@@ -1773,6 +1773,180 @@
     #tab-calendar { padding: 16px; }
   }
 
+
+  /* ── ENHANCED CALENDAR CELLS ─────────────────────────── */
+  .cal-day { min-height: 70px; padding: 5px 5px 4px; flex-direction: column; justify-content: space-between; align-items: flex-start; }
+  .cal-cell-top { display: flex; justify-content: space-between; align-items: baseline; width: 100%; }
+  .cal-sprint-num { font-family: var(--mono); font-size: 8px; font-weight: 700; color: rgba(6,182,212,0.65); letter-spacing: 0.04em; }
+  .cal-cell-bottom { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: auto; padding-top: 4px; }
+  .cal-dots { display: flex; gap: 3px; }
+  .cal-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid; flex-shrink: 0; transition: background 0.2s, border-color 0.2s; }
+  .cal-dot.d-code { border-color: #a78bfa; }
+  .cal-dot.d-file { border-color: #2dd4bf; }
+  .cal-dot.d-qa   { border-color: #fbbf24; }
+  .cal-dot.done   { background: var(--done); border-color: var(--done); }
+  .cal-tier-sm { font-family: var(--mono); font-size: 8px; font-weight: 700; padding: 1px 4px; border-radius: 2px; letter-spacing: 0.04em; }
+  .cal-tier-sm.t-a { color: var(--done); background: rgba(16,185,129,0.15); }
+  .cal-tier-sm.t-b { color: var(--mle); background: rgba(249,115,22,0.12); }
+  .cal-tier-sm.t-c { color: var(--gate); background: rgba(244,114,182,0.12); }
+  .cal-tier-sm.t-d { color: #a78bfa; background: rgba(139,92,246,0.12); }
+  .cal-sprint.selected { border-width: 2px; border-color: var(--swe) !important; box-shadow: 0 0 0 2px rgba(6,182,212,0.15); }
+
+  /* ── CALENDAR DETAIL PANEL ───────────────────────────── */
+  #cal-detail {
+    display: none;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--swe);
+    border-radius: 8px;
+    margin-top: 20px;
+    overflow: hidden;
+    animation: slideDown 0.18s ease;
+  }
+  #cal-detail.open { display: block; }
+  @keyframes slideDown { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
+
+  .cal-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .cal-detail-day-badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--swe);
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.3);
+    border-radius: 4px;
+    padding: 3px 10px;
+    flex-shrink: 0;
+  }
+  .cal-detail-title { font-size: 12px; color: var(--text-mid); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-detail-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; }
+  .cal-detail-jump {
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.35);
+    border-radius: 5px;
+    color: var(--swe);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    transition: all 0.14s;
+  }
+  .cal-detail-jump:hover { background: rgba(6,182,212,0.18); }
+  .cal-detail-close {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 5px 10px;
+    transition: all 0.14s;
+  }
+  .cal-detail-close:hover { color: var(--text); }
+
+  .cal-detail-tasks { display: grid; grid-template-columns: 1fr 1fr; }
+  .cal-dt {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    transition: opacity 0.2s;
+  }
+  .cal-dt:nth-child(even) { border-right: none; }
+  .cal-dt:nth-last-child(-n+2) { border-bottom: none; }
+  .cal-dt.task-done { opacity: 0.38; }
+
+  .cal-dt-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+  .cal-dt-icon { font-size: 13px; flex-shrink: 0; }
+  .cal-dt-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .cal-dt-time { font-family: var(--mono); font-size: 9px; color: var(--text-dim); margin-left: auto; flex-shrink: 0; }
+  .cal-dt-body { font-size: 11px; line-height: 1.6; color: var(--text-mid); }
+  .cal-dt-body strong { color: var(--text); font-weight: 500; }
+  .cal-dt-body em { color: var(--text); font-style: normal; }
+  .cal-dt-body code { font-family: var(--mono); font-size: 10px; background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px; }
+  [data-theme="light"] .cal-dt-body code { background: rgba(0,0,0,0.06); }
+
+  @media (max-width: 700px) {
+    .cal-detail-tasks { grid-template-columns: 1fr; }
+    .cal-dt { border-right: none; }
+    .cal-dt:nth-last-child(-n+2) { border-bottom: 1px solid var(--border); }
+    .cal-dt:last-child { border-bottom: none; }
+  }
+
+  /* ── DAILY RHYTHM — TODAY SECTION ────────────────────── */
+  .rhythm-today-wrap {
+    background: var(--surface);
+    border: 1px solid rgba(6,182,212,0.3);
+    border-left: 4px solid var(--swe);
+    border-radius: 8px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .rhythm-today-hdr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .rhythm-today-day {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--swe);
+  }
+  .rhythm-today-date { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .rhythm-today-jump {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    transition: all 0.14s;
+  }
+  .rhythm-today-jump:hover { color: var(--swe); border-color: rgba(6,182,212,0.4); }
+  .rhythm-today-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .rhythm-today-row:last-child { border-bottom: none; }
+  .rhythm-today-row.task-done { opacity: 0.38; }
+  .rhythm-tm { font-family: var(--mono); font-size: 10px; color: var(--text-dim); flex-shrink: 0; width: 28px; padding-top: 1px; }
+  .rhythm-today-row .task-check { margin-top: 2px; flex-shrink: 0; }
+  .rhythm-disc-icon { font-size: 12px; flex-shrink: 0; }
+  .rhythm-today-text { font-size: 12px; color: var(--text-mid); flex: 1; line-height: 1.4; }
+  .rhythm-today-text strong { color: var(--text); font-weight: 500; }
+  .rhythm-today-text em { color: var(--text); font-style: normal; }
+  .rhythm-today-text code { font-family: var(--mono); font-size: 10px; }
 </style>
 </head>
 <body>
@@ -3693,7 +3867,6 @@
     if (wkCard && !wkCard.classList.contains('open')) wkCard.querySelector('.week-header')?.click();
     const block = document.getElementById(`sprint-day-${dayNum}`);
     if (!block) return;
-    // Mark briefly so the eye lands
     block.classList.add('today-block');
     const nameEl = block.querySelector('.day-name');
     if (nameEl && !nameEl.querySelector('.today-label')) {
@@ -3705,18 +3878,166 @@
     setTimeout(() => block.scrollIntoView({ behavior:'smooth', block:'start' }), 200);
   }
 
-  /* ── CALENDAR ────────────────────────────────────────── */
+  /* ── CALENDAR CELL DOTS ─────────────────────────────── */
+  const DISC_DOT_MAP = { code: 'code', file: 'file-def', qa: 'interview' };
+
+  function updateCellDots(dayNum) {
+    const cell  = document.querySelector(`.cal-sprint[data-sd-num="${dayNum}"]`);
+    const block = document.getElementById(`sprint-day-${dayNum}`);
+    if (!cell || !block) return;
+    Object.entries(DISC_DOT_MAP).forEach(([dotCls, tagCls]) => {
+      const dot  = cell.querySelector(`.cal-dot.d-${dotCls}`);
+      if (!dot) return;
+      const task = [...block.querySelectorAll('.task')].find(t => t.querySelector(`.task-tag.${tagCls}`));
+      dot.classList.toggle('done', task ? !!task.querySelector('.task-check:checked') : false);
+    });
+  }
+
+  /* ── PANEL CHECKBOX CLEANUP ─────────────────────────── */
+  const panelCbKeys = new Set();
+
+  function clearPanelCbs() {
+    panelCbKeys.forEach(key => {
+      const set = cbRegistry.get(key);
+      if (!set) return;
+      set.forEach(cb => { if (!document.body.contains(cb)) set.delete(cb); });
+      if (set.size === 0) cbRegistry.delete(key);
+    });
+    panelCbKeys.clear();
+  }
+
+  /* ── CALENDAR DETAIL PANEL ──────────────────────────── */
+  const DISC_ICONS  = { code:'🔢', file:'📁', qa:'🎤', build:'🔨' };
+
+  function showDetailPanel(dayNum) {
+    clearPanelCbs();
+    const panel = document.getElementById('cal-detail');
+    if (!panel) return;
+    const block = document.getElementById(`sprint-day-${dayNum}`);
+    if (!block) return;
+
+    const rawTitle = block.querySelector('.day-name')?.textContent?.replace('← TODAY','').replace(/← DAY \d+/,'').trim() || '';
+    const wk       = dayNum <= 7 ? 1 : dayNum <= 14 ? 2 : dayNum <= 21 ? 3 : 4;
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'cal-detail-header';
+
+    const badge = document.createElement('span');
+    badge.className = 'cal-detail-day-badge';
+    badge.textContent = `Day ${dayNum} · Leave Week ${wk}`;
+
+    const title = document.createElement('span');
+    title.className = 'cal-detail-title';
+    title.textContent = rawTitle;
+
+    const actions = document.createElement('div');
+    actions.className = 'cal-detail-actions';
+
+    const jumpBtn = document.createElement('button');
+    jumpBtn.className = 'cal-detail-jump';
+    jumpBtn.textContent = '↗ Go to day block';
+    jumpBtn.addEventListener('click', () => jumpToSprintDay(dayNum));
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'cal-detail-close';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => {
+      panel.classList.remove('open');
+      document.querySelectorAll('.cal-sprint.selected').forEach(c => c.classList.remove('selected'));
+    });
+
+    actions.appendChild(jumpBtn);
+    actions.appendChild(closeBtn);
+    hdr.appendChild(badge);
+    hdr.appendChild(title);
+    hdr.appendChild(actions);
+
+    // Tasks grid
+    const grid = document.createElement('div');
+    grid.className = 'cal-detail-tasks';
+
+    block.querySelectorAll('.day-tasks .task').forEach((task, i) => {
+      const disc   = discipline(task);
+      if (!disc) return;
+      const key    = `d${dayNum}-${disc}-${i}`;
+      const textEl = task.querySelector('.task-text');
+      const timeEl = task.querySelector('.task-time');
+      const tagEl  = task.querySelector('.task-tag');
+
+      const card = document.createElement('div');
+      card.className = 'cal-dt';
+      const s = load();
+      if (s[key]) card.classList.add('task-done');
+
+      // Synced checkbox
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.className = 'task-check'; cb.checked = !!s[key];
+      registerCb(key, cb);
+      panelCbKeys.add(key);
+      cb.addEventListener('change', () => {
+        syncCb(key, cb.checked, cb);
+        card.classList.toggle('task-done', cb.checked);
+        refreshWeekProgress(block.closest('[data-leave-week]'));
+        refreshDashboard();
+        updateCellDots(dayNum);
+        refreshRhythmToday();
+      });
+
+      const top = document.createElement('div');
+      top.className = 'cal-dt-top';
+
+      const icon = document.createElement('span');
+      icon.className = 'cal-dt-icon';
+      icon.textContent = DISC_ICONS[disc] || '·';
+
+      // Reuse existing task-tag style
+      const tagClone = tagEl?.cloneNode(true);
+      if (tagClone) {
+        tagClone.className = 'cal-dt-tag ' + [...tagEl.classList].filter(cl => cl !== 'task-tag').join(' ');
+      }
+
+      const time = document.createElement('span');
+      time.className = 'cal-dt-time';
+      time.textContent = timeEl?.textContent || '';
+
+      top.appendChild(cb);
+      top.appendChild(icon);
+      if (tagClone) top.appendChild(tagClone);
+      top.appendChild(time);
+
+      // Content — clone innerHTML, strip injected checkboxes
+      const body = document.createElement('div');
+      body.className = 'cal-dt-body';
+      if (textEl) {
+        body.innerHTML = textEl.innerHTML;
+        body.querySelectorAll('.task-check').forEach(el => el.remove());
+      }
+
+      card.appendChild(top);
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+
+    panel.innerHTML = '';
+    panel.appendChild(hdr);
+    panel.appendChild(grid);
+    panel.classList.add('open');
+    setTimeout(() => panel.scrollIntoView({ behavior:'smooth', block:'nearest' }), 60);
+  }
+
+  /* ── BUILD CALENDAR ──────────────────────────────────── */
+  let _selectedCalDay = null;
+
   function buildCalendar() {
     const calTab = document.getElementById('tab-calendar');
     if (!calTab) return;
 
-    // Sprint day map: "YYYY-M-D" → sprint day number (1–29)
     const sprintMap = {};
     for (let i = 0; i < 29; i++) {
       const dt = new Date(2026, 5, 17 + i);
       sprintMap[`${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`] = i + 1;
     }
-
     const now      = new Date();
     const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 
@@ -3726,10 +4047,19 @@
     const legend = document.createElement('div');
     legend.className = 'cal-legend';
     legend.innerHTML = `
-      <div class="cal-legend-item"><div class="cal-legend-swatch l-sprint"></div>Sprint day — click to jump</div>
-      <div class="cal-legend-item"><div class="cal-legend-swatch l-done"></div>Code + File + Q&amp;A checked</div>
+      <div class="cal-legend-item"><div class="cal-legend-swatch l-sprint"></div>Sprint day — click for details</div>
+      <div class="cal-legend-item"><div class="cal-legend-swatch l-done"></div>Code + File + Q&A done</div>
       <div class="cal-legend-item"><div class="cal-legend-swatch l-today"></div>Today</div>
-    `;
+      <div class="cal-legend-item" style="margin-left:auto;font-size:9px;color:var(--text-dim);">
+        <span style="display:flex;gap:6px;align-items:center;">
+          <span style="display:inline-flex;gap:3px;">
+            <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #a78bfa;display:inline-block;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #2dd4bf;display:inline-block;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #fbbf24;display:inline-block;"></span>
+          </span>
+          Code · File · Q&amp;A
+        </span>
+      </div>`;
     calTab.appendChild(legend);
 
     const wrap = document.createElement('div');
@@ -3743,16 +4073,13 @@
       monthEl.className = 'cal-month';
       monthEl.innerHTML = `<div class="cal-month-name">${name}</div>`;
 
-      // Day-of-week header
-      const header = document.createElement('div');
-      header.className = 'cal-week-header';
+      const hdrRow = document.createElement('div');
+      hdrRow.className = 'cal-week-header';
       ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
-        const el = document.createElement('div');
-        el.className = 'cal-dow';
-        el.textContent = d;
-        header.appendChild(el);
+        const el = document.createElement('div'); el.className = 'cal-dow'; el.textContent = d;
+        hdrRow.appendChild(el);
       });
-      monthEl.appendChild(header);
+      monthEl.appendChild(hdrRow);
 
       const grid = document.createElement('div');
       grid.className = 'cal-days';
@@ -3760,21 +4087,16 @@
       const firstDow    = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      // Empty leading cells
       for (let i = 0; i < firstDow; i++) {
-        const el = document.createElement('div');
-        el.className = 'cal-day cal-empty';
-        grid.appendChild(el);
+        const el = document.createElement('div'); el.className = 'cal-day cal-empty'; grid.appendChild(el);
       }
 
-      // Day cells
       for (let d = 1; d <= daysInMonth; d++) {
         const key          = `${year}-${month}-${d}`;
         const sprintDayNum = sprintMap[key];
         const isToday      = todayKey === key;
-
-        const cell = document.createElement('div');
-        cell.className = 'cal-day';
+        const cell         = document.createElement('div');
+        cell.className     = 'cal-day';
         if (isToday) cell.classList.add('cal-today');
 
         if (sprintDayNum) {
@@ -3782,40 +4104,176 @@
           cell.dataset.sdNum = sprintDayNum;
           cell.setAttribute('tabindex', '0');
           cell.setAttribute('role', 'button');
-          cell.setAttribute('title', `Sprint Day ${sprintDayNum} — click to jump`);
-          cell.innerHTML = `<span class="cal-n">${d}</span><span class="cal-sd">D${sprintDayNum}</span>`;
+          cell.setAttribute('title', `Sprint Day ${sprintDayNum} — click for details`);
+
+          // Gather cell metadata from day block
+          const block    = document.getElementById(`sprint-day-${sprintDayNum}`);
+          const codeTask = block ? [...block.querySelectorAll('.task')].find(t => t.querySelector('.task-tag.code')) : null;
+          const tierText = codeTask?.querySelector('.task-tag')?.textContent?.match(/TIER\s+([A-Z\-]+)/)?.[1] || '';
+          const hasCode  = !!block?.querySelector('.task-tag.code');
+          const hasFile  = !!block?.querySelector('.task-tag.file-def');
+          const hasQA    = !!block?.querySelector('.task-tag.interview');
+
+          const dotHTML = [
+            hasCode ? '<span class="cal-dot d-code" title="Coding"></span>' : '',
+            hasFile ? '<span class="cal-dot d-file" title="File defense"></span>' : '',
+            hasQA   ? '<span class="cal-dot d-qa"   title="Q&A"></span>' : '',
+          ].join('');
+
+          const tierClass = tierText ? `t-${tierText.toLowerCase().charAt(0)}` : '';
+          const tierBadge = tierText ? `<span class="cal-tier-sm ${tierClass}">${tierText}</span>` : '';
+
+          cell.innerHTML = `
+            <div class="cal-cell-top">
+              <span class="cal-sprint-num">D${sprintDayNum}</span>
+              <span class="cal-n">${d}</span>
+            </div>
+            <div class="cal-cell-bottom">
+              <div class="cal-dots">${dotHTML}</div>
+              ${tierBadge}
+            </div>`;
 
           // Completion state
-          const block = document.getElementById(`sprint-day-${sprintDayNum}`);
           if (block && isDayDone(block)) cell.classList.add('cal-done');
+          updateCellDots(sprintDayNum);
 
-          const go = () => jumpToSprintDay(sprintDayNum);
+          const go = () => {
+            const already = _selectedCalDay === sprintDayNum;
+            document.querySelectorAll('.cal-sprint.selected').forEach(c => c.classList.remove('selected'));
+            if (already) {
+              _selectedCalDay = null;
+              const panel = document.getElementById('cal-detail');
+              if (panel) panel.classList.remove('open');
+            } else {
+              _selectedCalDay = sprintDayNum;
+              cell.classList.add('selected');
+              showDetailPanel(sprintDayNum);
+            }
+          };
           cell.addEventListener('click', go);
           cell.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); go(); } });
         } else {
-          cell.innerHTML = `<span class="cal-n">${d}</span>`;
+          cell.innerHTML = `<div class="cal-cell-top"><span></span><span class="cal-n">${d}</span></div>`;
         }
 
         grid.appendChild(cell);
       }
-
       monthEl.appendChild(grid);
       wrap.appendChild(monthEl);
     });
 
     calTab.appendChild(wrap);
+
+    // Detail panel placeholder
+    const panel = document.createElement('div');
+    panel.id = 'cal-detail';
+    calTab.appendChild(panel);
   }
 
-  /* ── REFRESH CALENDAR DONE-STATE ─────────────────────── */
+  /* ── REFRESH CALENDAR ────────────────────────────────── */
   function refreshCalendar() {
     document.querySelectorAll('.cal-sprint[data-sd-num]').forEach(cell => {
       const n     = parseInt(cell.dataset.sdNum);
       const block = document.getElementById(`sprint-day-${n}`);
       cell.classList.toggle('cal-done', block ? isDayDone(block) : false);
+      updateCellDots(n);
     });
   }
 
-  /* ── JUMP TO TODAY ───────────────────────────────────── */
+  /* ── DAILY RHYTHM — TODAY ────────────────────────────── */
+  function buildRhythmToday() {
+    const day = sprintDay(); if (!day) return;
+    const tab = document.getElementById('tab-rhythm'); if (!tab) return;
+    const block = document.getElementById(`sprint-day-${day}`); if (!block) return;
+    if (tab.querySelector('.rhythm-today-wrap')) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'rhythm-today-wrap';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'rhythm-today-hdr';
+    hdr.innerHTML = `
+      <span class="rhythm-today-day">TODAY · DAY ${day} OF 29</span>
+      <span class="rhythm-today-date">${sprintDateStr(day)}</span>`;
+    const jumpBtn = document.createElement('button');
+    jumpBtn.className = 'rhythm-today-jump';
+    jumpBtn.textContent = '↗ Jump to day block';
+    jumpBtn.addEventListener('click', () => jumpToSprintDay(day));
+    hdr.appendChild(jumpBtn);
+    wrap.appendChild(hdr);
+
+    const TIMES = { code:'30m', file:'20m', qa:'15m', build:'≥60m' };
+
+    block.querySelectorAll('.day-tasks .task').forEach((task, i) => {
+      const disc   = discipline(task); if (!disc) return;
+      const key    = `d${day}-${disc}-${i}`;
+      const textEl = task.querySelector('.task-text');
+      const s      = load();
+
+      // Summary text
+      let summary = '';
+      if (disc === 'code') { summary = textEl?.querySelector('strong')?.textContent || textEl?.textContent?.slice(0,70) || ''; }
+      else if (disc === 'file') { summary = textEl?.querySelector('code')?.textContent || textEl?.textContent?.slice(0,50) || ''; }
+      else if (disc === 'qa') {
+        const raw = textEl?.querySelector('em')?.textContent || textEl?.textContent?.slice(0,80) || '';
+        summary = raw.replace(/^[""\u201C]|[""\u201D]$/g, '');
+      } else {
+        const tag = task.querySelector('.task-tag');
+        summary = (tag?.textContent?.trim() || '') + ' — ' + (textEl?.textContent?.slice(0,50) || '');
+      }
+      summary = summary.trim().replace(/\s+/g, ' ');
+
+      const row = document.createElement('div');
+      row.className = 'rhythm-today-row';
+      if (s[key]) row.classList.add('task-done');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.className = 'task-check'; cb.checked = !!s[key];
+      registerCb(key, cb);
+      cb.addEventListener('change', () => {
+        syncCb(key, cb.checked, cb);
+        row.classList.toggle('task-done', cb.checked);
+        refreshWeekProgress(block.closest('[data-leave-week]'));
+        refreshDashboard();
+        updateCellDots(day);
+      });
+
+      const tm = document.createElement('span');
+      tm.className = 'rhythm-tm';
+      tm.textContent = TIMES[disc] || '';
+
+      const icon = document.createElement('span');
+      icon.className = 'rhythm-disc-icon';
+      icon.textContent = DISC_ICONS[disc] || '·';
+
+      const txt = document.createElement('span');
+      txt.className = 'rhythm-today-text';
+      txt.textContent = summary;
+
+      row.appendChild(cb);
+      row.appendChild(tm);
+      row.appendChild(icon);
+      row.appendChild(txt);
+      wrap.appendChild(row);
+    });
+
+    tab.insertBefore(wrap, tab.firstChild);
+  }
+
+  function refreshRhythmToday() {
+    const day = sprintDay(); if (!day) return;
+    const block = document.getElementById(`sprint-day-${day}`); if (!block) return;
+    document.querySelectorAll('.rhythm-today-row').forEach((row, i) => {
+      const tasks = [...block.querySelectorAll('.day-tasks .task')];
+      if (i >= tasks.length) return;
+      const disc = discipline(tasks[i]); if (!disc) return;
+      const key  = `d${day}-${disc}-${i}`;
+      const s    = load();
+      row.classList.toggle('task-done', !!s[key]);
+    });
+  }
+
+  /* ── JUMP TO TODAY ───────────────────────────────────── */  /* ── JUMP TO TODAY ───────────────────────────────────── */
   function jumpToToday() {
     const day = sprintDay(); if (!day) return;
     const wk  = day <= 7 ? 1 : day <= 14 ? 2 : day <= 21 ? 3 : 4;
@@ -3873,6 +4331,7 @@
     buildQuizMode();
     addJournals();
     buildCalendar();
+    if (sprintDay()) buildRhythmToday();
   }
 
   document.readyState === 'loading'
