@@ -5090,9 +5090,9 @@ const QBANK_L1 = {
         tie:`The selected document, active filter, review-drawer visibility, and currently selected citation may need to live in a page-level or panel-level component because multiple child components use them.`,
         trap:`"All state should be global." "State should always stay in the child." Putting separate copies of the same state in sibling components. Moving state higher without explaining which components need it.`,
         l2q:`How would you decide between local component state, context, and a dedicated state-management library?`,
-        l2a:`A strong answer should discuss scope, update frequency, debugging needs, and whether unrelated components need the data. Context is useful for broadly shared but relatively stable values. A state library becomes more useful when state transitions, caching, synchronization, or cross-page coordination become complex.`,
+        l2a:`Use local state when only one component or a small subtree needs the value. Use context when many components need relatively stable shared values such as authentication, theme, locale, or feature flags. Use a dedicated state management library when state is large, changes frequently, must be shared across distant parts of the application, or requires advanced capabilities such as caching, synchronization, derived state, debugging tools, or cross-page coordination. The decision should consider scope, update frequency, debugging needs, and whether unrelated components need access to the data.`,
         l3q:`How would you redesign a React application where excessive lifted state causes large parts of the page to rerender?`,
-        l3a:`A strong answer should discuss splitting state by ownership, separating read and write contexts, component composition, external stores with selector-based subscriptions, profiling before optimization, and avoiding one oversized page-level state object. ---`,
+        l3a:`First profile the application to identify which state updates are causing expensive re-renders. Split oversized page-level state by ownership and move state closer to the components that actually use it. Use component composition to isolate expensive subtrees. Avoid a single large context object — instead, separate contexts by domain or split read and write contexts. For frequently changing shared state, consider an external store with selector-based subscriptions so components only re-render when the specific data they consume changes. The goal is to reduce render blast radius while preserving a single source of truth.`,
       },
       {
         id:`react-02`, q:`What is a controlled input in React?`,
@@ -5104,9 +5104,9 @@ const QBANK_L1 = {
         tie:`Reviewer comments, document filters, search fields, and approval-reason inputs are likely controlled because the application needs validation, draft preservation, or conditional actions.`,
         trap:`"Controlled means the user cannot edit it." "Uncontrolled means the input has no validation." Using <code>value</code> without an <code>onChange</code> handler and accidentally making the field read-only. Saying controlled inputs are always superior.`,
         l2q:`When might you choose an uncontrolled input instead of a controlled input?`,
-        l2a:`A strong answer should mention simple forms, file inputs, third-party DOM integrations, reduced rerendering for very large forms, and form libraries that use refs internally.`,
+        l2a:`Use an uncontrolled input when React does not need to respond to every keystroke or continuously own the current value. Common examples include simple forms, file inputs, third-party libraries that manipulate the DOM directly, and very large forms where field-level rerendering may become expensive. Uncontrolled inputs store their current value in the DOM and are usually read through a ref or a form library. Some form libraries use uncontrolled inputs internally to reduce rerenders while still providing validation and submission handling. The choice is not that uncontrolled inputs are always faster or controlled inputs are always better. It depends on whether the application needs immediate validation, conditional rendering, synchronization, or direct control over each change.`,
         l3q:`How would you design a large form containing hundreds of fields without causing every keystroke to rerender the entire form?`,
-        l3a:`A strong answer should discuss component isolation, field-level subscriptions, uncontrolled or hybrid form management, debounced derived work, separating validation concerns, and measuring actual rendering behavior. ---`,
+        l3a:`First, measure the form with React DevTools Profiler to identify whether rerendering is actually a bottleneck. Then isolate fields into smaller components so a change to one field does not rerender the entire form. Use field-level subscriptions or a form library that supports uncontrolled or hybrid input management. Avoid storing one giant form object in a page-level component if every update replaces the whole object. Separate immediate field updates from expensive derived work. Debounce operations such as autosave, server validation, or large recalculations. Keep synchronous validation close to the field when possible, and run cross-field validation only when required. The design goal is for each field or small group of related fields to subscribe only to the state it needs.`,
       },
       {
         id:`react-03`, q:`What is <code>useEffect</code> used for?`,
@@ -5118,9 +5118,9 @@ const QBANK_L1 = {
         tie:`An Effect may subscribe to job-status updates or connect to a streaming review service. Filtering retrieval results or calculating result counts should usually happen during rendering instead.`,
         trap:`"<code>useEffect</code> runs whenever something changes." Using an Effect for every calculation. Forgetting cleanup for subscriptions and timers. Omitting dependencies to force an Effect to run less often.`,
         l2q:`Give an example of an Effect that should be replaced with an event handler or render-time calculation.`,
-        l2a:`A strong answer should identify duplicated derived state or logic that belongs directly in the action that caused it.`,
+        l2a:`An Effect should not be used to store a value that can be directly derived from existing props or state. For example, storing filtered items in state and updating them through an Effect duplicates derived state and causes an unnecessary render. The filtered value can be calculated directly during rendering: <code>const visibleItems = items.filter(item => item.name.includes(filter))</code>. Similarly, logic that happens because a user clicked a button should usually run inside the button's event handler rather than through an Effect watching for a state change caused by that button. Effects are appropriate for synchronizing with external systems, not for coordinating ordinary internal calculations.`,
         l3q:`How would you diagnose an Effect that repeatedly fetches data, uses stale values, or enters an infinite loop?`,
-        l3a:`A strong answer should discuss dependency identity, stale closures, unstable objects and functions, cleanup, request cancellation, Strict Mode behavior, and whether the Effect is necessary at all. ---`,
+        l3a:`First, determine whether the Effect is necessary at all. If the work can happen during rendering or directly inside an event handler, remove the Effect. Then inspect the dependency array. An infinite loop often occurs because the Effect updates state that changes one of its own dependencies, or because an object, array, or function dependency is recreated on every render and therefore has a new identity each time. Stale values usually come from stale closures or missing dependencies — the Effect captures values from the render in which it was created. Also check whether functions or objects should be defined inside the Effect or stabilized, whether subscriptions and timers have cleanup functions, whether fetch requests should be cancelled with AbortController, and whether React Strict Mode is intentionally running setup and cleanup twice. The fix should preserve correct dependencies rather than suppressing warnings.`,
       },
       {
         id:`react-04`, q:`What is <code>useReducer</code>?`,
@@ -5132,9 +5132,9 @@ const QBANK_L1 = {
         tie:`A review panel may have related transitions for loading a task, selecting citations, changing a comment, submitting a decision, and handling success or failure.`,
         trap:`Saying a reducer directly changes the current state. Using reducers for every component. Creating generic actions such as SET_FIELD without preserving meaningful domain transitions. Performing API calls directly inside the reducer.`,
         l2q:`When would <code>useReducer</code> be clearer than five separate <code>useState</code> calls?`,
-        l2a:`A strong answer should discuss related transitions, atomic updates, repeated event patterns, complex handlers, and testable transition logic.`,
+        l2a:`<code>useReducer</code> is clearer when several state values change together or when state changes represent meaningful domain events. A review form might track current comment, selected citations, submission status, validation errors, and server error — if several handlers must update multiple values consistently, a reducer centralizes those transitions. Actions such as <code>reviewLoaded</code>, <code>commentChanged</code>, <code>submissionStarted</code>, <code>submissionSucceeded</code>, and <code>submissionFailed</code> are easier to understand than several unrelated setter calls spread across the component. A reducer is especially useful when updates must be atomic, the same transitions happen from several places, state transition logic needs unit testing, or some transitions should be impossible. Simple, independent values usually remain clearer with <code>useState</code>.`,
         l3q:`How would you model a review workflow as a state machine rather than a collection of loosely related booleans?`,
-        l3a:`A strong answer should identify valid states and transitions, prevent impossible combinations, separate side effects from transition logic, and consider explicit state-machine tooling when workflow rules become complex. ---`,
+        l3a:`Define explicit states representing the valid stages of the workflow such as <code>idle</code>, <code>loading</code>, <code>ready</code>, <code>submitting</code>, <code>succeeded</code>, <code>failed</code>, and <code>conflict</code>. Then define which transitions are allowed — for example <code>ready -> submitting</code>, <code>submitting -> succeeded</code>, <code>submitting -> failed</code>. This prevents impossible combinations such as <code>isLoading = true, isSubmitted = true, hasError = true</code>. The state should include only the data valid for that state, using a discriminated union where the <code>status</code> field determines which other fields are present. Keep side effects such as API calls outside the reducer — the reducer decides the next state, application code performs the external work. For highly complex workflows, explicit state-machine tooling may improve visualization, guards, transition testing, and prevention of invalid states.`,
       },
       {
         id:`react-05`, q:`What do <code>useMemo</code> and <code>useCallback</code> do?`,
@@ -5146,9 +5146,9 @@ const QBANK_L1 = {
         tie:`Memoization may help with expensive formatting of large document chunks or stable callback props passed into a virtualized result table.`,
         trap:`"<code>useMemo</code> makes the application faster." Memoizing every value and callback. Using memoization to fix incorrect logic. Being unable to explain which rerender or computation is being prevented.`,
         l2q:`How would you prove that memoization improved a component?`,
-        l2a:`A strong answer should mention React DevTools Profiler, browser performance tools, repeatable test conditions, and comparing before-and-after rendering or calculation costs.`,
+        l2a:`Measure before and after under repeatable conditions. Use React DevTools Profiler to compare how often the component renders, how long renders take, which props caused rerenders, and whether child components were skipped after memoization. Use browser performance tools for expensive calculations or long tasks. Test with realistic data sizes rather than tiny development fixtures. For a calculation, record its execution cost before and after <code>useMemo</code>. For a callback, verify that stabilizing the reference actually allows a memoized child to avoid rerendering. Memoization is justified only when the measured improvement outweighs its complexity and overhead.`,
         l3q:`How can memoization make performance worse?`,
-        l3a:`A strong answer should discuss dependency comparison, retained memory, invalidation frequency, code complexity, ineffective memoization caused by unstable object props, and optimizing work that was already trivial. ---`,
+        l3a:`Dependencies must be compared on each render, cached values and closures consume memory, and the memoized calculation may still rerun frequently if dependencies change often. Code becomes harder to understand and maintain. Unstable object or function dependencies can invalidate the cache every render, making memoization ineffective. Memoizing a trivial calculation can cost more than recalculating it. <code>useCallback</code> can also be ineffective if the receiving component is not memoized or if another prop changes every render anyway. Memoization can also cause developers to focus on avoiding renders instead of fixing larger architectural problems such as oversized state ownership, expensive component trees, or excessive network requests. Use it for measured bottlenecks, not as a default style.`,
       },
       {
         id:`react-06`, q:`How can TypeScript represent loading, success, and error states?`,
@@ -5160,9 +5160,9 @@ const QBANK_L1 = {
         tie:`Retrieval previews, review submissions, document-processing jobs, and exports all move through identifiable asynchronous states.`,
         trap:`Using many unrelated optional booleans. Making every property optional. Using <code>any</code> for API state. Accessing <code>data</code> without first checking the state.`,
         l2q:`How would you enforce exhaustive handling of every union member?`,
-        l2a:`A strong answer should use a switch, assign the unhandled value to <code>never</code>, and explain how this exposes newly added states during compilation.`,
+        l2a:`Use a <code>switch</code> on the discriminating field and assign the default case to <code>never</code>. If a new union member is added but the <code>switch</code> is not updated, TypeScript reports that the unhandled value cannot be assigned to <code>never</code>. This turns missing state handling into a compile-time error. The pattern is: in the <code>default</code> case, declare <code>const exhaustiveCheck: never = state</code> — TypeScript will flag this as an error when <code>state</code> can still be any unhandled member. This ensures that every branch of the union is handled and future additions to the union are automatically caught.`,
         l3q:`How would you model background refresh where old data remains visible while a newer request is loading?`,
-        l3a:`A strong answer should distinguish initial loading from refreshing, preserve the last successful data, model stale or refreshing states explicitly, and avoid collapsing all asynchronous behavior into a single loading boolean. ---`,
+        l3a:`Do not represent every request with one <code>isLoading</code> boolean. Distinguish initial loading from refreshing by using a discriminated union that includes a <code>refreshing</code> state with the previous data attached. During the initial load there may be no data to display; during a background refresh, preserve the last successful data and indicate that it may be stale. The UI can continue showing the previous result while displaying a refresh indicator. If the refresh fails, the application may preserve the old data and show a non-blocking warning rather than replacing the entire screen with an error. The model should make freshness, refresh state, and retained data explicit.`,
       },
       {
         id:`react-07`, q:`Why should API responses be validated at runtime?`,
@@ -5174,9 +5174,9 @@ const QBANK_L1 = {
         tie:`The review interface should validate retrieval results, citation structures, task statuses, and assessment responses before storing them in UI state.`,
         trap:`"The backend uses Java, so the response is safe." Treating <code>as ReviewResponse</code> as validation. Using <code>any</code> for network data. Performing random defensive checks throughout every component instead of validating at the boundary.`,
         l2q:`Where should validation errors be translated into user-facing errors?`,
-        l2a:`A strong answer should separate transport, decoding, domain, and presentation concerns. The API layer should identify malformed data, while the UI decides how to present the failure.`,
+        l2a:`Keep responsibilities separate. The transport or API layer should perform the request, check HTTP status, decode the response, validate the runtime shape, and return a typed result or a structured technical error. The domain or application layer can translate low-level failures into meaningful application categories such as network unavailable, authentication required, response schema invalid, version conflict, or service temporarily unavailable. The presentation layer decides how to show the error to the user — an inline field message, retry banner, modal, or generic failure notice. Components should not need to understand raw JSON decoding errors. The API boundary identifies malformed data; the UI chooses user-appropriate language.`,
         l3q:`How would you evolve a frontend and backend contract without breaking independently deployed clients?`,
-        l3a:`A strong answer should discuss additive changes, versioning when necessary, tolerant readers, contract tests, generated schemas or clients, deprecation periods, observability, and backward-compatible deployment sequencing. ---`,
+        l3a:`Prefer backward-compatible, additive changes — add optional fields rather than renaming or removing existing ones, preserve existing meanings, and allow clients to ignore fields they do not understand. Use versioning when a breaking change is unavoidable. Maintain a deprecation period before removing old fields or endpoints. Use generated schemas or clients when practical and run contract tests. A safe deployment sequence is often: deploy backend support for both old and new contracts, deploy clients that understand the new contract, observe adoption and errors, then remove the old contract only after all clients have migrated. Add observability for schema validation failures, old-version traffic, and deprecated field usage.`,
       },
       {
         id:`react-08`, q:`How should a React component handle an API request?`,
@@ -5188,9 +5188,9 @@ const QBANK_L1 = {
         tie:`A reviewer should not accidentally submit the same approval twice, and an older retrieval-preview request should not overwrite results for a newly selected document.`,
         trap:`Only describing the happy path. Ignoring loading and error states. Assuming responses always arrive in request order. Permanently disabling the interface after an error.`,
         l2q:`How would you implement an optimistic approval action?`,
-        l2a:`A strong answer should apply the expected local change, preserve rollback information, send the request, reconcile with the server response, and restore or mark the item on failure.`,
+        l2a:`Update the UI immediately as though the approval succeeded, while preserving enough previous state to roll back. A basic sequence is: save the current item state, mark the item approved locally, disable duplicate approval actions, send the request, reconcile the local state with the server response, and if the request fails, restore the previous state or mark the item as needing attention. The optimistic state should be visibly distinguishable when appropriate, especially for important workflows. The server remains authoritative — if it returns a different version or rejects the action, the client must reconcile rather than silently keeping its optimistic result. Optimistic updates are best when failure is uncommon and rollback is understandable.`,
         l3q:`How would you handle simultaneous edits, stale versions, retries, and duplicate requests across multiple browser tabs?`,
-        l3a:`A strong answer should discuss server-side idempotency, optimistic concurrency control, entity versions, conflict responses, client reconciliation, retry safety, cross-tab synchronization where needed, and the server remaining authoritative. ---`,
+        l3a:`Use server-side concurrency and idempotency controls. For stale edits, include an entity version or last-updated value with the request and have the server perform a conditional update — returning a conflict response such as HTTP 409 if the version changed. The client shows the newer server state and asks the user to reconcile. For retries and duplicate submissions, attach an idempotency key so repeating the same logical request returns the same result rather than applying the operation twice. Across tabs, use BroadcastChannel, storage events, or refreshed server queries when cross-tab coordination matters. The server must remain the authoritative source for versions, transitions, and duplicate prevention.`,
       },
     ],
   },
@@ -5208,9 +5208,9 @@ const QBANK_L1 = {
         tie:`Documents, document versions, chunks, answers, review tasks, and review events all need stable identifiers.`,
         trap:`"A primary key is the first column." Assuming it must always be an auto-incrementing integer. Using a mutable display value as identity. Confusing a primary key with any indexed column.`,
         l2q:`How would you choose between an integer key, UUID, and composite primary key?`,
-        l2a:`A strong answer should discuss generation location, distributed creation, index size, locality, natural identity, relationship semantics, and operational needs.`,
+        l2a:`Use an integer surrogate key when you want a compact, efficient, database-generated identifier with good index performance and simple foreign-key relationships. Use a UUID when identifiers must be generated across distributed systems, before database insertion, merged from multiple systems, or exposed publicly without revealing sequence information. Use a composite primary key when the natural identity of the row is the combination of multiple columns, such as reviewer_id and task_id in an assignment table. The choice should balance performance, uniqueness requirements, readability, and long-term maintainability.`,
         l3q:`How would key selection affect partitioning, replication, data migration, and high-volume index behavior?`,
-        l3a:`A strong answer should connect key distribution and ordering to page splits, locality, sharding strategy, global uniqueness, storage overhead, and migration complexity. ---`,
+        l3a:`Primary-key design affects both logical modeling and physical database behavior. Sequential integer keys provide excellent index locality and compact storage, but may create write hot spots and require coordination for uniqueness across systems. UUIDs provide global uniqueness and simplify distributed writes, replication, and data migration, but increase storage overhead and can reduce index locality, leading to page splits and less efficient caching. Composite keys model natural relationships well but increase index size, foreign-key complexity, and migration effort. Key selection should consider access patterns, write distribution, partitioning strategy, storage costs, and future operational requirements.`,
       },
       {
         id:`sql-02`, q:`What is database normalization?`,
@@ -5222,9 +5222,9 @@ const QBANK_L1 = {
         tie:`Documents, versions, chunks, answers, citations, reviewers, and review events should be modeled as related entities rather than repeated inside one giant table.`,
         trap:`"Normalization means making the database faster." Splitting every field into its own table. Treating duplicate cached or reporting data as automatically incorrect. Being unable to explain update inconsistency.`,
         l2q:`When might you intentionally denormalize data?`,
-        l2a:`A strong answer should mention measured read-performance needs, reporting projections, materialized views, caches, and maintaining a clear canonical source.`,
+        l2a:`Denormalize when measured read-performance or reporting requirements justify storing duplicated or precomputed data. Examples include reporting tables, materialized views, search indexes, cached aggregates, precomputed dashboard projections, and read models optimized for a specific screen. The normalized model should remain the canonical source of truth. Denormalized copies should have a defined refresh strategy, ownership model, and acceptable freshness window. Denormalization should solve a measured problem, not be used simply to avoid joins.`,
         l3q:`How would you maintain consistency between a normalized write model and denormalized read models?`,
-        l3a:`A strong answer should discuss transactional updates, change events, outbox patterns, rebuildability, idempotent consumers, freshness guarantees, and reconciliation. ---`,
+        l3a:`Treat the normalized transactional model as the source of truth. For changes that must update both, update them in one database transaction when they are in the same consistency boundary. For asynchronous read models, publish change events after the write — an outbox pattern can record the business change and the event in the same transaction, then a separate publisher safely forwards the event. Consumers should be idempotent so replaying an event does not corrupt the projection. Read models should be rebuildable from canonical data or an event history. Define freshness guarantees explicitly and add reconciliation jobs that compare canonical records with projections and repair drift.`,
       },
       {
         id:`sql-03`, q:`What is a foreign key?`,
@@ -5236,9 +5236,9 @@ const QBANK_L1 = {
         tie:`A citation should not refer to a chunk that does not exist, and a review event should not refer to an unknown review task.`,
         trap:`"A foreign key is just another ID column." Assuming naming a column <code>document_id</code> creates a relationship. Adding cascade deletion everywhere. Assuming foreign keys automatically create every useful index.`,
         l2q:`How would you model a many-to-many relationship between answers and cited chunks?`,
-        l2a:`A strong answer should introduce a join table, foreign keys, uniqueness constraints, and relationship metadata such as citation order or spans.`,
+        l2a:`Create a join table containing foreign keys to both entities. The join table represents the relationship between an answer and a chunk. Add a uniqueness constraint or composite primary key to prevent duplicate relationships. Store relationship-specific metadata on the join table — citation order, supporting span, citation type, confidence, and added timestamp all belong on the relationship because they describe how that specific chunk supports that specific answer. The join table is a first-class entity, not just a link.`,
         l3q:`When might a high-scale system avoid or selectively use database-enforced foreign keys?`,
-        l3a:`A strong answer should discuss distributed ownership, ingestion performance, partitioning limitations, operational tradeoffs, and the additional consistency and reconciliation mechanisms required. ---`,
+        l3a:`A system may avoid cross-table foreign keys when data is partitioned or sharded across independent databases, different services own the related records, high-volume ingestion requires fewer synchronous checks, or bulk imports would be slowed by validation. Removing foreign keys does not remove the consistency requirement — it transfers enforcement to application logic and operations. The system then requires validation before writes, idempotent ingestion, reconciliation jobs, orphan detection, event-driven cleanup, and monitoring of missing references. Foreign keys should not be removed merely for presumed performance; the operational cost of rebuilding referential integrity must be justified.`,
       },
       {
         id:`sql-04`, q:`What is a database index?`,
@@ -5250,9 +5250,9 @@ const QBANK_L1 = {
         tie:`The review queue may frequently filter by reviewer, status, due date, or creation time.`,
         trap:`"Indexes always make the database faster." Indexing every column. Assuming an index is automatically used. Ignoring column order in a composite index.`,
         l2q:`How would you determine whether a query is using an index effectively?`,
-        l2a:`A strong answer should mention EXPLAIN, EXPLAIN ANALYZE, row estimates, actual rows, scan types, selectivity, and realistic production-like data.`,
+        l2a:`Use <code>EXPLAIN</code> or <code>EXPLAIN ANALYZE</code>. Inspect whether the database performs an index scan or full table scan, estimated rows versus actual rows, execution time, rows filtered out, join strategy, sort operations, whether the index matches the query's filter and ordering, and whether the query returns so much of the table that an index is not beneficial. Test with realistic production-like data volume and distribution — a query that performs well on 100 rows may behave very differently with millions. Do not assume that creating an index means the database will use it.`,
         l3q:`How would you design indexes for a large, write-heavy queue with several competing access patterns?`,
-        l3a:`A strong answer should discuss workload measurement, composite and partial indexes, covering indexes, write amplification, hot pages, data distribution, retention, partitioning, and removing unused indexes. ---`,
+        l3a:`Start by measuring the real workload: most frequent filters, sort orders, queue-polling queries, write rate, retention period, data distribution, and query latency targets. Create a small number of indexes aligned with important access patterns — composite index column order should match how queries filter and sort. Consider partial indexes for active or pending rows, covering indexes when avoiding table lookups materially helps, partitioning for large retained histories, and separate indexes for mutually important access paths. Monitor write amplification from every extra index and hot-page behavior on sequential inserts. Monitor index usage and remove unused or redundant indexes as workload and data distribution change.`,
       },
       {
         id:`sql-05`, q:`What is the difference between an inner join and a left join?`,
@@ -5264,9 +5264,9 @@ const QBANK_L1 = {
         tie:`A pending-work dashboard should preserve tasks that do not yet have a completed review.`,
         trap:`Repeating syntax without explaining which rows remain. Saying a left join is always slower. Forgetting that filters in the WHERE clause can accidentally remove unmatched rows. Using SELECT * across several tables.`,
         l2q:`How can a condition in the WHERE clause accidentally turn a left join into inner-join behavior?`,
-        l2a:`A strong answer should explain that filtering a nullable right-side column in WHERE removes unmatched rows and that conditions may need to be placed in the join predicate or explicitly allow NULL.`,
+        l2a:`A left join preserves unmatched rows by filling the right-side columns with NULL. If a WHERE filter references a nullable right-side column, rows where that column is NULL are removed — which eliminates all unmatched rows and produces inner-join behavior. To preserve unmatched left-side rows, place the right-side filter in the join condition rather than the WHERE clause. The join condition is evaluated per-row during matching; the WHERE clause is evaluated after the join is formed, when NULLs have already appeared. Alternatively, explicitly allow NULL in the WHERE filter when that matches the business requirement.`,
         l3q:`How would you diagnose duplicate rows caused by joins in a reporting query?`,
-        l3a:`A strong answer should reason about relationship cardinality, identify one-to-many expansion, avoid using DISTINCT as a blind fix, and choose aggregation, latest-row selection, or corrected join constraints. ---`,
+        l3a:`Determine the intended grain of the result and the cardinality of every relationship. Ask: should this query return one row per task? Can one task have many reviews? Can one review have many citations? A one-to-many join expands rows, and joining several one-to-many tables can multiply them further. Inspect row counts after each join and group by the expected key to identify which join introduces duplication. Do not use DISTINCT as a blind fix — it may hide a modeling or query error. Choose the correct approach: aggregate child rows before joining, select the latest child row with a window function, add missing join constraints, use EXISTS when only existence matters, or return nested or separate results when the relationship is genuinely one-to-many.`,
       },
       {
         id:`sql-06`, q:`What does GROUP BY do?`,
@@ -5278,9 +5278,9 @@ const QBANK_L1 = {
         tie:`The dashboard may count pending tasks by reviewer, calculate average review time, or summarize retrieval failures by document.`,
         trap:`"GROUP BY sorts the rows." Selecting unrelated columns without understanding the grouping level. Using grouping when row-level detail must be preserved. Being unable to describe the result grain.`,
         l2q:`When would you use a window function instead of GROUP BY?`,
-        l2a:`A strong answer should explain that window functions preserve individual rows while adding aggregate, rank, or sequence context.`,
+        l2a:`Use a window function when you need aggregate, ranking, or sequence information while preserving individual rows. GROUP BY collapses rows to one per group. A window function preserves every source row while adding a computed value in a new column. Use window functions for ranking, running totals, previous or next values, group counts attached to detail rows, latest-row selection, and percent-of-group calculations. The key distinction is whether you need the individual rows to remain in the result or whether you only need the aggregated summary.`,
         l3q:`How would you retrieve the latest review event per task and still make the result deterministic when timestamps tie?`,
-        l3a:`A strong answer should use a window function or database-specific latest-row technique and include a stable secondary ordering column such as an event ID. ---`,
+        l3a:`Use a window function with a stable secondary ordering column. Partition by the task ID, order by created_at descending as the primary sort, and add a unique stable column such as event ID as a secondary sort. Assign a row number and select only row number 1. Ordering only by timestamp is not deterministic when two events share the same timestamp — adding a unique, stable secondary key guarantees the same row is chosen consistently regardless of how the database breaks ties internally.`,
       },
       {
         id:`sql-07`, q:`What is a database transaction?`,
@@ -5292,9 +5292,9 @@ const QBANK_L1 = {
         tie:`Assignment, approval, final assessment, and audit recording often need to remain consistent as a single operation.`,
         trap:`"A transaction is any SQL query." Assuming transactions prevent every concurrency problem. Holding transactions open while waiting for user input or remote API calls. Updating current state and audit history separately.`,
         l2q:`How can two reviewers still conflict even when each uses a transaction?`,
-        l2a:`A strong answer should explain that separate transactions can read the same initial state and then compete to update it. It should introduce locking, isolation, or version checks.`,
+        l2a:`Transactions make each reviewer's set of operations atomic, but separate transactions can still read the same initial state before either commits. Both reviewers read task version 3, both decide to approve it, both submit their updates, and one overwrites the other without knowing a conflict occurred. Possible solutions include optimistic locking with a version column checked in the update condition, conditional updates that check expected state before committing, pessimistic row locks that prevent concurrent reads, and appropriate isolation levels. Transactions protect atomicity but do not automatically prevent every race condition.`,
         l3q:`How would you enforce that a review task can only move through valid transitions under heavy concurrency?`,
-        l3a:`A strong answer should discuss conditional updates, version columns, optimistic or pessimistic locking, database constraints, transition invariants, retry behavior, and auditable conflict handling. ---`,
+        l3a:`Use a conditional update that checks both the expected current state and a version number. If zero rows are updated, the state or version changed and the request should return a conflict. Additional protections may include database constraints for valid states, optimistic locking for common low-contention updates, pessimistic locking for rare high-contention workflows, atomic audit-event insertion in the same transaction, idempotency keys for retries, and clear retry behavior for transient conflicts. Every accepted or rejected transition should be auditable.`,
       },
     ],
   },
@@ -5312,9 +5312,9 @@ const QBANK_L1 = {
         tie:`The Java API, React/TypeScript UI, and Python retrieval code should have separate, visible checks so a failure can be traced to the correct subsystem.`,
         trap:`"CI means automatically deploying every commit." Only mentioning unit tests. Allowing CI and local development to use unrelated commands. Producing artifacts even when required checks fail.`,
         l2q:`Which checks should block a merge, and which should run later before deployment?`,
-        l2a:`A strong answer should balance fast pull-request feedback with slower integration, end-to-end, security, and deployment validation.`,
+        l2a:`Checks that are fast, deterministic, and necessary to keep the shared branch healthy should block merges: compilation, unit tests, linting, formatting checks, type checking, contract tests, and basic integration tests. Slower, more expensive, or environment-dependent checks should run later before deployment: full end-to-end tests, load and performance tests, long-running security scans, migration validation, staging smoke tests, and canary validation. The goal is to provide fast feedback during code review while still validating release readiness before deployment.`,
         l3q:`How would you design a reliable CI pipeline for a polyglot monorepo without rerunning every job for every change?`,
-        l3a:`A strong answer should discuss change detection, dependency graphs, caching, reproducible builds, parallel jobs, reusable workflows, artifact promotion, required checks, and avoiding skipped transitive dependencies. ---`,
+        l3a:`Use affected-change detection rather than running every job for every commit. Organize the repository into clearly defined ownership boundaries and maintain a dependency graph between projects. Use path-based triggers to run only the builds and tests affected by a change, while ensuring that changes to shared libraries, contracts, schemas, build tooling, or CI configuration trigger all dependent jobs. Cache language-specific dependencies and build artifacts to reduce execution time. Keep pull-request validation fast and deterministic, then run broader validation on the main branch, nightly schedules, or release pipelines. When dependency impact is uncertain, prefer running additional jobs rather than risking missed failures.`,
       },
       {
         id:`sdlc-02`, q:`What is a container?`,
@@ -5326,9 +5326,9 @@ const QBANK_L1 = {
         tie:`The Spring API, frontend server, and Python worker can each be packaged as reproducible images while the database and document storage remain external.`,
         trap:`"A container is a lightweight virtual machine." Storing important persistent data only in the container filesystem. Baking secrets into the image. Assuming Docker alone makes a system production-ready.`,
         l2q:`What practices would you use to build secure and efficient container images?`,
-        l2a:`A strong answer should mention small trusted base images, pinned dependencies, non-root users, multistage builds, minimal build context, vulnerability scanning, and no embedded secrets.`,
+        l2a:`Use small, trusted base images; pinned runtime and dependency versions; multistage builds so compilers and build tools are excluded from the final image; a non-root runtime user; a minimal build context with .dockerignore; no secrets in layers, environment defaults, or build arguments; vulnerability scanning; reproducible package installation; only the files required at runtime; read-only filesystems where practical; and explicit entrypoints and health behavior. Keep build and runtime concerns separate — the final image should contain the application and required runtime dependencies, not source-control metadata, test fixtures, package caches, or development tools.`,
         l3q:`How would you debug a container that works locally but repeatedly fails or restarts in production?`,
-        l3a:`A strong answer should investigate entrypoints, environment configuration, resource limits, filesystem assumptions, platform architecture, health checks, signals, dependency availability, logs, and deployment differences. ---`,
+        l3a:`Compare the production environment against local assumptions. Inspect the container exit code, entrypoint and command, application logs before restart, environment variables and secret injection, CPU and memory limits, out-of-memory kills, filesystem permissions and write locations, read-only filesystem behavior, container architecture and base-image compatibility, health-check failures, startup and readiness timing, network and dependency availability, mounted files and volumes, signal handling and graceful shutdown, and production deployment configuration. Determine whether the orchestrator is restarting the process because it crashed, exceeded limits, or failed health checks. Reproduce the production image and runtime configuration as closely as possible rather than rebuilding a different local variant.`,
       },
       {
         id:`sdlc-03`, q:`What is infrastructure as code?`,
@@ -5340,9 +5340,9 @@ const QBANK_L1 = {
         tie:`The product's database, object storage, queue, networking, service permissions, and deployment environment should be reproducible from code.`,
         trap:`"Infrastructure as code is just a setup script." Assuming it prevents all manual drift. Storing secrets directly in infrastructure files. Mixing product business rules into infrastructure definitions.`,
         l2q:`What is infrastructure drift, and how would you detect or correct it?`,
-        l2a:`A strong answer should explain divergence between declared and actual state, planning or preview commands, policy controls, imports, reconciliation, and limiting manual access.`,
+        l2a:`Infrastructure drift occurs when the real environment no longer matches the declared infrastructure configuration — a firewall rule changed manually, a resource created outside the code, a setting edited in the cloud console, or a deployed resource deleted manually. Detect drift with planning, preview, or drift-detection commands that compare declared and actual state. Correction options include applying the declared configuration to restore the expected state, importing legitimate manually created resources into managed state, updating code when the manual change was intended, or removing unauthorized resources. Reduce drift by limiting manual production access, requiring reviewed infrastructure changes, and auditing changes outside the normal pipeline.`,
         l3q:`How would you structure infrastructure code across development, staging, and production without copying entire configurations?`,
-        l3a:`A strong answer should discuss reusable modules, explicit environment configuration, state isolation, promotion discipline, least privilege, provider boundaries, and avoiding overly abstract modules. ---`,
+        l3a:`Create reusable modules for shared infrastructure patterns such as application service, database, queue, network, object storage, and monitoring. Keep environment-specific configuration explicit — instance size, replica count, domain, retention, feature flags, and backup policy. Use separate state files or state backends for each environment to prevent accidental cross-environment changes. Promote tested module versions through environments rather than independently rewriting infrastructure. Apply least privilege separately in each environment — production should not automatically inherit broad development permissions. Avoid over-abstracting modules into highly generic systems that hide important behavior; shared modules should remove duplication while keeping security, capacity, and environment differences visible.`,
       },
       {
         id:`sdlc-04`, q:`What is a secret in an application?`,
@@ -5354,9 +5354,9 @@ const QBANK_L1 = {
         tie:`Database credentials, embedding-provider credentials, and service-to-service tokens must be kept outside the repository and runtime image.`,
         trap:`"Environment variables are always secure." Committing .env files. Using one shared credential for every service. Logging entire configuration objects that contain secrets.`,
         l2q:`How should secrets be provided to CI jobs and production services?`,
-        l2a:`A strong answer should discuss platform secret stores, scoped identities, masked values, runtime injection, auditability, and avoiding secrets in generated artifacts.`,
+        l2a:`Store secrets in the CI platform's secret store or an approved external secrets manager. For CI: scope secrets only to workflows, repositories, branches, or environments that need them; mask values in logs; avoid exposing secrets to untrusted pull requests; prefer short-lived identity federation over long-lived credentials; and do not place secrets in artifacts, caches, or generated files. For production: inject secrets at runtime, use workload identities or service accounts where possible, grant least-privilege access, audit secret access, and rotate credentials regularly. Environment variables may be a delivery mechanism, but they are not themselves a complete secret-management strategy.`,
         l3q:`How would you rotate a heavily used credential without downtime?`,
-        l3a:`A strong answer should discuss overlapping validity, dual-key support, staged rollout, dynamic credentials where possible, revocation sequencing, monitoring, and rapid recovery if rotation fails. ---`,
+        l3a:`Support overlapping validity. A safe sequence is: create a new credential while the old one remains valid, update the secret store, roll out applications that can use the new credential, verify successful authentication and monitor errors, confirm all instances have migrated, revoke the old credential, and remove fallback support. Prefer dynamic or short-lived credentials when available because they reduce manual rotation risk. The process should include staged rollout, clear rollback, audit logs, expiration tracking, monitoring of old-key usage, and emergency revocation procedures. Never revoke the old credential before consumers have successfully adopted the new one.`,
       },
       {
         id:`sdlc-05`, q:`What is a health check?`,
@@ -5368,9 +5368,9 @@ const QBANK_L1 = {
         tie:`A Python worker may be alive while loading an index but not ready to accept retrieval work. The API may be alive while temporarily unable to access its database.`,
         trap:`Using one shallow endpoint for every health purpose. Restarting the application whenever any dependency is unavailable. Returning healthy without checking whether the service initialized correctly. Adding expensive work to every health request.`,
         l2q:`Which dependencies should be included in readiness, and which should be excluded from liveness?`,
-        l2a:`A strong answer should base the decision on whether the instance can safely serve traffic and whether restarting it would resolve the condition.`,
+        l2a:`Liveness should answer: is this process running, or is it stuck in a condition that restarting may fix? Keep liveness shallow — it should not usually fail because a database, queue, or external API is temporarily unavailable, since restarting the process will not repair those dependencies and may create a restart storm. Readiness should answer: can this instance safely receive traffic right now? Include dependencies that are essential to serving requests correctly. Exclude optional dependencies when the service can degrade gracefully. The decision should be based on whether the instance can safely serve traffic and whether removing it from traffic is useful.`,
         l3q:`How would you prevent health checks from causing cascading failures during a dependency outage?`,
-        l3a:`A strong answer should discuss timeouts, shallow liveness checks, readiness thresholds, backoff, circuit breaking, load shedding, avoiding expensive dependency probes, and cautious restart policies. ---`,
+        l3a:`Use short health-check timeouts, shallow liveness checks, readiness thresholds rather than failing on one transient error, backoff and jitter, circuit breakers, load shedding, cached dependency status where appropriate, low-frequency inexpensive probes, and conservative restart policies. Do not make every health check run expensive queries against an already failing dependency. During an outage, readiness may remove overloaded instances from traffic, but if every instance becomes unready simultaneously the system may have no capacity — design partial-degradation behavior where possible. Health checks should report useful status without amplifying dependency load.`,
       },
       {
         id:`sdlc-06`, q:`What is a deployment rollback?`,
@@ -5382,9 +5382,9 @@ const QBANK_L1 = {
         tie:`A retrieval regression or broken review-submission release should be containable without immediately affecting every reviewer.`,
         trap:`"Just redeploy the last commit." Rebuilding the old version instead of retaining the tested artifact. Ignoring configuration and database changes. Having no monitoring criteria for deciding when to roll back.`,
         l2q:`What is the difference between a canary deployment and a blue-green deployment?`,
-        l2a:`A strong answer should explain gradual exposure versus switching between complete environments, along with differences in cost, traffic control, rollback, and observability.`,
+        l2a:`A canary deployment gradually sends a small percentage of traffic to the new version — 1%, 5%, 25%, 50%, 100% — observing metrics at each stage and stopping if problems appear. A blue-green deployment maintains two complete environments, validates the new environment, then switches all traffic at once. Canary advantages: limits initial blast radius, measures real behavior under gradual load, supports progressive validation. Canary costs: requires traffic splitting, both versions may run simultaneously, and metrics must distinguish versions. Blue-green advantages: fast traffic switch and fast rollback to the previous environment. Blue-green costs: requires duplicate environment capacity, and a full traffic switch may expose problems suddenly.`,
         l3q:`How would you build an automated progressive-delivery policy for this product?`,
-        l3a:`A strong answer should define rollout stages, technical and business metrics, minimum sample sizes, stop conditions, automatic rollback or pause behavior, feature flags, schema compatibility, and human override. ---`,
+        l3a:`Define rollout stages and required observations: internal only, 1%, 10%, 25%, 50%, 100%. At each stage, evaluate technical metrics such as error rate, latency, timeouts, and resource usage, and business and quality metrics such as review completion rate, retrieval success, and human override rate. Require minimum traffic or sample sizes before promotion. Define automatic stop conditions and rollback thresholds. Use feature flags to disable risky behavior independently of the deployment. Ensure database changes are backward compatible with both old and new versions. Include automated pause or rollback, manual override, version-specific dashboards, audit history, explicit timeout for inconclusive stages, and clear ownership during rollout.`,
       },
       {
         id:`sdlc-07`, q:`What are application logs?`,
@@ -5396,22 +5396,35 @@ const QBANK_L1 = {
         tie:`A request ID can connect the React submission, Spring request, database operation, and Python retrieval call involved in one user action.`,
         trap:`Logging everything, including secrets. Only logging generic messages such as "something failed." Depending on local console output in production. Treating logs as the only monitoring system.`,
         l2q:`What is the difference between logs, metrics, and traces?`,
-        l2a:`A strong answer should explain that metrics reveal trends and alert conditions, traces follow request paths and latency, and logs provide detailed event context.`,
+        l2a:`Logs are detailed event records describing what happened — a specific review submission failed because version 4 was stale. Metrics are numerical measurements aggregated over time — request count, error rate, p95 latency, queue depth, CPU usage — best for dashboards, trends, and alerts. Traces follow one request or operation across service boundaries, showing which spans occurred and how long each step took across the browser, API, database, and downstream services. Use metrics to detect that something is wrong, traces to locate where time or failure occurred, and logs to inspect detailed context for a specific event.`,
         l3q:`How would you design observability for a slow or incorrect RAG response?`,
-        l3a:`A strong answer should connect frontend timing, API traces, retrieval duration, candidate counts, model calls, token usage, database timing, result-quality metrics, deployment version, request correlation, and privacy-safe diagnostic data.`,
+        l3a:`Assign a request or trace ID at the frontend or API boundary and propagate it through every service. Capture timing for frontend request duration, API processing, database calls, retrieval duration, number of chunks scanned, candidate count, reranking duration, model-call latency, token usage, and final response serialization. Record version information for the application deployment, retrieval configuration, embedding model, prompt or workflow version, and corpus or index version. For quality diagnosis, collect privacy-safe metadata such as retrieval scores, empty-result rate, citation coverage, refusal rate, and human override rate. Use metrics for trends and alerting, distributed traces for latency attribution, and structured logs for individual failures. Avoid logging full sensitive documents, secrets, private prompts, or unnecessary user content.`,
       },
     ],
   },
 };
 
 // ── State ─────────────────────────────────────────────────
-const QB_KEY = 'cqw-qbank-v1';
+const QB_KEY     = 'cqw-qbank-v1';
+const QB_POS_KEY = 'cqw-qbank-pos';
 let qbTrack = 'swe', qbIdx = 0, qbRev = false, qbDetail = false, qbFuRev = false;
 
 function qbLoad()    { try { return JSON.parse(localStorage.getItem(QB_KEY)||'{}'); } catch { return {}; } }
 function qbSave(s)   { localStorage.setItem(QB_KEY, JSON.stringify(s)); }
 function qbGetSt(id) { return qbLoad()[id]; }
 function qbSetSt(id, st) { const s=qbLoad(); if(st) s[id]=st; else delete s[id]; qbSave(s); }
+
+function qbSavePos() { localStorage.setItem(QB_POS_KEY, JSON.stringify({track:qbTrack,idx:qbIdx})); }
+function qbRestorePos() {
+  try {
+    const p = JSON.parse(localStorage.getItem(QB_POS_KEY)||'{}');
+    if (p.track && QBANK_L1[p.track]) {
+      qbTrack = p.track;
+      const maxIdx = QBANK_L1[p.track].questions.length - 1;
+      qbIdx = (typeof p.idx === 'number' && p.idx >= 0 && p.idx <= maxIdx) ? p.idx : 0;
+    }
+  } catch {}
+}
 
 function qbCounts(tk) {
   const s=qbLoad(), qs=QBANK_L1[tk].questions;
@@ -5426,7 +5439,7 @@ function renderQBTrackBar() {
     const btn=document.createElement('button');
     btn.className=`qb-track-btn${key===qbTrack?' active':''}`;
     btn.innerHTML=`${track.icon} ${track.short} <span class="qb-track-count">${c.mastered}/${c.total}</span>`;
-    btn.addEventListener('click',()=>{ qbTrack=key;qbIdx=0;qbRev=false;qbDetail=false;qbFuRev=false;renderQBTrackBar();renderQBCard(); });
+    btn.addEventListener('click',()=>{ qbTrack=key;qbIdx=0;qbRev=false;qbDetail=false;qbFuRev=false;qbSavePos();renderQBTrackBar();renderQBCard(); });
     bar.appendChild(btn);
   });
 }
@@ -5528,10 +5541,17 @@ function renderQBCard() {
     document.getElementById('qb-l3-answer').style.display='';
     document.getElementById('qb-l3-reveal').style.display='none';
   });
-  document.getElementById('qb-prev')?.addEventListener('click', () => { if(qbIdx>0){qbIdx--;qbRev=false;qbDetail=false;qbFuRev=false;renderQBCard();} });
-  document.getElementById('qb-next')?.addEventListener('click', () => { if(qbIdx<total-1){qbIdx++;qbRev=false;qbDetail=false;qbFuRev=false;renderQBCard();} });
+  document.getElementById('qb-prev')?.addEventListener('click', () => { if(qbIdx>0){qbIdx--;qbRev=false;qbDetail=false;qbFuRev=false;qbSavePos();renderQBCard();} });
+  document.getElementById('qb-next')?.addEventListener('click', () => { if(qbIdx<total-1){qbIdx++;qbRev=false;qbDetail=false;qbFuRev=false;qbSavePos();renderQBCard();} });
 
-  const markStatus = (s) => { qbSetSt(q.id, qbGetSt(q.id)===s?null:s); renderQBCard(); renderQBTrackBar(); };
+  const markStatus = (s) => {
+    qbSetSt(q.id, qbGetSt(q.id)===s?null:s);
+    // Auto-advance to next question after marking (unless on last)
+    if (qbIdx < total - 1) { qbIdx++; qbRev=false; qbDetail=false; qbFuRev=false; }
+    qbSavePos();
+    renderQBCard();
+    renderQBTrackBar();
+  };
   document.getElementById('qb-mastered-btn')?.addEventListener('click', ()=>markStatus('mastered'));
   document.getElementById('qb-review-btn')?.addEventListener('click', ()=>markStatus('review'));
 
@@ -5561,13 +5581,14 @@ function buildQuestionBank() {
     if(!document.getElementById('tab-qbank')?.classList.contains('active')) return;
     if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT') return;
     const track=QBANK_L1[qbTrack], q=track.questions[qbIdx];
-    if(e.key==='ArrowLeft')  { e.preventDefault(); if(qbIdx>0){qbIdx--;qbRev=false;qbDetail=false;qbFuRev=false;renderQBCard();} }
-    else if(e.key==='ArrowRight'||e.key==='Enter') { e.preventDefault(); if(qbIdx<track.questions.length-1){qbIdx++;qbRev=false;qbDetail=false;qbFuRev=false;renderQBCard();} }
+    if(e.key==='ArrowLeft')  { e.preventDefault(); if(qbIdx>0){qbIdx--;qbRev=false;qbDetail=false;qbFuRev=false;qbSavePos();renderQBCard();} }
+    else if(e.key==='ArrowRight'||e.key==='Enter') { e.preventDefault(); if(qbIdx<track.questions.length-1){qbIdx++;qbRev=false;qbDetail=false;qbFuRev=false;qbSavePos();renderQBCard();} }
     else if(e.key===' '&&!qbRev) { e.preventDefault(); qbReveal(); }
-    else if(e.key==='m'||e.key==='M') { qbSetSt(q.id,qbGetSt(q.id)==='mastered'?null:'mastered'); renderQBCard();renderQBTrackBar(); }
-    else if(e.key==='r'||e.key==='R') { qbSetSt(q.id,qbGetSt(q.id)==='review'?null:'review'); renderQBCard();renderQBTrackBar(); }
+    else if(e.key==='m'||e.key==='M') { qbSetSt(q.id,qbGetSt(q.id)==='mastered'?null:'mastered'); if(qbIdx<track.questions.length-1){qbIdx++;qbRev=false;qbDetail=false;qbFuRev=false;} qbSavePos(); renderQBCard();renderQBTrackBar(); }
+    else if(e.key==='r'||e.key==='R') { qbSetSt(q.id,qbGetSt(q.id)==='review'?null:'review'); if(qbIdx<track.questions.length-1){qbIdx++;qbRev=false;qbDetail=false;qbFuRev=false;} qbSavePos(); renderQBCard();renderQBTrackBar(); }
   });
 
+  qbRestorePos();
   renderQBTrackBar();
   renderQBCard();
 }
