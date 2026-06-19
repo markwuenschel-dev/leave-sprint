@@ -2118,93 +2118,97 @@ if(document.readyState==='loading') {
 
 
 /* ══════════════════════════════════════════════════════
-   RUBRIC — Technical Competency Scoring System v1.0
-   Sections mirror the document exactly.
-   Tracking: localStorage key 'rubric-log-v1'
+   RUBRIC — Technical Competency Scoring System v1.5
 ══════════════════════════════════════════════════════ */
 
-const RUBRIC_VERSION = '1.0';
+const RUBRIC_VERSION = '1.5';
 const RUBRIC_LOG_KEY = 'rubric-log-v1';
 
 /* ── REFERENCE DATA ─────────────────────────────────── */
 const RD = {
+
   taskTypes: [
-    { id: 'coding',      label: 'Coding',                  color: 'var(--rag)' },
-    { id: 'debugging',   label: 'Debugging',               color: 'var(--audit)' },
-    { id: 'knowledge',   label: 'Technical Knowledge',     color: 'var(--sql)' },
-    { id: 'sysdesign',   label: 'System Design',           color: 'var(--react)' },
-    { id: 'prodeng',     label: 'Production Engineering',  color: 'var(--infra)' },
-    { id: 'walkthrough', label: 'Project Walkthrough',     color: 'var(--java)' },
-    { id: 'behavioral',  label: 'Behavioral Technical',    color: 'var(--mle)' }
+    { id: 'coding',      label: 'Coding',                 color: 'var(--rag)' },
+    { id: 'debugging',   label: 'Debugging',              color: 'var(--audit)' },
+    { id: 'knowledge',   label: 'Technical Knowledge',    color: 'var(--sql)' },
+    { id: 'sysdesign',   label: 'System Design',          color: 'var(--react)' },
+    { id: 'prodeng',     label: 'Production Engineering', color: 'var(--infra)' },
+    { id: 'walkthrough', label: 'Project Walkthrough',    color: 'var(--java)' },
+    { id: 'behavioral',  label: 'Behavioral Technical',   color: 'var(--mle)' }
   ],
 
-  demonstratedLevels: [
-    'Below Level I', 'Emerging Level I', 'Level I', 'Strong Level I',
-    'Level II', 'Strong Level II', 'Level III', 'Strong Level III'
+  /* §7 Universal competency dimensions */
+  universalDims: [
+    { id: 'correctness',   label: 'Correctness and factual accuracy',    short: 'Correct', max: 25 },
+    { id: 'reasoning',     label: 'Reasoning and decomposition',         short: 'Reason',  max: 20 },
+    { id: 'judgment',      label: 'Technical judgment and tradeoffs',    short: 'Judge',   max: 15 },
+    { id: 'validation',    label: 'Validation and evidence',             short: 'Valid',   max: 15 },
+    { id: 'communication', label: 'Communication and explanation',       short: 'Comm',    max: 15 },
+    { id: 'completeness',  label: 'Completeness and execution quality',  short: 'Compl',   max: 10 }
   ],
 
-  weaknessTags: [
-    'Shallow reasoning',        'Missed edge cases',      'Thin tradeoffs',
-    'Evidence gaps',            'Explanation unclear',    'Incomplete execution',
-    'Excessive prompting',      'Incorrect reasoning',    'No test strategy',
-    'Missing failure handling', 'Ownership unclear',      'Confident false claim'
-  ],
-
+  /* §3 Level definitions */
   levels: [
     {
       id: 'L1', label: 'Level I', subtitle: 'Scoped Contributor',
-      desc: 'Can complete clearly scoped work using established patterns.',
-      traits: [
-        'Understands fundamental concepts',
-        'Produces correct solutions to bounded problems',
-        'Follows existing architecture and conventions',
-        'Identifies common edge cases', 'Writes basic tests',
-        'Accepts and incorporates guidance',
-        'Explains what the code does',
-        'Escalates when outside their knowledge'
-      ]
+      scope: 'Functions, small components, routine defects, clearly defined requirements.',
+      standard: 'Completes bounded work using established patterns; explains fundamentals; writes basic tests; recovers with guidance.',
+      difficultyRange: 'D1–D3', maxAssistance: 3
     },
     {
       id: 'L2', label: 'Level II', subtitle: 'Independent Owner',
-      desc: 'Can independently own a feature, service component, investigation, or technical workflow.',
-      traits: [
-        'Converts incomplete requirements into a workable solution',
-        'Selects appropriate implementation patterns',
-        'Identifies meaningful tradeoffs',
-        'Debugs across files, modules, and service boundaries',
-        'Writes effective tests', 'Handles errors and operational concerns',
-        'Explains why the design was chosen',
-        'Recognizes risks before they become defects',
-        'Delivers without continuous supervision'
-      ]
+      scope: 'Cross-file features, service boundaries, multi-layer defects, incomplete requirements.',
+      standard: 'Owns a feature, service component, investigation, or technical workflow independently; makes sound tradeoffs and handles operational concerns.',
+      difficultyRange: 'D3–D4', maxAssistance: 2
     },
     {
       id: 'L3', label: 'Level III', subtitle: 'Senior Technical Owner',
-      desc: 'Can own ambiguous, high-impact technical problems and improve the effectiveness of other engineers.',
-      traits: [
-        'Defines unclear problems before solving them',
-        'Evaluates multiple architectural approaches',
-        'Anticipates system-wide and long-term consequences',
-        'Handles reliability, scale, performance, security, and operational risk',
-        'Diagnoses unfamiliar failures systematically',
-        'Creates reusable patterns and standards',
-        'Communicates decisions across technical and nontechnical groups',
-        'Challenges weak assumptions',
-        'Guides or mentors other engineers',
-        'Balances immediate delivery against long-term maintainability'
-      ]
+      scope: 'Architecture, lifecycle/state failures, reliability, migrations, cross-team or system-wide consequences.',
+      standard: 'Owns ambiguous, high-impact problems; anticipates system-wide consequences; defines reusable standards and improves others\u2019 effectiveness.',
+      difficultyRange: 'D4–D5', maxAssistance: 1
     }
   ],
 
-  gates: [
-    { gate: 'Correctness',             req: 'The central answer or implementation must be substantially correct' },
-    { gate: 'Relevance',               req: 'The response must solve the problem actually asked' },
-    { gate: 'Independent explanation', req: 'The candidate must be able to explain the answer without relying on generated wording' },
-    { gate: 'Evidence',                req: 'Claims about defects, performance, or behavior must be supported' },
-    { gate: 'Safety and integrity',    req: 'Must not hide uncertainty, fabricate results, or claim tests that were not run' },
-    { gate: 'Completion',              req: 'Must reach a usable conclusion rather than stop at vague ideas' }
+  /* §3.2 Level-specific scoring lenses */
+  scoringLenses: [
+    { level: 'Level I',   lens: 'Correctness; fundamental concept or implementation; direct relevance; basic edge cases; readable explanation; basic verification.' },
+    { level: 'Level II',  lens: 'Independent decomposition; mechanism-level reasoning; meaningful tradeoffs; cross-component effects; failure handling; strong tests/evidence; operational judgment.' },
+    { level: 'Level III', lens: 'Ambiguity resolution; system-wide consequences; risk and blast radius; alternatives and evolution path; prevention/standards; long-term maintainability; guidance of others.' }
   ],
 
+  /* §4 Mandatory gates */
+  gates: [
+    { gate: 'Correctness',             req: 'The central answer or implementation is substantially correct.' },
+    { gate: 'Relevance',               req: 'The response solves the problem actually asked.' },
+    { gate: 'Independent explanation', req: 'The candidate can explain the work without relying on generated wording.' },
+    { gate: 'Evidence',                req: 'Claims are supported by tests, direct reproduction, or observable behavior.' },
+    { gate: 'Safety and integrity',    req: 'No fabricated tests, results, ownership, or certainty.' },
+    { gate: 'Completion',              req: 'The response reaches a usable conclusion or deliverable.' }
+  ],
+
+  /* §6 Difficulty */
+  difficulty: [
+    { d: 1, label: 'Direct',                    desc: 'Single-step, local, obvious failure; accurate failing test; minimal ambiguity.', level: 'Early Level I' },
+    { d: 2, label: 'Local reasoning',            desc: 'Bounded component; straightforward reproduction; logic understanding required; local fix.', level: 'Level I' },
+    { d: 3, label: 'Bounded semantic/policy',    desc: 'Code may run; output violates intended meaning or policy; weak semantic tests; bounded root cause.', level: 'Strong Level I / Level II' },
+    { d: 4, label: 'Multi-layer contract',       desc: 'Crosses layers or data grains; producer/consumer assumptions disagree; tests may share the mistake.', level: 'Level II' },
+    { d: 5, label: 'Hidden state/lifecycle',     desc: 'Plausible success; sequence, cache, fallback, retry, stale state, or provenance hides the defect.', level: 'Strong Level II / Level III' }
+  ],
+
+  /* §6.1 Difficulty attribute matrix */
+  difficultyAttributes: [
+    { dim: 'Scope',              v0: 'One function',          v1: 'Multiple files',          v2: 'Multiple layers/services' },
+    { dim: 'Observability',      v0: 'Immediate failure',     v1: 'Clearly wrong output',    v2: 'Plausible successful output' },
+    { dim: 'Reproduction',       v0: 'Direct',                v1: 'Special input',           v2: 'Sequence/state dependent' },
+    { dim: 'Test quality',       v0: 'Accurate failing test', v1: 'Missing/incomplete test', v2: 'Misleading green test' },
+    { dim: 'Root-cause distance',v0: 'Same line/function',    v1: 'Different component',     v2: 'Far from symptom' },
+    { dim: 'Contract complexity',v0: 'Local behavior',        v1: 'One interface',           v2: 'Multiple contracts/invariants' },
+    { dim: 'Fix coordination',   v0: 'Local edit',            v1: 'Code plus tests',         v2: 'Multi-layer/state-safe change' },
+    { dim: 'False-lead density', v0: 'Low',                   v1: 'Moderate',                v2: 'Several plausible causes' }
+  ],
+  difficultyThresholds: [ {range:'0–2',d:1},{range:'3–5',d:2},{range:'6–8',d:3},{range:'9–12',d:4},{range:'13–16',d:5} ],
+
+  /* §7 Universal competency score bands (per dimension) */
   universal: [
     { name: 'Correctness and factual accuracy',    weight: 25, bands: [
       { range: '23–25', std: 'Correct throughout; no meaningful defects' },
@@ -2213,7 +2217,7 @@ const RD = {
       { range: '8–13',  std: 'Major flaws despite some correct concepts' },
       { range: '0–7',   std: 'Incorrect, irrelevant, or unusable' }
     ]},
-    { name: 'Reasoning and problem decomposition', weight: 20, bands: [
+    { name: 'Reasoning and decomposition',         weight: 20, bands: [
       { range: '18–20', std: 'Breaks problem into correct components and handles dependencies' },
       { range: '15–17', std: 'Sound reasoning with minor gaps' },
       { range: '11–14', std: 'Understandable approach but incomplete structure' },
@@ -2250,189 +2254,249 @@ const RD = {
     ]}
   ],
 
+  /* §8 Task-specific rubrics */
   taskRubrics: [
     {
       id: 'coding', label: 'Coding',
       categories: [
-        { name: 'Functional correctness', weight: 35 },
-        { name: 'Algorithm and data-structure choice', weight: 20 },
-        { name: 'Complexity analysis', weight: 15 },
-        { name: 'Edge cases', weight: 15 },
-        { name: 'Code quality', weight: 10 },
-        { name: 'Verification', weight: 5 }
-      ],
-      levels: {
-        L1: ['Produces a correct solution for normal cases', 'Uses a recognizable standard pattern', 'States basic time and space complexity', 'Handles obvious edge cases', 'Writes readable code'],
-        L2: ['Selects an efficient approach without excessive prompting', 'Explains invariants and why the algorithm works', 'Handles meaningful edge cases', 'Identifies tradeoffs between alternatives', 'Tests the implementation deliberately'],
-        L3: ['Clarifies ambiguous constraints', 'Evaluates multiple approaches', 'Identifies hidden failure modes', 'Produces maintainable and adaptable code', 'Connects local solution to broader system concerns']
-      }
+        { name: 'Functional correctness',          weight: 35 },
+        { name: 'Algorithm/data-structure choice', weight: 20 },
+        { name: 'Complexity analysis',             weight: 15 },
+        { name: 'Edge cases',                      weight: 15 },
+        { name: 'Code quality',                    weight: 10 },
+        { name: 'Verification',                    weight: 5  }
+      ]
     },
     {
       id: 'debugging', label: 'Debugging',
       categories: [
-        { name: 'Reproduction and problem definition', weight: 15 },
-        { name: 'Isolation of failure', weight: 20 },
-        { name: 'Hypothesis quality', weight: 20 },
-        { name: 'Evidence collection', weight: 20 },
-        { name: 'Root-cause accuracy', weight: 15 },
-        { name: 'Fix and regression prevention', weight: 10 }
-      ],
-      levels: {
-        L1: ['Reproduces a local defect', 'Reads errors and stack traces', 'Uses logs, tests, or a debugger', 'Fixes a bounded implementation issue', 'Confirms the immediate fix'],
-        L2: ['Traces failures across modules or boundaries', 'Separates symptoms from root causes', 'Tests hypotheses one at a time', 'Identifies stale tests, artifacts, or assumptions', 'Adds regression coverage'],
-        L3: ['Handles ambiguous or unfamiliar failures', 'Understands system-wide dependencies', 'Evaluates blast radius', 'Separates code defects from contract, data, infrastructure, or process failures', 'Improves diagnostics and prevention mechanisms']
-      }
+        { name: 'Reproduction and problem definition', weight: 10 },
+        { name: 'Dependency-chain inspection',         weight: 15 },
+        { name: 'Hypothesis quality',                  weight: 15 },
+        { name: 'Evidence and falsification',          weight: 20 },
+        { name: 'Root-cause accuracy',                 weight: 20 },
+        { name: 'Contract-level fix',                  weight: 15 },
+        { name: 'Regression prevention',               weight: 5  }
+      ]
     },
     {
       id: 'knowledge', label: 'Technical Knowledge',
       categories: [
-        { name: 'Conceptual accuracy', weight: 30 },
-        { name: 'Mechanism-level explanation', weight: 25 },
+        { name: 'Conceptual accuracy',            weight: 30 },
+        { name: 'Mechanism-level explanation',    weight: 25 },
         { name: 'Application to a real scenario', weight: 20 },
-        { name: 'Tradeoffs and limitations', weight: 15 },
-        { name: 'Clarity and precision', weight: 10 }
-      ],
-      levels: {
-        L1: ['Explains what the concept is', 'Explains its basic purpose', 'Gives a simple example'],
-        L2: ['Explains how it works', 'Explains why it is used', 'Explains when it should or should not be used', 'Identifies relevant failure modes'],
-        L3: ['Discusses architectural consequences', 'Evaluates alternatives', 'Addresses operational and organizational tradeoffs', 'Explains how the choice changes under different constraints']
-      }
+        { name: 'Tradeoffs and limitations',      weight: 15 },
+        { name: 'Clarity and precision',          weight: 10 }
+      ]
     },
     {
       id: 'sysdesign', label: 'System Design',
       categories: [
-        { name: 'Requirements and assumptions', weight: 15 },
-        { name: 'Architecture and component boundaries', weight: 20 },
-        { name: 'Data model and contracts', weight: 15 },
-        { name: 'Scalability and performance', weight: 15 },
+        { name: 'Requirements and assumptions',     weight: 15 },
+        { name: 'Architecture and boundaries',      weight: 20 },
+        { name: 'Data model and contracts',         weight: 15 },
+        { name: 'Scalability and performance',      weight: 15 },
         { name: 'Reliability and failure handling', weight: 15 },
-        { name: 'Security and operational concerns', weight: 10 },
-        { name: 'Tradeoffs and evolution path', weight: 10 }
-      ],
-      levels: {
-        L1: ['Identifies core components', 'Produces a workable simple design', 'Defines basic APIs or data flow', 'Recognizes at least one failure mode'],
-        L2: ['Clarifies functional and nonfunctional requirements', 'Defines service and ownership boundaries', 'Discusses persistence, validation, failures, and observability', 'Handles realistic scale and performance concerns', 'Makes explicit tradeoffs'],
-        L3: ['Challenges assumptions and controls scope', 'Designs for operational ownership', 'Evaluates migration and evolution paths', 'Discusses cost, security, resilience, and organizational boundaries', 'Identifies where complexity is justified and where it is not']
-      }
+        { name: 'Security and operations',          weight: 10 },
+        { name: 'Tradeoffs and evolution path',     weight: 10 }
+      ]
     },
     {
       id: 'prodeng', label: 'Production Engineering',
       categories: [
-        { name: 'Architecture and boundaries', weight: 15 },
-        { name: 'Testing strategy', weight: 15 },
-        { name: 'Error handling and resilience', weight: 15 },
-        { name: 'Observability and diagnostics', weight: 15 },
-        { name: 'Deployment and reproducibility', weight: 10 },
-        { name: 'Data and migration safety', weight: 10 },
-        { name: 'Security and configuration', weight: 10 },
-        { name: 'Documentation and maintainability', weight: 10 }
-      ],
-      levels: {
-        L1: ['Writes working, readable code', 'Adds appropriate unit tests', 'Handles common errors', 'Follows existing project structure', 'Documents setup or behavior'],
-        L2: ['Owns a feature from contract through testing', 'Adds integration coverage', 'Produces useful logs and errors', 'Maintains configuration boundaries', 'Considers deployment and rollback behavior', 'Documents operational expectations'],
-        L3: ['Designs reliability and observability strategy', 'Evaluates production risk and blast radius', 'Plans migrations and rollback', 'Defines service-level expectations', 'Improves standards across the system or team', 'Makes long-term maintainability tradeoffs consciously']
-      }
+        { name: 'Architecture and boundaries',        weight: 15 },
+        { name: 'Testing strategy',                   weight: 15 },
+        { name: 'Error handling and resilience',      weight: 15 },
+        { name: 'Observability and diagnostics',      weight: 15 },
+        { name: 'Deployment and reproducibility',     weight: 10 },
+        { name: 'Data and migration safety',          weight: 10 },
+        { name: 'Security and configuration',         weight: 10 },
+        { name: 'Documentation and maintainability',  weight: 10 }
+      ]
     },
     {
       id: 'walkthrough', label: 'Project Walkthrough',
       categories: [
-        { name: 'Problem and user value', weight: 15 },
-        { name: 'Architecture explanation', weight: 20 },
-        { name: 'Personal ownership', weight: 20 },
-        { name: 'Design decisions and alternatives', weight: 15 },
-        { name: 'Failure and learning examples', weight: 15 },
-        { name: 'Production limitations and next steps', weight: 15 }
+        { name: 'Problem and user value',                  weight: 15 },
+        { name: 'Architecture explanation',                weight: 20 },
+        { name: 'Personal ownership',                      weight: 20 },
+        { name: 'Design decisions and alternatives',       weight: 15 },
+        { name: 'Failure and learning examples',           weight: 15 },
+        { name: 'Production limitations and next steps',   weight: 15 }
       ],
-      note: 'Candidate must distinguish what they personally implemented vs. generated/inherited/adapted vs. tested vs. hypothetical vs. production-shaped vs. deployed. Inflated ownership claims → severe penalty.',
-      levels: { L1: [], L2: [], L3: [] }
-    },
-    {
-      id: 'behavioral', label: 'Behavioral Technical',
-      categories: [
-        { name: 'Situation and stakes', weight: 10 },
-        { name: 'Personal responsibility', weight: 20 },
-        { name: 'Decision-making', weight: 20 },
-        { name: 'Technical depth', weight: 15 },
-        { name: 'Collaboration and communication', weight: 15 },
-        { name: 'Result and evidence', weight: 10 },
-        { name: 'Reflection and improvement', weight: 10 }
-      ],
-      note: 'Strong answers describe actual decisions and consequences — not general claims like "I communicated effectively" or "I took ownership."',
-      levels: { L1: [], L2: [], L3: [] }
+      note: 'Candidate must distinguish what they personally implemented vs. generated/inherited/adapted. Inflated ownership claims \u2192 severe penalty.'
     }
   ],
 
-  scoreBands: [
-    { range: '90–100', verdict: 'Exceptional',  cls: 'verdict-exceptional' },
-    { range: '80–89',  verdict: 'Strong pass',  cls: 'verdict-pass' },
-    { range: '70–79',  verdict: 'Pass',          cls: 'verdict-pass' },
-    { range: '60–69',  verdict: 'Borderline',    cls: 'verdict-border' },
-    { range: '50–59',  verdict: 'Fail',          cls: 'verdict-fail' },
-    { range: '<50',    verdict: 'Clear fail',    cls: 'verdict-fail' }
+  /* §9 Domain and role evidence model */
+  domainGroups: [
+    {
+      group: 'Languages',
+      domains: ['Java','Python','TypeScript','SQL']
+    },
+    {
+      group: 'Frameworks & Platforms',
+      domains: ['Spring Boot','React','AWS','Docker/CI/CD','Databases']
+    },
+    {
+      group: 'Core Engineering',
+      domains: ['Algorithms/DSA','Backend/API Engineering','Frontend Engineering','Distributed Systems','Observability/Reliability']
+    },
+    {
+      group: 'Data & AI',
+      domains: ['Data Modeling','Data Engineering','Statistical Analysis','Machine Learning','Retrieval/RAG','Evaluation/Experimentation']
+    }
   ],
 
-  levelClassifications: [
-    'Below Level I', 'Emerging Level I', 'Level I', 'Strong Level I',
-    'Level II', 'Strong Level II', 'Level III', 'Strong Level III'
+  domainSubcompetencies: [
+    { domain: 'Java',             subs: 'Syntax/control flow; OOP; interfaces; collections/generics; exceptions; streams/lambdas; concurrency; testing; JVM concepts; DSA fluency' },
+    { domain: 'Spring Boot',      subs: 'Controllers/HTTP; DTOs/validation; services; dependency injection; error translation; configuration; integration testing; persistence/migrations; security; observability' },
+    { domain: 'TypeScript',       subs: 'Type fundamentals; narrowing; generics; unions; nullability; async/error typing; API contracts; strict-mode fluency' },
+    { domain: 'React',            subs: 'Components; props/state; forms; async server state; rendering; hooks; loading/error states; accessibility; testing; performance' },
+    { domain: 'Python',           subs: 'Core language; data structures; typing; exceptions; modules/packages; testing; data processing; APIs; concurrency; performance; reliability' },
+    { domain: 'Machine Learning', subs: 'Problem formulation; feature/target design; baselines; validation; leakage; metrics; error analysis; reproducibility; monitoring; deployment implications' },
+    { domain: 'Retrieval/RAG',    subs: 'Ingestion; chunking; retrieval; embeddings; ranking/hybrid; evaluation; structured output; refusal/grounding; human review; serving; cost/latency; monitoring' },
+    { domain: 'Data Engineering', subs: 'Data modeling/grain; pipelines; data quality; SQL; reliability/idempotency; orchestration; scale/performance; lineage/provenance' }
   ],
 
-  caps: [
-    { condition: 'Correct result with materially incorrect reasoning',      max: '65' },
-    { condition: 'Correct code with no meaningful explanation',             max: '70' },
-    { condition: 'Cannot reproduce or explain submitted code independently',max: '60' },
-    { condition: 'Claims testing without evidence',                         max: '55' },
-    { condition: 'Debugging fix without reproducing the defect',            max: '65' },
-    { condition: 'Debugging conclusion unsupported by evidence',            max: '60' },
-    { condition: 'System design omits failure handling',                    max: '70 / 60 (LII / LIII)' },
-    { condition: 'System design omits requirements clarification',          max: '70' },
-    { condition: 'Production work has no test strategy',                    max: '65' },
-    { condition: 'Project walkthrough cannot distinguish personal ownership',max: '60' },
-    { condition: 'Confidently states a materially false claim',             max: '50' },
-    { condition: 'Fabricates results, tests, or experience',               max: '0–40' }
+  roles: [
+    { id: 'SWE', label: 'SWE',
+      weights: 'Implementation/code quality 20; Debugging 20; System/API design 15; Testing 15; Reliability/operations 15; Data/persistence 5; Communication/ownership 10' },
+    { id: 'MLE', label: 'MLE',
+      weights: 'Software engineering 20; ML implementation 15; Data/feature pipelines 15; Evaluation 15; Serving 10; Reliability/monitoring 10; Reproducibility 10; Communication 5' },
+    { id: 'DS',  label: 'DS',
+      weights: 'Problem formulation 15; Statistical reasoning 20; Data preparation/EDA 15; Modeling 15; Validation/error analysis 15; Experimentation/metrics 10; Communication/business interpretation 10' },
+    { id: 'DE',  label: 'DE',
+      weights: 'Data modeling/grain 15; Pipeline implementation 20; Data quality 15; SQL/query reasoning 15; Reliability/idempotency 15; Orchestration/operations 10; Scale/performance 5; Communication 5' }
   ],
 
-  penalties: [
-    { deficiency: 'Minor factual error',                           penalty: '−2 to −5' },
-    { deficiency: 'Material factual error',                        penalty: '−6 to −15' },
-    { deficiency: 'Missed important edge case',                    penalty: '−3 to −8' },
-    { deficiency: 'Vague tradeoff language',                       penalty: '−2 to −6' },
-    { deficiency: 'Unnecessary complexity',                        penalty: '−2 to −8' },
-    { deficiency: 'Does not answer the exact question',            penalty: '−5 to −15' },
-    { deficiency: 'Excessive prompting required',                  penalty: '−3 to −15' },
-    { deficiency: 'Poorly structured explanation',                 penalty: '−2 to −6' },
-    { deficiency: 'Fails to state uncertainty',                    penalty: '−3 to −10' },
-    { deficiency: 'Repeats memorized terminology without mechanism',penalty: '−3 to −10' }
+  domainContributionWeights: [
+    { role: 'Primary technical domain',          pct: '60%' },
+    { role: 'First secondary technical domain',  pct: '25%' },
+    { role: 'Second secondary technical domain', pct: '15%' },
+    { role: 'Primary role',                      pct: '70%' },
+    { role: 'Secondary role',                    pct: '20%' },
+    { role: 'Tertiary role',                     pct: '10%' }
   ],
 
-  criticalFails: [
-    'The implementation does not solve the requested problem',
-    'The candidate cannot explain the submitted solution',
-    'The candidate repeatedly guesses instead of gathering evidence',
-    'The candidate introduces unsafe production behavior without recognizing the risk',
-    'The candidate fabricates tests, results, ownership, or experience',
-    'The candidate refuses to revise a disproven hypothesis',
-    'The candidate cannot distinguish a symptom from a root cause',
-    'The candidate provides confident but materially false technical guidance'
+  /* §10 Retrospective evidence classes */
+  evidenceClasses: [
+    { id: 'prospective', label: 'Prospective controlled', weight: 1.00,
+      desc: 'Difficulty precommitted; prompt, answer, assistance, tests, and expected behavior captured.' },
+    { id: 'classA', label: 'Class A — Strong retrospective', weight: 0.75,
+      desc: 'Complete prompt/answer/code, observable outputs, reconstructable assistance and expected behavior.' },
+    { id: 'classB', label: 'Class B — Partial retrospective', weight: 0.40,
+      desc: 'Answer exists, but testing, autonomy, or difficulty evidence is incomplete.' },
+    { id: 'classC', label: 'Class C — Anecdotal', weight: 0.00,
+      desc: 'Only summary claims or project bullets remain; not numerically scorable.' }
   ],
 
-  difficulty: [
-    { d: 1, desc: 'Basic recall or direct implementation' },
-    { d: 2, desc: 'Familiar application with limited ambiguity' },
-    { d: 3, desc: 'Multi-step task requiring independent reasoning' },
-    { d: 4, desc: 'Cross-component, ambiguous, or production-shaped task' },
-    { d: 5, desc: 'Senior-level ambiguity, complex dependencies, or system-wide consequences' }
+  /* §11 Multi-bug exercise */
+  bugCompletionStandards: [
+    { evidence: 'Symptom only',                                              maxCredit: '20%' },
+    { evidence: 'Affected area only',                                        maxCredit: '40%' },
+    { evidence: 'Exact root cause, incomplete fix',                          maxCredit: '70%' },
+    { evidence: 'Correct fix without explanation',                           maxCredit: '75%' },
+    { evidence: 'Root cause, invariant, source-level fix, regression proof', maxCredit: '100%' }
+  ],
+  difficultyMultipliers: [
+    { d: 1, mult: 0.75 }, { d: 2, mult: 0.90 }, { d: 3, mult: 1.00 },
+    { d: 4, mult: 1.25 }, { d: 5, mult: 1.50 }
   ],
 
+  /* §12 Assistance */
   assistance: [
-    { lvl: 0, desc: 'No assistance' },
-    { lvl: 1, desc: 'Clarification of task only' },
-    { lvl: 2, desc: 'Minor directional hint' },
-    { lvl: 3, desc: 'Significant conceptual hint — normally cannot establish Level II independence unless reproduced independently' },
-    { lvl: 4, desc: 'Step-by-step guidance — cannot establish independent competency' },
-    { lvl: 5, desc: 'Solution substantially provided — cannot establish independent competency' }
+    { lvl: 0, desc: 'None',                                      autonomy: 'Full autonomy evidence' },
+    { lvl: 1, desc: 'Task clarification only',                   autonomy: 'Full autonomy evidence' },
+    { lvl: 2, desc: 'General directional hint',                  autonomy: 'Reduces autonomy confidence' },
+    { lvl: 3, desc: 'Relevant subsystem identified',             autonomy: 'Cannot establish clean Level II independence' },
+    { lvl: 4, desc: 'Affected file or contract identified',      autonomy: 'Cannot establish independent competency' },
+    { lvl: 5, desc: 'Root cause or fix substantially revealed',  autonomy: 'Cannot establish independent competency' }
   ],
 
-  /* § 24 — Promotion Evidence Standard */
+  /* §13 Caps */
+  caps: [
+    { condition: 'Correct result with materially wrong reasoning',       max: '65' },
+    { condition: 'Correct code with no meaningful explanation',          max: '70' },
+    { condition: 'Cannot reproduce or explain submitted code',           max: '60' },
+    { condition: 'Claims testing without evidence',                      max: '55' },
+    { condition: 'Debugging fix without reproduction',                   max: '70' },
+    { condition: 'Debugging conclusion unsupported by evidence',         max: '60' },
+    { condition: 'Symptom fix preserving root cause',                    max: '65' },
+    { condition: 'Changes tests to accept wrong behavior',               max: '50' },
+    { condition: 'System design omits failure handling',                 max: '70 at Level II; 60 at Level III' },
+    { condition: 'Production work has no test strategy',                 max: '65' },
+    { condition: 'Confident materially false claim',                     max: '50' },
+    { condition: 'Fabricated results, tests, ownership, or experience',  max: '0\u201340' }
+  ],
+
+  /* §13 Penalties */
+  penalties: [
+    { deficiency: 'Minor factual error',                            penalty: '\u22122 to \u22125' },
+    { deficiency: 'Material factual error',                         penalty: '\u22126 to \u221215' },
+    { deficiency: 'Missed important edge case',                     penalty: '\u22123 to \u22128' },
+    { deficiency: 'Vague tradeoff language',                        penalty: '\u22122 to \u22126' },
+    { deficiency: 'Excessive prompting required',                   penalty: '\u22123 to \u221215' },
+    { deficiency: 'Continues disproved debugging theory',           penalty: '\u22125 to \u221210' },
+    { deficiency: 'Edits before reproducing',                       penalty: '\u22123 to \u22128' },
+    { deficiency: 'Broad speculative refactor',                     penalty: '\u22125 to \u221215' },
+    { deficiency: 'Counts unrelated technical debt as a seeded bug',penalty: '\u22125' },
+    { deficiency: 'Breaks unrelated behavior',                      penalty: '\u221210 to \u221225' }
+  ],
+
+  /* §14 Demonstrated-level rules */
+  levelRules: [
+    { level: 'Level I',   pattern: 'Passing D1\u2013D3 work; bounded implementation/debugging; basic explanation and verification; some guidance acceptable.' },
+    { level: 'Level II',  pattern: 'Passing D3\u2013D4 work; independent multi-file or multi-layer reasoning; contract understanding; meaningful tests; assistance \u22642.' },
+    { level: 'Level III', pattern: 'Strong D4\u2013D5 work; ambiguous system-level reasoning; lifecycle/provenance/reliability judgment; blast-radius analysis; assistance \u22641.' }
+  ],
+
+  /* §15 Score bands */
+  scoreBands: [
+    { range: '90\u2013100', verdict: 'Exceptional',  cls: 'verdict-exceptional', min: 90 },
+    { range: '80\u201389',  verdict: 'Strong pass',  cls: 'verdict-pass',        min: 80 },
+    { range: '70\u201379',  verdict: 'Pass',          cls: 'verdict-pass',        min: 70 },
+    { range: '60\u201369',  verdict: 'Borderline',    cls: 'verdict-border',      min: 60 },
+    { range: '50\u201359',  verdict: 'Fail',          cls: 'verdict-fail',        min: 50 },
+    { range: '<50',         verdict: 'Clear fail',    cls: 'verdict-fail',        min: 0  }
+  ],
+
+  demonstratedLevels: [
+    'Below Level I','Emerging Level I','Level I','Strong Level I',
+    'Level II','Strong Level II','Level III','Strong Level III'
+  ],
+
+  weaknessTags: [
+    'Shallow reasoning','Missed edge cases','Thin tradeoffs',
+    'Evidence gaps','Explanation unclear','Incomplete execution',
+    'Excessive prompting','Incorrect reasoning','No test strategy',
+    'Missing failure handling','Ownership unclear','Confident false claim'
+  ],
+
+  /* §19 Grading principles */
+  gradingPrinciples: [
+    'Grade demonstrated behavior, not potential.',
+    'Do not award points for effort.',
+    'Do not reward terminology without mechanism.',
+    'Do not assume missing evidence is favorable.',
+    'Honest uncertainty is better than confident error.',
+    'A correct answer does not prove sound reasoning.',
+    'Passing tests do not prove the tests are meaningful.',
+    'Project size does not prove ownership.',
+    'Career transition does not lower the bar.',
+    'Difficulty is assigned before performance whenever possible.',
+    'A difficult task solved with heavy assistance does not prove independence.',
+    'A simple task cannot establish seniority by itself.',
+    'Stop pursuing disproved theories immediately.',
+    'Prefer contract-level fixes over symptom patches.',
+    'Always report all three level scores for every answer.',
+    'Do not average the Level I, Level II, and Level III scores.',
+    'Do not let a low-level problem establish higher-level readiness.',
+    'Use the problem level to cap qualifying evidence, not to suppress developmental scoring.',
+    'Version rubric changes explicitly.'
+  ],
+
+  /* §20 Promotion evidence standard (unchanged from v1.0 structure) */
   promotionEvidence: {
     L1: [
       { type: 'coding',      min: 3, label: 'Coding / implementation tasks' },
@@ -2441,119 +2505,122 @@ const RD = {
       { type: 'walkthrough', min: 1, label: 'Project or feature walkthrough' }
     ],
     L2: [
-      { type: 'coding',    min: 3, label: 'Independent feature / medium-complexity coding (assistance ≤ 2)', maxAssist: 2 },
-      { type: 'debugging', min: 3, label: 'Cross-file / cross-component debugging (assistance ≤ 2)', maxAssist: 2 },
-      { type: 'sysdesign', min: 2, label: 'System design exercises' },
+      { type: 'coding',     min: 3, label: 'Independent feature / medium-complexity coding', maxAssist: 2 },
+      { type: 'debugging',  min: 3, label: 'Cross-file / cross-component debugging',         maxAssist: 2 },
+      { type: 'sysdesign',  min: 2, label: 'System design exercises' },
       { type: 'walkthrough',min: 1, label: 'Production-shaped project walkthrough' }
     ],
     L3: [
-      { type: 'prodeng',   min: 3, label: 'Ambiguous system or production investigations (D ≥ 4)', minDiff: 4 },
-      { type: 'sysdesign', min: 3, label: 'System design at Difficulty 4 or 5', minDiff: 4 },
-      { type: 'walkthrough',min: 1, label: 'Evidence of architecture / reliability / migration judgment' },
-      { type: 'behavioral', min: 1, label: 'Evidence of improving another engineer\'s work or defining a reusable standard' }
+      { type: 'prodeng',    min: 3, label: 'Ambiguous system or production investigations', minDiff: 4 },
+      { type: 'sysdesign',  min: 3, label: 'System design at Difficulty 4 or 5',            minDiff: 4 },
+      { type: 'walkthrough',min: 1, label: 'Architecture / reliability / migration judgment' },
+      { type: 'behavioral', min: 1, label: 'Evidence of improving others or defining reusable standards' }
     ]
-  },
-
-  gradingPrinciples: [
-    'Grade demonstrated behavior, not inferred potential.',
-    'Do not award points for effort.',
-    'Do not reward terminology unless the mechanism is understood.',
-    'Do not assume missing evidence is favorable.',
-    'Do not penalize honest uncertainty as severely as confident error.',
-    'Do not treat a correct final answer as proof of sound reasoning.',
-    'Do not treat passing tests as proof that the tests are meaningful.',
-    'Do not treat project size as proof of ownership or understanding.',
-    'Do not adjust standards downward because the candidate is transitioning careers.',
-    'State the verdict directly, even when it is unfavorable.',
-    'Separate requirements discovery from implementation failure.',
-    'Stop pursuing a debugging theory when evidence disproves it.',
-    'Record whether the task measured recall, implementation, judgment, or autonomy.',
-    'Compare trends only across reasonably comparable attempts.',
-    'Revise the rubric only through explicit versioning, never during an evaluation.'
-  ]
+  }
 };
 
-/* ── LOG STORAGE ─────────────────────────────────────── */
+/* ── STORAGE ─────────────────────────────────────────── */
 function rLog()  { try { return JSON.parse(localStorage.getItem(RUBRIC_LOG_KEY) || '[]'); } catch { return []; } }
-function rSave(entries) { localStorage.setItem(RUBRIC_LOG_KEY, JSON.stringify(entries)); }
+function rSave(e) { localStorage.setItem(RUBRIC_LOG_KEY, JSON.stringify(e)); }
 
-function rComputeRaw(u, t)        { return +(u * 0.60 + t * 0.40).toFixed(1); }
+function rComputeRaw(u, t) { return +(u * 0.60 + t * 0.40).toFixed(1); }
 function rComputeFinal(raw, cap, pen) {
   let f = raw - (parseFloat(pen) || 0);
-  if (cap !== '' && cap !== null && !isNaN(parseFloat(cap))) f = Math.min(f, parseFloat(cap));
+  if (cap !== '' && cap !== null && cap !== undefined && !isNaN(parseFloat(cap))) f = Math.min(f, parseFloat(cap));
   return +Math.max(0, f).toFixed(1);
 }
 function rScoreBand(score) {
-  if (score >= 90) return RD.scoreBands[0];
-  if (score >= 80) return RD.scoreBands[1];
-  if (score >= 70) return RD.scoreBands[2];
-  if (score >= 60) return RD.scoreBands[3];
-  if (score >= 50) return RD.scoreBands[4];
-  return RD.scoreBands[5];
+  return RD.scoreBands.find(b => score >= b.min) || RD.scoreBands[RD.scoreBands.length - 1];
 }
-function rTaskColor(id) {
-  return (RD.taskTypes.find(t => t.id === id) || {}).color || 'var(--text-dim)';
-}
-function rTaskLabel(id) {
-  return (RD.taskTypes.find(t => t.id === id) || {}).label || id;
+function rTaskColor(id) { return (RD.taskTypes.find(t => t.id === id) || {}).color || 'var(--text-dim)'; }
+function rTaskLabel(id) { return (RD.taskTypes.find(t => t.id === id) || {}).label || id; }
+function rEvidenceWeight(entry) {
+  const cls = entry.evidenceClass || 'prospective';
+  const ec = RD.evidenceClasses.find(e => e.id === cls);
+  return ec ? ec.weight : 1.0;
 }
 
-/* ── ENTRY NORMALISER ───────────────────────────────── */
+/* Normalize sub-scores to 0-100% */
+function rSubPct(subScores) {
+  return RD.universalDims.map(d => {
+    const v = subScores?.[d.id];
+    return (v !== null && v !== undefined && v !== '') ? Math.round((parseFloat(v) / d.max) * 100) : null;
+  });
+}
+function rSubTotal(subScores) {
+  if (!subScores) return null;
+  const vals = RD.universalDims.map(d => parseFloat(subScores[d.id]));
+  return vals.some(isNaN) ? null : +vals.reduce((s, v) => s + v, 0).toFixed(1);
+}
+function rAvgSubPct(entries) {
+  const w = entries.filter(e => e.universalSubScores && rSubTotal(e.universalSubScores) !== null);
+  if (!w.length) return null;
+  const totals = Array(RD.universalDims.length).fill(0);
+  w.forEach(e => { rSubPct(e.universalSubScores).forEach((p, i) => { totals[i] += (p ?? 0); }); });
+  return totals.map(t => Math.round(t / w.length));
+}
+
+/* §20.1 Entry normaliser — v1.5 field set */
 function rNormaliseEntry(raw) {
   const id = raw.id || (Date.now() + '-' + Math.random().toString(36).slice(2, 6));
-  const u  = parseFloat(raw.universalScore)    || 0;
-  const t  = parseFloat(raw.taskSpecificScore) || 0;
-
-  /* If all 6 sub-scores are present, compute universalScore from them */
-  const DIMS = ['correctness','reasoning','judgment','validation','communication','completeness'];
   const subs = raw.universalSubScores || null;
-  const subTotal = subs
-    ? (() => { const vals = DIMS.map(d => parseFloat(subs[d])); return vals.some(isNaN) ? null : +vals.reduce((s,v)=>s+v,0).toFixed(1); })()
-    : null;
-  const uFinal = (subTotal !== null && !raw.universalScore) ? subTotal : u;
-
-  const rawScore   = raw.rawScore   !== undefined ? raw.rawScore   : rComputeRaw(uFinal, t);
+  const subTotal = subs ? rSubTotal(subs) : null;
+  const u = parseFloat(raw.universalScore) || (subTotal !== null && !raw.universalScore ? subTotal : 0);
+  const t = parseFloat(raw.taskSpecificScore) || 0;
+  const rawScore   = raw.rawScore   !== undefined ? raw.rawScore   : rComputeRaw(u, t);
   const finalScore = raw.finalScore !== undefined ? raw.finalScore : rComputeFinal(rawScore, raw.cap ?? null, raw.penalties ?? 0);
-
   return {
-    id,
-    date:              raw.date              || new Date().toISOString().slice(0, 10),
-    task:              raw.task              || '',
-    taskType:          raw.taskType          || '',
-    domain:            raw.domain            || '',
-    difficulty:        parseInt(raw.difficulty)      || 0,
-    targetLevel:       raw.targetLevel       || '',
-    assistanceLevel:   parseInt(raw.assistanceLevel) ?? 0,
-    universalScore:    uFinal,
-    taskSpecificScore: t,
-    rawScore,
-    cap:               raw.cap !== undefined ? raw.cap : null,
-    penalties:         raw.penalties         || 0,
-    finalScore,
-    levelScores:       raw.levelScores       || { L1: null, L2: null, L3: null },
-    demonstratedLevel: raw.demonstratedLevel || '',
-    confidence:        raw.confidence        || '',
-    weaknessTags:      raw.weaknessTags      || [],
-    strengths:         raw.strengths         || '',
-    weaknesses:        raw.weaknesses        || '',
-    nextTarget:        raw.nextTarget        || '',
-    gates:             raw.gates             || {},
+    /* Core */
+    id, rubricVersion: raw.rubricVersion || RUBRIC_VERSION,
+    date: raw.date || new Date().toISOString().slice(0, 10),
+    task: raw.task || '', taskType: raw.taskType || '',
+    domain: raw.domain || '',
+    /* Classification */
+    problemLevel:       raw.problemLevel    || raw.targetLevel || '',
+    targetLevel:        raw.targetLevel     || raw.problemLevel || '',
+    answerLevel:        raw.answerLevel     || '',
+    difficulty:         parseInt(raw.difficulty) || 0,
+    difficultyAssignment: raw.difficultyAssignment || '',
+    difficultyAttributeScore: raw.difficultyAttributeScore ?? null,
+    /* Evidence class */
+    evidenceClass:      raw.evidenceClass   || 'prospective',
+    autonomyConfidence: raw.autonomyConfidence || '',
+    assistanceLevel:    parseInt(raw.assistanceLevel) ?? 0,
+    /* Domains and roles */
+    primaryDomain:      raw.primaryDomain   || raw.domain || '',
+    secondaryDomains:   raw.secondaryDomains || [],
+    primaryRole:        raw.primaryRole     || '',
+    secondaryRoles:     raw.secondaryRoles  || [],
+    /* Scores */
+    universalScore: u, taskSpecificScore: t,
+    rawScore, cap: raw.cap !== undefined ? raw.cap : null,
+    penalties: raw.penalties || 0, finalScore,
     universalSubScores: subs,
-    quickLog:          raw.quickLog          || false,
-    rubricVersion:     raw.rubricVersion     || RUBRIC_VERSION
+    levelScores: raw.levelScores || { L1: null, L2: null, L3: null },
+    /* Verdict */
+    demonstratedLevel:           raw.demonstratedLevel            || '',
+    qualifyingEvidenceNote:      raw.qualifyingEvidenceNote        || '',
+    mainReasonNextLevelNotReached:raw.mainReasonNextLevelNotReached || '',
+    surviveProbing:              raw.surviveProbing                || '',
+    confidence:                  raw.confidence                   || '',
+    /* Gates and tags */
+    gates: raw.gates || {}, weaknessTags: raw.weaknessTags || [],
+    strengths: raw.strengths || '', weaknesses: raw.weaknesses || '',
+    nextTarget: raw.nextTarget || '',
+    quickLog: raw.quickLog || false
   };
 }
 
 /* ── DOM HELPERS ─────────────────────────────────────── */
 function rEl(tag, cls, inner) {
   const el = document.createElement(tag);
-  if (cls)   el.className = cls;
+  if (cls) el.className = cls;
   if (inner !== undefined) el.innerHTML = inner;
   return el;
 }
 function rTbl(headers, rows, cls) {
   const t = rEl('table', 'rt' + (cls ? ' ' + cls : ''));
-  const thead = rEl('thead'); const tr0 = rEl('tr');
+  const thead = rEl('thead'), tr0 = rEl('tr');
   headers.forEach(h => tr0.appendChild(rEl('th', '', h)));
   thead.appendChild(tr0); t.appendChild(thead);
   const tbody = rEl('tbody');
@@ -2562,15 +2629,13 @@ function rTbl(headers, rows, cls) {
     row.forEach((cell, i) => tr.appendChild(rEl('td', i === 0 ? 'rtk' : '', cell)));
     tbody.appendChild(tr);
   });
-  t.appendChild(tbody);
-  return t;
+  t.appendChild(tbody); return t;
 }
 function rAccordion(title, body, open) {
   const d = rEl('details', 'rsec');
   if (open) d.setAttribute('open', '');
   d.appendChild(rEl('summary', 'rsec-title', title));
-  d.appendChild(body);
-  return d;
+  d.appendChild(body); return d;
 }
 function rList(items, cls) {
   const ul = rEl('ul', 'rlist' + (cls ? ' ' + cls : ''));
@@ -2581,1029 +2646,978 @@ function rList(items, cls) {
 /* ── SPARKLINE ───────────────────────────────────────── */
 function rSparkline(scores, color) {
   const W = 120, H = 36, PAD = 4;
-  if (!scores.length) return rEl('span', 'spark-empty', '—');
-  const min = Math.min(...scores, 0);
-  const max = Math.max(...scores, 100);
-  const range = max - min || 1;
+  if (!scores.length) return rEl('span', 'spark-empty', '\u2014');
+  const min = Math.min(...scores, 0), max = Math.max(...scores, 100), range = max - min || 1;
   const pts = scores.map((s, i) => {
     const x = PAD + (i / Math.max(scores.length - 1, 1)) * (W - PAD * 2);
     const y = H - PAD - ((s - min) / range) * (H - PAD * 2);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
-  const last = scores[scores.length - 1];
-  const lx = PAD + (W - PAD * 2);
+  const lx = PAD + (W - PAD * 2), last = scores[scores.length - 1];
   const ly = H - PAD - ((last - min) / range) * (H - PAD * 2);
   const passY = H - PAD - ((70 - min) / range) * (H - PAD * 2);
-
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
   svg.className = 'sparkline';
-
-  // 70-pass line
   if (min < 70 && max > 60) {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', PAD); line.setAttribute('x2', W - PAD);
-    line.setAttribute('y1', passY); line.setAttribute('y2', passY);
-    line.setAttribute('stroke', 'rgba(100,120,140,0.35)');
-    line.setAttribute('stroke-width', '0.8');
-    line.setAttribute('stroke-dasharray', '2,2');
-    svg.appendChild(line);
+    const l = document.createElementNS(NS, 'line');
+    ['x1','x2','y1','y2'].forEach((a, i) => l.setAttribute(a, [PAD, W-PAD, passY, passY][i]));
+    l.setAttribute('stroke', 'rgba(100,120,140,0.35)'); l.setAttribute('stroke-width', '0.8'); l.setAttribute('stroke-dasharray', '2,2');
+    svg.appendChild(l);
   }
-
-  // Line
-  const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-  pl.setAttribute('points', pts.join(' '));
-  pl.setAttribute('fill', 'none');
-  pl.setAttribute('stroke', color);
-  pl.setAttribute('stroke-width', '1.8');
-  pl.setAttribute('stroke-linejoin', 'round');
-  pl.setAttribute('stroke-linecap', 'round');
+  const pl = document.createElementNS(NS, 'polyline');
+  pl.setAttribute('points', pts.join(' ')); pl.setAttribute('fill', 'none');
+  pl.setAttribute('stroke', color); pl.setAttribute('stroke-width', '1.8');
+  pl.setAttribute('stroke-linejoin', 'round'); pl.setAttribute('stroke-linecap', 'round');
   svg.appendChild(pl);
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('cx', lx); c.setAttribute('cy', ly); c.setAttribute('r', '3'); c.setAttribute('fill', color);
+  svg.appendChild(c); return svg;
+}
 
-  // End dot
-  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  c.setAttribute('cx', lx); c.setAttribute('cy', ly); c.setAttribute('r', '3');
-  c.setAttribute('fill', color);
-  svg.appendChild(c);
-
+/* ── SPIDER / RADAR ──────────────────────────────────── */
+function rSpider(pcts, size, opts) {
+  size = size || 160;
+  const { showLabels = true, compact = false } = opts || {};
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.setAttribute('width', size); svg.setAttribute('height', size);
+  svg.className = 'r-spider';
+  const cx = size / 2, cy = size / 2, labelPad = showLabels ? 22 : 6, r = (size / 2) - labelPad;
+  const N = 6, angle = i => (Math.PI * 2 * i / N) - Math.PI / 2;
+  const pt = (pct, i) => { const a = angle(i), d2 = (pct / 100) * r; return [cx + d2 * Math.cos(a), cy + d2 * Math.sin(a)]; };
+  [50, 70, 100].forEach(ring => {
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points', Array.from({length: N}, (_, i) => pt(ring, i)).map(p => p.join(',')).join(' '));
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke', ring === 70 ? 'rgba(16,185,129,0.25)' : 'rgba(100,120,140,0.15)');
+    poly.setAttribute('stroke-width', ring === 70 ? '1' : '0.7');
+    if (ring === 70) poly.setAttribute('stroke-dasharray', '3,2');
+    svg.appendChild(poly);
+  });
+  for (let i = 0; i < N; i++) {
+    const [x, y] = pt(100, i);
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', cx); l.setAttribute('y1', cy); l.setAttribute('x2', x); l.setAttribute('y2', y);
+    l.setAttribute('stroke', 'rgba(100,120,140,0.2)'); l.setAttribute('stroke-width', '0.7');
+    svg.appendChild(l);
+  }
+  const valid = pcts.filter(p => p !== null && p !== undefined);
+  if (valid.length === N) {
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points', pcts.map((p, i) => pt(Math.max(0, p), i).join(',')).join(' '));
+    poly.setAttribute('fill', 'rgba(99,102,241,0.18)'); poly.setAttribute('stroke', 'rgba(99,102,241,0.8)');
+    poly.setAttribute('stroke-width', '1.5'); poly.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(poly);
+    pcts.forEach((p, i) => {
+      const [x, y] = pt(Math.max(0, p), i);
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', '2.5'); c.setAttribute('fill', 'rgba(99,102,241,0.9)');
+      svg.appendChild(c);
+    });
+  }
+  if (showLabels) {
+    RD.universalDims.forEach((d, i) => {
+      const a = angle(i), lr = r + labelPad - 4;
+      const lx2 = cx + lr * Math.cos(a), ly2 = cy + lr * Math.sin(a);
+      const text = document.createElementNS(NS, 'text');
+      text.setAttribute('x', lx2); text.setAttribute('y', ly2);
+      text.setAttribute('text-anchor', Math.abs(Math.cos(a)) < 0.1 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-size', compact ? '8' : '9');
+      text.setAttribute('fill', 'var(--text-dim)'); text.setAttribute('font-family', 'var(--mono)');
+      const val = pcts[i];
+      text.textContent = compact ? d.short : (d.short + (val !== null && val !== undefined ? ` ${val}%` : ''));
+      svg.appendChild(text);
+    });
+  }
   return svg;
 }
 
-/* ── PROMOTION EVIDENCE COUNTER ─────────────────────── */
-function rCountPromoEvidence(entries, levelKey) {
-  const reqs = RD.promotionEvidence[levelKey] || [];
-  return reqs.map(req => {
-    const qualifying = entries.filter(e => {
-      if (e.taskType !== req.type) return false;
-      if (e.finalScore < 70) return false;
-      if (req.maxAssist !== undefined && e.assistanceLevel > req.maxAssist) return false;
-      if (req.minDiff   !== undefined && e.difficulty < req.minDiff) return false;
-      return true;
-    });
-    return { ...req, count: qualifying.length, met: qualifying.length >= req.min };
+/* ── PROMOTION EVIDENCE ──────────────────────────────── */
+function rCountPromoEvidence(entries, lvl) {
+  return (RD.promotionEvidence[lvl] || []).map(req => {
+    const q = entries.filter(e =>
+      e.taskType === req.type && e.finalScore >= 70 &&
+      (req.maxAssist === undefined || e.assistanceLevel <= req.maxAssist) &&
+      (req.minDiff   === undefined || e.difficulty    >= req.minDiff)
+    );
+    return { ...req, count: q.length, met: q.length >= req.min };
   });
 }
-
-/* ── ROLLING AVERAGE (last 5 of same type) ──────────── */
 function rRollingAvg(entries, taskType) {
-  const filtered = entries.filter(e => e.taskType === taskType).slice(-5);
-  if (!filtered.length) return null;
-  return +(filtered.reduce((s, e) => s + e.finalScore, 0) / filtered.length).toFixed(1);
+  const f = entries.filter(e => e.taskType === taskType).slice(-5);
+  return f.length ? +(f.reduce((s, e) => s + e.finalScore, 0) / f.length).toFixed(1) : null;
 }
 
 /* ══════════════════════════════════════════════════════
-   MAIN BUILD FUNCTION
+   BUILD
 ══════════════════════════════════════════════════════ */
 function buildRubric() {
   const tab = document.getElementById('tab-rubric');
   if (!tab || tab.querySelector('.r-wrap')) return;
+  const wrap = rEl('div', 'r-wrap'); tab.appendChild(wrap);
 
-  const wrap = rEl('div', 'r-wrap');
-  tab.appendChild(wrap);
-
-  /* ── SUB-TAB BAR ── */
   const bar = rEl('div', 'r-bar');
   const VIEWS = [
-    { id: 'progress',  label: '📊 Progress' },
-    { id: 'log-entry', label: '＋ Log Entry' },
-    { id: 'history',   label: '📋 History' },
-    { id: 'reference', label: '📚 Reference' }
+    { id: 'progress', label: '\ud83d\udcca Progress' },
+    { id: 'log-entry',label: '\uff0b Log Entry'  },
+    { id: 'history',  label: '\ud83d\udccb History'   },
+    { id: 'reference',label: '\ud83d\udcda Reference' }
   ];
-  const btns = {};
+  const btns = {}, panels = {};
   VIEWS.forEach((v, i) => {
     const b = rEl('button', 'r-subtab' + (i === 0 ? ' active' : ''), v.label);
     b.addEventListener('click', () => switchView(v.id));
-    bar.appendChild(b);
-    btns[v.id] = b;
+    bar.appendChild(b); btns[v.id] = b;
   });
   wrap.appendChild(bar);
-
-  /* ── VIEW CONTAINER ── */
-  const views = rEl('div', 'r-views');
-  wrap.appendChild(views);
-
-  const panels = {};
+  const views = rEl('div', 'r-views'); wrap.appendChild(views);
   VIEWS.forEach(v => {
-    const p = rEl('div', 'r-view');
-    p.id = 'r-view-' + v.id;
-    views.appendChild(p);
-    panels[v.id] = p;
+    const p = rEl('div', 'r-view'); p.id = 'r-view-' + v.id;
+    views.appendChild(p); panels[v.id] = p;
   });
 
   function switchView(id) {
     Object.values(btns).forEach(b => b.classList.remove('active'));
     Object.values(panels).forEach(p => p.classList.remove('active'));
-    btns[id].classList.add('active');
-    panels[id].classList.add('active');
-    // Rebuild views that change on data
+    btns[id].classList.add('active'); panels[id].classList.add('active');
     if (id === 'progress') buildProgress();
     if (id === 'history')  buildHistory();
   }
 
-  /* ════════════════════════════════════════════════════
-     VIEW: PROGRESS
-  ════════════════════════════════════════════════════ */
+  /* ════ PROGRESS ═══════════════════════════════════════ */
   function buildProgress() {
-    const el = panels['progress'];
-    el.innerHTML = '';
+    const el = panels['progress']; el.innerHTML = '';
     const entries = rLog();
 
-    /* Sprint context */
+    /* Sprint day */
     const SPRINT_START = new Date(2026, 5, 17);
-    const today = new Date();
-    const sprintDay = Math.max(1, Math.min(29, Math.round((today - SPRINT_START) / 86400000) + 1));
+    const sprintDay = Math.max(1, Math.min(29, Math.round((new Date() - SPRINT_START) / 86400000) + 1));
 
-    /* Top stats */
-    const stats = rEl('div', 'r-stats-grid');
+    /* Stats */
     const total = entries.length;
     const passes = entries.filter(e => e.finalScore >= 70).length;
     const assistFree = entries.filter(e => e.assistanceLevel <= 1).length;
     const lastFive = entries.slice(-5);
-    const rollingAll = lastFive.length
-      ? +(lastFive.reduce((s, e) => s + e.finalScore, 0) / lastFive.length).toFixed(1) : null;
+    const rollingAll = lastFive.length ? +(lastFive.reduce((s, e) => s + e.finalScore, 0) / lastFive.length).toFixed(1) : null;
+    const sorted = [...entries].map(e => e.finalScore).sort((a, b) => a - b);
+    const median = sorted.length ? (sorted.length % 2 ? sorted[Math.floor(sorted.length/2)] : +((sorted[sorted.length/2-1]+sorted[sorted.length/2])/2).toFixed(1)) : null;
+    const trend = entries.length >= 2 ? entries[entries.length-1].finalScore - entries[entries.length-2].finalScore : null;
+    const trendStr = trend === null ? '\u2014' : trend > 0 ? `\u25b2 ${trend.toFixed(1)}` : trend < 0 ? `\u25bc ${Math.abs(trend).toFixed(1)}` : '\u2192 0';
 
-    const trend = entries.length >= 2
-      ? entries[entries.length - 1].finalScore - entries[entries.length - 2].finalScore
-      : null;
-    const trendStr = trend === null ? '—'
-      : trend > 0 ? `▲ ${trend.toFixed(1)}` : trend < 0 ? `▼ ${Math.abs(trend).toFixed(1)}` : '→ 0';
-    const trendCls = trend === null ? '' : trend > 0 ? 'stat-up' : trend < 0 ? 'stat-down' : '';
-
+    const statsGrid = rEl('div', 'r-stats-grid');
     [
-      { val: `Day ${sprintDay} / 29`,  lbl: 'sprint day' },
-      { val: total,                     lbl: 'attempts logged' },
-      { val: total ? `${passes}/${total}` : '—', lbl: 'passed (≥70)' },
-      { val: rollingAll !== null ? rollingAll : '—', lbl: 'rolling avg (last 5)' },
-      { val: total ? `${Math.round(assistFree/total*100)}%` : '—', lbl: 'assistance-free' },
-      { val: trendStr, lbl: 'last vs prev', cls: trendCls }
+      { val: `Day ${sprintDay}/29`, lbl: 'sprint day' },
+      { val: total,                  lbl: 'attempts' },
+      { val: total ? `${passes}/${total}` : '\u2014', lbl: 'passed (\u226570)' },
+      { val: rollingAll ?? '\u2014', lbl: 'rolling avg (5)' },
+      { val: median ?? '\u2014',     lbl: 'median' },
+      { val: total ? `${Math.round(assistFree/total*100)}%` : '\u2014', lbl: 'A\u22641' },
+      { val: trendStr, lbl: 'last vs prev', cls: trend > 0 ? 'stat-up' : trend < 0 ? 'stat-down' : '' }
     ].forEach(s => {
       const card = rEl('div', 'r-stat-card');
-      const v = rEl('div', 'r-stat-val' + (s.cls ? ' ' + s.cls : ''), String(s.val));
-      card.appendChild(v);
+      card.appendChild(rEl('div', 'r-stat-val' + (s.cls ? ' ' + s.cls : ''), String(s.val)));
       card.appendChild(rEl('div', 'r-stat-lbl', s.lbl));
-      stats.appendChild(card);
+      statsGrid.appendChild(card);
     });
-    el.appendChild(stats);
+    el.appendChild(statsGrid);
 
-    /* Per-task-type sparklines */
+    /* Three-level score summary */
+    if (total > 0) {
+      const withL = entries.filter(e => e.levelScores?.L1 !== null);
+      if (withL.length) {
+        const lvlSec = rEl('div', 'r-level-scores-section');
+        lvlSec.appendChild(rEl('div', 'r-section-label', 'Three-Score Averages'));
+        const lvlGrid = rEl('div', 'r-three-score-grid');
+        ['L1','L2','L3'].forEach(lk => {
+          const scores = withL.map(e => e.levelScores[lk]).filter(v => v !== null);
+          const avg = scores.length ? +(scores.reduce((s,v)=>s+v,0)/scores.length).toFixed(1) : null;
+          const passes3 = scores.filter(v => v >= 70).length;
+          const card = rEl('div', 'r-three-score-card');
+          const band = avg !== null ? rScoreBand(avg) : null;
+          card.appendChild(rEl('div', 'r-three-score-label', { L1: 'Level I', L2: 'Level II', L3: 'Level III' }[lk]));
+          card.appendChild(rEl('div', 'r-three-score-val ' + (band ? band.cls : ''), avg !== null ? avg : '\u2014'));
+          card.appendChild(rEl('div', 'r-three-score-sub', scores.length ? `${passes3}/${scores.length} pass` : 'no data'));
+          lvlGrid.appendChild(card);
+        });
+        lvlSec.appendChild(lvlGrid);
+        el.appendChild(lvlSec);
+      }
+    }
+
+    /* Universal competency radar */
+    const avgPcts = rAvgSubPct(entries);
+    if (avgPcts) {
+      const radarSec = rEl('div', 'r-radar-section');
+      radarSec.appendChild(rEl('div', 'r-section-label', 'Average Universal Competency Profile'));
+      const radarWrap = rEl('div', 'r-radar-center');
+      radarWrap.appendChild(rSpider(avgPcts, 220, { showLabels: true }));
+      const legend = rEl('div', 'r-radar-legend');
+      RD.universalDims.forEach((d, i) => {
+        const row = rEl('div', 'r-radar-leg-row');
+        const bw = rEl('div', 'r-radar-leg-bar-wrap');
+        const bf = rEl('div', 'r-radar-leg-bar');
+        const pct = avgPcts[i];
+        bf.style.width = pct + '%';
+        bf.style.background = pct >= 70 ? 'var(--done)' : pct >= 50 ? 'var(--doing)' : 'var(--audit)';
+        bw.appendChild(bf);
+        row.appendChild(rEl('span', 'r-radar-leg-label', d.label));
+        row.appendChild(bw);
+        row.appendChild(rEl('span', 'r-radar-leg-val', pct + '%'));
+        legend.appendChild(row);
+      });
+      radarWrap.appendChild(legend); radarSec.appendChild(radarWrap);
+      el.appendChild(radarSec);
+    }
+
+    /* Domain breakdown */
+    if (total > 0) {
+      const withDomain = entries.filter(e => (e.primaryDomain || e.domain));
+      if (withDomain.length) {
+        const domSec = rEl('div', 'r-domain-section');
+        domSec.appendChild(rEl('div', 'r-section-label', 'Domain Evidence'));
+        const domGrid = rEl('div', 'r-domain-grid');
+        const domainMap = {};
+        withDomain.forEach(e => {
+          const d = (e.primaryDomain || e.domain || '').trim();
+          if (!d) return;
+          if (!domainMap[d]) domainMap[d] = [];
+          domainMap[d].push(e.finalScore);
+        });
+        Object.entries(domainMap)
+          .sort((a, b) => b[1].length - a[1].length)
+          .forEach(([dom, scores]) => {
+            const avg = +(scores.reduce((s,v)=>s+v,0)/scores.length).toFixed(1);
+            const band = rScoreBand(avg);
+            const card = rEl('div', 'r-domain-card');
+            card.appendChild(rEl('div', 'r-domain-name', dom));
+            const barRow = rEl('div', 'r-domain-bar-row');
+            const bw = rEl('div', 'r-domain-bar-wrap');
+            const bf = rEl('div', 'r-domain-bar'); bf.style.width = avg + '%';
+            bf.style.background = avg >= 70 ? 'var(--done)' : avg >= 60 ? 'var(--doing)' : 'var(--audit)';
+            bw.appendChild(bf);
+            barRow.appendChild(bw);
+            barRow.appendChild(rEl('span', 'r-domain-avg ' + band.cls, avg));
+            card.appendChild(barRow);
+            card.appendChild(rEl('div', 'r-domain-count', `${scores.length} attempt${scores.length > 1 ? 's' : ''}`));
+            domGrid.appendChild(card);
+          });
+        domSec.appendChild(domGrid);
+        el.appendChild(domSec);
+      }
+    }
+
+    /* Role breakdown */
+    if (total > 0) {
+      const withRole = entries.filter(e => e.primaryRole);
+      if (withRole.length) {
+        const roleSec = rEl('div', 'r-domain-section');
+        roleSec.appendChild(rEl('div', 'r-section-label', 'Role Evidence'));
+        const roleGrid = rEl('div', 'r-domain-grid');
+        const roleMap = {};
+        withRole.forEach(e => {
+          const r = e.primaryRole;
+          if (!roleMap[r]) roleMap[r] = [];
+          roleMap[r].push(e.finalScore);
+        });
+        Object.entries(roleMap).forEach(([role, scores]) => {
+          const avg = +(scores.reduce((s,v)=>s+v,0)/scores.length).toFixed(1);
+          const band = rScoreBand(avg);
+          const card = rEl('div', 'r-domain-card');
+          card.appendChild(rEl('div', 'r-domain-name', role));
+          const barRow = rEl('div', 'r-domain-bar-row');
+          const bw = rEl('div', 'r-domain-bar-wrap');
+          const bf = rEl('div', 'r-domain-bar'); bf.style.width = avg + '%';
+          bf.style.background = avg >= 70 ? 'var(--done)' : avg >= 60 ? 'var(--doing)' : 'var(--audit)';
+          bw.appendChild(bf);
+          barRow.appendChild(bw);
+          barRow.appendChild(rEl('span', 'r-domain-avg ' + band.cls, avg));
+          card.appendChild(barRow);
+          card.appendChild(rEl('div', 'r-domain-count', `${scores.length} attempt${scores.length>1?'s':''}`));
+          roleGrid.appendChild(card);
+        });
+        roleSec.appendChild(roleGrid);
+        el.appendChild(roleSec);
+      }
+    }
+
+    /* Task-type sparklines */
     const sparkWrap = rEl('div', 'r-spark-section');
     sparkWrap.appendChild(rEl('div', 'r-section-label', 'Score Trend by Task Type'));
     const sparkGrid = rEl('div', 'r-spark-grid');
-
     RD.taskTypes.forEach(tt => {
-      const typeEntries = entries.filter(e => e.taskType === tt.id);
-      const scores = typeEntries.map(e => e.finalScore);
+      const te = entries.filter(e => e.taskType === tt.id);
+      const scores = te.map(e => e.finalScore);
       const avg = rRollingAvg(entries, tt.id);
-      const passes_t = typeEntries.filter(e => e.finalScore >= 70).length;
-
       const card = rEl('div', 'r-spark-card');
       const hdr = rEl('div', 'r-spark-hdr');
-      const dot = rEl('span', 'r-spark-dot');
-      dot.style.background = tt.color;
-      hdr.appendChild(dot);
-      hdr.appendChild(rEl('span', 'r-spark-label', tt.label));
-      card.appendChild(hdr);
-
-      if (scores.length === 0) {
+      const dot = rEl('span', 'r-spark-dot'); dot.style.background = tt.color;
+      hdr.appendChild(dot); hdr.appendChild(rEl('span', 'r-spark-label', tt.label)); card.appendChild(hdr);
+      if (!scores.length) {
         card.appendChild(rEl('div', 'r-spark-empty', 'no attempts'));
       } else {
         card.appendChild(rSparkline(scores, tt.color));
         const meta = rEl('div', 'r-spark-meta');
-        meta.appendChild(rEl('span', '', `${passes_t}/${scores.length} pass`));
+        meta.appendChild(rEl('span', '', `${te.filter(e=>e.finalScore>=70).length}/${scores.length} pass`));
         if (avg !== null) meta.appendChild(rEl('span', 'r-spark-avg', `avg ${avg}`));
         card.appendChild(meta);
       }
       sparkGrid.appendChild(card);
     });
-    sparkWrap.appendChild(sparkGrid);
-    el.appendChild(sparkWrap);
+    sparkWrap.appendChild(sparkGrid); el.appendChild(sparkWrap);
 
-    /* Recurring weaknesses */
-    if (entries.length > 0) {
-      const allTags = entries.flatMap(e => e.weaknessTags || []);
+    /* Weakness tags */
+    const allTags = entries.flatMap(e => e.weaknessTags || []);
+    if (allTags.length) {
       const freq = {};
-      allTags.forEach(t => { freq[t] = (freq[t] || 0) + 1; });
-      const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
-      if (sorted.length > 0) {
-        const weakWrap = rEl('div', 'r-weak-section');
-        weakWrap.appendChild(rEl('div', 'r-section-label', 'Recurring Weakness Tags'));
-        const tagRow = rEl('div', 'r-weak-tags');
-        sorted.forEach(([tag, count]) => {
-          const t = rEl('span', 'r-weak-tag', `${tag} <span class="r-weak-count">${count}</span>`);
-          if (count >= 3) t.classList.add('r-weak-hot');
-          tagRow.appendChild(t);
-        });
-        weakWrap.appendChild(tagRow);
-        el.appendChild(weakWrap);
-      }
+      allTags.forEach(t => { freq[t] = (freq[t]||0)+1; });
+      const ws = rEl('div', 'r-weak-section');
+      ws.appendChild(rEl('div', 'r-section-label', 'Recurring Weakness Tags'));
+      const tr = rEl('div', 'r-weak-tags');
+      Object.entries(freq).sort((a,b)=>b[1]-a[1]).forEach(([tag,count]) => {
+        tr.appendChild(rEl('span', 'r-weak-tag'+(count>=3?' r-weak-hot':''), `${tag} <span class="r-weak-count">${count}</span>`));
+      });
+      ws.appendChild(tr); el.appendChild(ws);
     }
 
-    /* Promotion Evidence Progress */
+    /* Promotion evidence */
     const promoWrap = rEl('div', 'r-promo-section');
-    promoWrap.appendChild(rEl('div', 'r-section-label', 'Promotion Evidence Progress (§ 24)'));
-    const promoNote = rEl('p', 'r-promo-note',
-      'Counts only qualifying attempts: final score ≥ 70, assistance constraints met. ' +
-      'Meeting the count alone does not guarantee the level — quality and breadth must also meet the bar.');
-    promoWrap.appendChild(promoNote);
-
-    ['L1', 'L2', 'L3'].forEach(lvl => {
+    promoWrap.appendChild(rEl('div', 'r-section-label', 'Promotion Evidence Progress'));
+    promoWrap.appendChild(rEl('p', 'r-promo-note', 'Counts qualifying attempts only: final score \u226570, assistance and difficulty constraints met.'));
+    ['L1','L2','L3'].forEach(lvl => {
       const counts = rCountPromoEvidence(entries, lvl);
       const allMet = counts.every(c => c.met);
       const block = rEl('div', 'r-promo-block');
-      block.appendChild(rEl('div', 'r-promo-level-label' + (allMet ? ' r-promo-met' : ''),
-        (allMet ? '✓ ' : '') + { L1: 'Level I', L2: 'Level II', L3: 'Level III' }[lvl]));
+      block.appendChild(rEl('div', 'r-promo-level-label'+(allMet?' r-promo-met':''), (allMet?'\u2713 ':'')+{L1:'Level I',L2:'Level II',L3:'Level III'}[lvl]));
       counts.forEach(c => {
         const row = rEl('div', 'r-promo-row');
-        const pct = Math.min(1, c.count / c.min);
-        const barWrap = rEl('div', 'r-promo-bar-wrap');
-        const bar2 = rEl('div', 'r-promo-bar');
-        bar2.style.width = (pct * 100) + '%';
-        bar2.style.background = c.met ? 'var(--done)' : 'var(--rag)';
-        barWrap.appendChild(bar2);
-
+        const bw = rEl('div', 'r-promo-bar-wrap'), bf = rEl('div', 'r-promo-bar');
+        bf.style.width = Math.min(1, c.count/c.min)*100+'%';
+        bf.style.background = c.met ? 'var(--done)' : 'var(--rag)';
+        bw.appendChild(bf);
         row.appendChild(rEl('div', 'r-promo-row-label', c.label));
-        const progress = rEl('div', 'r-promo-row-count', `${c.count} / ${c.min}`);
-        if (c.met) progress.classList.add('r-promo-count-met');
-        row.appendChild(progress);
-        row.appendChild(barWrap);
-        block.appendChild(row);
+        row.appendChild(rEl('div', 'r-promo-row-count'+(c.met?' r-promo-count-met':''), `${c.count}/${c.min}`));
+        row.appendChild(bw); block.appendChild(row);
       });
       promoWrap.appendChild(block);
     });
     el.appendChild(promoWrap);
 
-    /* Recent entries mini-table */
-    if (entries.length > 0) {
-      const recentWrap = rEl('div', 'r-recent-section');
-      recentWrap.appendChild(rEl('div', 'r-section-label', 'Recent Entries'));
-      const recent = [...entries].reverse().slice(0, 5);
-      const tbl = rEl('table', 'rt r-recent-tbl');
-      tbl.innerHTML = `<thead><tr><th>Date</th><th>Task</th><th>Type</th><th>D</th><th>A</th><th>Score</th><th>Level</th></tr></thead>`;
-      const tbody = rEl('tbody');
-      recent.forEach(e => {
-        const band = rScoreBand(e.finalScore);
-        const tr = rEl('tr');
-        tr.innerHTML = `
-          <td class="rtk">${e.date}</td>
-          <td>${e.task}</td>
-          <td><span class="r-type-dot" style="background:${rTaskColor(e.taskType)}"></span>${rTaskLabel(e.taskType)}</td>
-          <td>${e.difficulty}</td>
-          <td>${e.assistanceLevel}</td>
-          <td><span class="${band.cls}">${e.finalScore}</span></td>
-          <td style="font-size:10px">${e.demonstratedLevel || '—'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-      tbl.appendChild(tbody);
-      recentWrap.appendChild(tbl);
-      el.appendChild(recentWrap);
-    } else {
-      const empty = rEl('div', 'r-empty', '📊 No entries yet — use <strong>＋ Log Entry</strong> to record your first evaluation.');
-      el.appendChild(empty);
-    }
+    if (!total) el.appendChild(rEl('div', 'r-empty', '\ud83d\udcca No entries yet \u2014 use <strong>\uff0b Log Entry</strong> to record or import evaluations.'));
   }
 
-  /* ════════════════════════════════════════════════════
-     VIEW: LOG ENTRY  (§ 23 — Improvement Tracking fields)
-  ════════════════════════════════════════════════════ */
+  /* ════ LOG ENTRY ══════════════════════════════════════ */
   (function buildLogEntry() {
     const el = panels['log-entry'];
-
-    /* ── MODE BAR ── */
     const modeBar = rEl('div', 'r-mode-bar');
     const pasteBtn = rEl('button', 'r-mode-btn active', '{ } Paste JSON');
-    const quickBtn = rEl('button', 'r-mode-btn', '⚡ Quick Log');
+    const quickBtn = rEl('button', 'r-mode-btn', '\u26a1 Quick Log');
     const modeDesc = rEl('p', 'r-mode-desc', 'Paste one entry or an array of entries.');
-    modeBar.appendChild(pasteBtn);
-    modeBar.appendChild(quickBtn);
-    modeBar.appendChild(modeDesc);
+    modeBar.appendChild(pasteBtn); modeBar.appendChild(quickBtn); modeBar.appendChild(modeDesc);
     el.appendChild(modeBar);
 
-    /* ══════════════════════════════════════════════
-       PASTE JSON PANEL
-    ══════════════════════════════════════════════ */
+    /* Paste panel */
     const pastePanel = rEl('div', 'r-paste-panel');
-
-    const schemaToggle = rEl('button', 'r-schema-toggle', '▶ Show JSON schema');
+    const schemaToggle = rEl('button', 'r-schema-toggle', '\u25b6 Show JSON schema');
     const schemaBlock  = rEl('div', 'r-schema-block r-hidden');
-    schemaBlock.appendChild(rEl('pre', 'r-template', JSON.stringify([{
-      date: "2026-06-19",
-      task: "Description of the task",
-      taskType: "coding | debugging | knowledge | sysdesign | prodeng | walkthrough | behavioral",
-      domain: "e.g. Java / Data Structures",
-      difficulty: "1–5",
-      targetLevel: "L1 | L2 | L3",
-      assistanceLevel: "0–5",
-      universalScore: "0–100 (or omit if using subScores)",
-      taskSpecificScore: "0–100",
-      finalScore: "0–100 (computed if omitted)",
-      cap: "number or null",
-      penalties: 0,
-      levelScores: { L1: null, L2: null, L3: null },
-      demonstratedLevel: "e.g. Strong Level I",
-      confidence: "High | Medium | Low",
-      weaknessTags: ["Shallow reasoning", "Thin tradeoffs"],
-      strengths: "...",
-      weaknesses: "...",
-      nextTarget: "...",
-      universalSubScores: {
-        correctness: "0–25",
-        reasoning: "0–20",
-        judgment: "0–15",
-        validation: "0–15",
-        communication: "0–15",
-        completeness: "0–10"
-      },
-      gates: {
-        Correctness: "Pass | Partial | Fail",
-        Relevance: "Pass | Partial | Fail",
-        "Independent explanation": "Pass | Partial | Fail",
-        Evidence: "Pass | Partial | Fail",
-        "Safety and integrity": "Pass | Partial | Fail",
-        Completion: "Pass | Partial | Fail"
-      }
-    }], null, 2)));
-
+    const SCHEMA_EXAMPLE = {
+      date: "2026-06-19", task: "...", taskType: "coding",
+      domain: "Java / Data Structures",
+      problemLevel: "L2", difficulty: 3,
+      difficultyAssignment: "Precommitted",
+      targetLevel: "L2", assistanceLevel: 0,
+      autonomyConfidence: "Verified",
+      evidenceClass: "prospective",
+      primaryDomain: "Java", secondaryDomains: ["Algorithms/DSA"],
+      primaryRole: "SWE", secondaryRoles: [],
+      universalSubScores: { correctness: 21, reasoning: 15, judgment: 11, validation: 12, communication: 13, completeness: 8 },
+      universalScore: 80, taskSpecificScore: 76,
+      cap: null, penalties: 0,
+      levelScores: { L1: 90, L2: 78, L3: 55 },
+      answerLevel: "Level II",
+      demonstratedLevel: "Strong Level I",
+      qualifyingEvidenceNote: "...",
+      mainReasonNextLevelNotReached: "...",
+      surviveProbing: "Yes",
+      confidence: "Medium",
+      weaknessTags: ["Shallow reasoning","Thin tradeoffs"],
+      gates: { Correctness: "Pass", Relevance: "Pass", "Independent explanation": "Partial", Evidence: "Pass", "Safety and integrity": "Pass", Completion: "Pass" },
+      strengths: "...", weaknesses: "...", nextTarget: "..."
+    };
+    schemaBlock.appendChild(rEl('pre', 'r-template', JSON.stringify(SCHEMA_EXAMPLE, null, 2)));
     schemaToggle.addEventListener('click', () => {
       const open = !schemaBlock.classList.contains('r-hidden');
       schemaBlock.classList.toggle('r-hidden', open);
-      schemaToggle.textContent = open ? '▶ Show JSON schema' : '▼ Hide JSON schema';
+      schemaToggle.textContent = open ? '\u25b6 Show JSON schema' : '\u25bc Hide JSON schema';
     });
-    pastePanel.appendChild(schemaToggle);
-    pastePanel.appendChild(schemaBlock);
-
+    pastePanel.appendChild(schemaToggle); pastePanel.appendChild(schemaBlock);
     const textarea = rEl('textarea', 'r-input r-paste-textarea');
     textarea.placeholder = 'Paste a single entry { } or an array [ { }, { } ] and hit Import.';
     pastePanel.appendChild(textarea);
-
     const pasteActions = rEl('div', 'r-form-actions');
-    const importBtn  = rEl('button', 'r-btn', '↑ Import');
-    const clearBtn2  = rEl('button', 'r-btn r-btn-ghost', 'Clear');
-    const pasteMsg   = rEl('div', 'r-save-msg');
-    pasteActions.appendChild(importBtn);
-    pasteActions.appendChild(clearBtn2);
-    pasteActions.appendChild(pasteMsg);
-    pastePanel.appendChild(pasteActions);
-    el.appendChild(pastePanel);
+    const importBtn = rEl('button', 'r-btn', '\u2191 Import');
+    const clearBtn2 = rEl('button', 'r-btn r-btn-ghost', 'Clear');
+    const pasteMsg  = rEl('div', 'r-save-msg');
+    pasteActions.appendChild(importBtn); pasteActions.appendChild(clearBtn2); pasteActions.appendChild(pasteMsg);
+    pastePanel.appendChild(pasteActions); el.appendChild(pastePanel);
 
     importBtn.addEventListener('click', () => {
       const raw = textarea.value.trim();
-      if (!raw) { pasteMsg.textContent = '⚠ Nothing to import.'; pasteMsg.className = 'r-save-msg r-save-err'; return; }
+      if (!raw) { pasteMsg.textContent = '\u26a0 Nothing to import.'; pasteMsg.className = 'r-save-msg r-save-err'; return; }
       try {
         let parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) parsed = [parsed];
         if (!parsed.length || typeof parsed[0] !== 'object') throw new Error('Expected an object or array of objects');
-
-        const existing  = rLog();
-        const existIds  = new Set(existing.map(e => e.id));
-        const normalised = parsed.map(rNormaliseEntry);
-        const fresh     = normalised.filter(e => !existIds.has(e.id));
-        const merged    = [...existing, ...fresh].sort((a, b) => a.date.localeCompare(b.date));
-        rSave(merged);
-
-        const skipped = parsed.length - fresh.length;
-        pasteMsg.textContent = `✓ Imported ${fresh.length} entr${fresh.length === 1 ? 'y' : 'ies'}${skipped ? ` (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped)` : ''}.`;
+        const existing = rLog(), existIds = new Set(existing.map(e => e.id));
+        const normed = parsed.map(rNormaliseEntry);
+        const fresh = normed.filter(e => !existIds.has(e.id));
+        rSave([...existing, ...fresh].sort((a,b)=>a.date.localeCompare(b.date)));
+        const sk = parsed.length - fresh.length;
+        pasteMsg.textContent = `\u2713 Imported ${fresh.length} entr${fresh.length===1?'y':'ies'}${sk ? ` (${sk} duplicate${sk>1?'s':''} skipped)` : ''}.`;
         pasteMsg.className = 'r-save-msg r-save-ok';
         textarea.value = '';
-        setTimeout(() => { pasteMsg.textContent = ''; }, 5000);
-      } catch (e) {
-        pasteMsg.textContent = '⚠ ' + e.message;
+        setTimeout(() => { pasteMsg.textContent=''; }, 5000);
+      } catch(e) {
+        pasteMsg.textContent = '\u26a0 ' + e.message;
         pasteMsg.className = 'r-save-msg r-save-err';
       }
     });
+    clearBtn2.addEventListener('click', () => { textarea.value=''; pasteMsg.textContent=''; });
 
-    clearBtn2.addEventListener('click', () => { textarea.value = ''; pasteMsg.textContent = ''; });
-
-    /* ══════════════════════════════════════════════
-       QUICK LOG PANEL
-    ══════════════════════════════════════════════ */
+    /* Quick log panel */
     const quickPanel = rEl('div', 'r-quick-form r-hidden');
-
     function qSel(id, opts) {
       const s = rEl('select', 'r-input'); s.id = id;
-      opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; s.appendChild(o); });
+      opts.forEach(([v,t]) => { const o=document.createElement('option'); o.value=v; o.textContent=t; s.appendChild(o); });
       return s;
     }
     function qField(label, input) {
       const w = rEl('div', 'r-field');
-      w.appendChild(rEl('label', 'r-field-label', label));
-      w.appendChild(input); quickPanel.appendChild(w); return input;
+      w.appendChild(rEl('label', 'r-field-label', label)); w.appendChild(input); quickPanel.appendChild(w); return input;
     }
-
-    const qDate = Object.assign(rEl('input', 'r-input'), { type: 'date', id: 'ql-date', value: new Date().toISOString().slice(0, 10) });
+    const qDate = Object.assign(rEl('input','r-input'),{type:'date',id:'ql-date',value:new Date().toISOString().slice(0,10)});
     qField('Date', qDate);
-    const qTask = Object.assign(rEl('input', 'r-input'), { type: 'text', id: 'ql-task', placeholder: 'e.g. Implement LRU Cache' });
+    const qTask = Object.assign(rEl('input','r-input'),{type:'text',id:'ql-task',placeholder:'Task description'});
     qField('Task', qTask);
-    const qType = qSel('ql-type', [['', '— type —'], ...RD.taskTypes.map(t => [t.id, t.label])]);
+    const qType = qSel('ql-type',[['','\u2014 type \u2014'],...RD.taskTypes.map(t=>[t.id,t.label])]);
     qField('Task Type', qType);
-
     const qMiniRow = rEl('div', 'r-score-row');
-    [['ql-diff', 'Difficulty', [['','—'], ...RD.difficulty.map(d=>[d.d,`D${d.d}`])]],
-     ['ql-assist','Assistance', RD.assistance.map(a=>[a.lvl,`A${a.lvl}`])]].forEach(([id, lbl, opts]) => {
-      const f = rEl('div', 'r-score-field');
-      f.appendChild(rEl('label', 'r-field-label', lbl));
-      f.appendChild(qSel(id, opts));
-      qMiniRow.appendChild(f);
+    [['ql-diff','Difficulty',[['','\u2014'],...RD.difficulty.map(d=>[d.d,`D${d.d}`])]],
+     ['ql-assist','Assistance',RD.assistance.map(a=>[a.lvl,`A${a.lvl}`])]].forEach(([id,lbl,opts])=>{
+      const f=rEl('div','r-score-field'); f.appendChild(rEl('label','r-field-label',lbl)); f.appendChild(qSel(id,opts)); qMiniRow.appendChild(f);
     });
-    const qScoreField = rEl('div', 'r-score-field');
-    qScoreField.appendChild(rEl('label', 'r-field-label', 'Final Score'));
-    const qScore = Object.assign(rEl('input', 'r-input'), { type: 'number', id: 'ql-score', min: '0', max: '100', placeholder: '0–100' });
-    qScoreField.appendChild(qScore);
-    qMiniRow.appendChild(qScoreField);
-    quickPanel.appendChild(qMiniRow);
-
-    const qTagWrap = rEl('div', 'r-field');
-    qTagWrap.appendChild(rEl('label', 'r-field-label', 'Weakness Tags'));
-    const qTagGrid = rEl('div', 'r-tag-grid');
-    RD.weaknessTags.forEach(tag => {
-      const lbl = rEl('label', 'r-tag-label');
-      const cb = rEl('input', 'r-tag-cb'); cb.type = 'checkbox'; cb.value = tag; cb.name = 'ql-tags';
-      lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' ' + tag));
-      qTagGrid.appendChild(lbl);
+    const qSF=rEl('div','r-score-field');
+    qSF.appendChild(rEl('label','r-field-label','Final Score'));
+    const qScore=Object.assign(rEl('input','r-input'),{type:'number',id:'ql-score',min:'0',max:'100',placeholder:'0\u2013100'});
+    qSF.appendChild(qScore); qMiniRow.appendChild(qSF); quickPanel.appendChild(qMiniRow);
+    const qTagWrap=rEl('div','r-field'); qTagWrap.appendChild(rEl('label','r-field-label','Weakness Tags'));
+    const qTagGrid=rEl('div','r-tag-grid');
+    RD.weaknessTags.forEach(tag=>{
+      const lbl=rEl('label','r-tag-label'),cb=rEl('input','r-tag-cb');
+      cb.type='checkbox'; cb.value=tag; cb.name='ql-tags';
+      lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' '+tag)); qTagGrid.appendChild(lbl);
     });
-    qTagWrap.appendChild(qTagGrid);
-    quickPanel.appendChild(qTagWrap);
-
-    const qNextField = rEl('div', 'r-field');
-    qNextField.appendChild(rEl('label', 'r-field-label', 'Next Target'));
-    const qNext = Object.assign(rEl('input', 'r-input'), { type: 'text', id: 'ql-next', placeholder: 'Optional' });
-    qNextField.appendChild(qNext);
-    quickPanel.appendChild(qNextField);
-
-    const qActions = rEl('div', 'r-form-actions');
-    const qSave  = rEl('button', 'r-btn', '✓ Save');
-    const qClear = rEl('button', 'r-btn r-btn-ghost', 'Clear');
-    const qMsg   = rEl('div', 'r-save-msg');
+    qTagWrap.appendChild(qTagGrid); quickPanel.appendChild(qTagWrap);
+    const qNextF=rEl('div','r-field'); qNextF.appendChild(rEl('label','r-field-label','Next Target'));
+    const qNext=Object.assign(rEl('input','r-input'),{type:'text',id:'ql-next',placeholder:'Optional'});
+    qNextF.appendChild(qNext); quickPanel.appendChild(qNextF);
+    const qActions=rEl('div','r-form-actions');
+    const qSave=rEl('button','r-btn','\u2713 Save'),qClear=rEl('button','r-btn r-btn-ghost','Clear'),qMsg=rEl('div','r-save-msg');
     qActions.appendChild(qSave); qActions.appendChild(qClear); qActions.appendChild(qMsg);
-    quickPanel.appendChild(qActions);
-    el.appendChild(quickPanel);
-
+    quickPanel.appendChild(qActions); el.appendChild(quickPanel);
     qSave.addEventListener('click', () => {
-      const task = qTask.value.trim(), taskType = qType.value, score = parseFloat(qScore.value);
-      if (!task)      { qMsg.textContent = '⚠ Task required.';      qMsg.className = 'r-save-msg r-save-err'; return; }
-      if (!taskType)  { qMsg.textContent = '⚠ Task type required.'; qMsg.className = 'r-save-msg r-save-err'; return; }
-      if (isNaN(score)){ qMsg.textContent = '⚠ Score required.';    qMsg.className = 'r-save-msg r-save-err'; return; }
-      const tags = [...quickPanel.querySelectorAll('input[name="ql-tags"]:checked')].map(c => c.value);
-      const entry = rNormaliseEntry({
-        date: qDate.value, task, taskType,
-        difficulty:      parseInt(document.getElementById('ql-diff')?.value)   || 0,
-        assistanceLevel: parseInt(document.getElementById('ql-assist')?.value) ?? 0,
-        universalScore: 0, taskSpecificScore: 0,
-        finalScore: score, rawScore: score,
-        weaknessTags: tags, nextTarget: qNext.value, quickLog: true
-      });
-      const entries = rLog(); entries.push(entry); rSave(entries);
-      qMsg.textContent = '✓ Saved.'; qMsg.className = 'r-save-msg r-save-ok';
-      setTimeout(() => { qMsg.textContent = ''; }, 3000);
-      [qTask, qNext, qScore].forEach(i => { i.value = ''; });
-      qType.value = '';
-      quickPanel.querySelectorAll('input[name="ql-tags"]:checked').forEach(c => { c.checked = false; });
+      const task=qTask.value.trim(),taskType=qType.value,score=parseFloat(qScore.value);
+      if(!task){qMsg.textContent='\u26a0 Task required.';qMsg.className='r-save-msg r-save-err';return;}
+      if(!taskType){qMsg.textContent='\u26a0 Task type required.';qMsg.className='r-save-msg r-save-err';return;}
+      if(isNaN(score)){qMsg.textContent='\u26a0 Score required.';qMsg.className='r-save-msg r-save-err';return;}
+      const tags=[...quickPanel.querySelectorAll('input[name="ql-tags"]:checked')].map(c=>c.value);
+      const entry=rNormaliseEntry({date:qDate.value,task,taskType,
+        difficulty:parseInt(document.getElementById('ql-diff')?.value)||0,
+        assistanceLevel:parseInt(document.getElementById('ql-assist')?.value)??0,
+        universalScore:0,taskSpecificScore:0,finalScore:score,rawScore:score,
+        weaknessTags:tags,nextTarget:qNext.value,quickLog:true});
+      const ents=rLog(); ents.push(entry); rSave(ents);
+      qMsg.textContent='\u2713 Saved.'; qMsg.className='r-save-msg r-save-ok';
+      setTimeout(()=>{qMsg.textContent='';},3000);
+      [qTask,qNext,qScore].forEach(i=>{i.value='';}); qType.value='';
+      quickPanel.querySelectorAll('input[name="ql-tags"]:checked').forEach(c=>{c.checked=false;});
     });
-    qClear.addEventListener('click', () => {
-      [qTask, qNext, qScore].forEach(i => { i.value = ''; });
-      qDate.value = new Date().toISOString().slice(0, 10);
-      qType.value = '';
-      quickPanel.querySelectorAll('input[name="ql-tags"]').forEach(c => { c.checked = false; });
-      qMsg.textContent = '';
+    qClear.addEventListener('click', ()=>{
+      [qTask,qNext,qScore].forEach(i=>{i.value='';}); qDate.value=new Date().toISOString().slice(0,10);
+      qType.value=''; quickPanel.querySelectorAll('input[name="ql-tags"]').forEach(c=>{c.checked=false;});
+      qMsg.textContent='';
     });
-
-    /* Mode switching */
-    pasteBtn.addEventListener('click', () => {
-      pasteBtn.classList.add('active'); quickBtn.classList.remove('active');
-      pastePanel.classList.remove('r-hidden'); quickPanel.classList.add('r-hidden');
-      modeDesc.textContent = 'Paste one entry or an array of entries.';
-    });
-    quickBtn.addEventListener('click', () => {
-      quickBtn.classList.add('active'); pasteBtn.classList.remove('active');
-      quickPanel.classList.remove('r-hidden'); pastePanel.classList.add('r-hidden');
-      modeDesc.textContent = 'Five fields. Score first, details later.';
-    });
+    pasteBtn.addEventListener('click',()=>{pasteBtn.classList.add('active');quickBtn.classList.remove('active');pastePanel.classList.remove('r-hidden');quickPanel.classList.add('r-hidden');modeDesc.textContent='Paste one entry or an array of entries.';});
+    quickBtn.addEventListener('click',()=>{quickBtn.classList.add('active');pasteBtn.classList.remove('active');quickPanel.classList.remove('r-hidden');pastePanel.classList.add('r-hidden');modeDesc.textContent='Five fields. Score first, details later.';});
   })();
 
-  /* ════════════════════════════════════════════════════
-     VIEW: HISTORY
-  ════════════════════════════════════════════════════ */
+  /* ════ HISTORY ════════════════════════════════════════ */
   function buildHistory() {
-    const el = panels['history'];
-    el.innerHTML = '';
+    const el = panels['history']; el.innerHTML = '';
     const entries = rLog();
-
-    if (!entries.length) {
-      el.appendChild(rEl('div', 'r-empty', 'No entries yet.'));
-      return;
-    }
-
     const hdr = rEl('div', 'r-history-hdr');
     hdr.appendChild(rEl('span', 'r-section-label', `${entries.length} entries`));
-    const exportBtn = rEl('button', 'r-btn r-btn-sm r-btn-ghost', '↓ Export JSON');
-    exportBtn.addEventListener('click', () => {
-      const blob = new Blob([JSON.stringify(entries, null, 2)], {type: 'application/json'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `rubric-log-${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
+    const exportBtn = rEl('button','r-btn r-btn-sm r-btn-ghost','\u2193 Export JSON');
+    exportBtn.addEventListener('click', ()=>{
+      const blob=new Blob([JSON.stringify(entries,null,2)],{type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download=`rubric-log-${new Date().toISOString().slice(0,10)}.json`; a.click();
     });
-    const clearAllBtn = rEl('button', 'r-btn r-btn-sm r-btn-ghost r-btn-danger', '✕ Clear All');
-    clearAllBtn.addEventListener('click', () => {
-      if (confirm('Delete all log entries? This cannot be undone.')) {
-        rSave([]); buildHistory();
-      }
+    const importBtn2=rEl('button','r-btn r-btn-sm r-btn-ghost','\u2191 Import JSON');
+    const importFile=rEl('input','r-hidden-file'); importFile.type='file'; importFile.accept='.json';
+    const importMsg=rEl('div','r-save-msg');
+    importBtn2.addEventListener('click',()=>importFile.click());
+    importFile.addEventListener('change',()=>{
+      const file=importFile.files[0]; if(!file) return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try {
+          let parsed=JSON.parse(ev.target.result);
+          if(!Array.isArray(parsed)) parsed=[parsed];
+          const existing=rLog(),existIds=new Set(existing.map(e=>e.id));
+          const normed=parsed.map(rNormaliseEntry);
+          const fresh=normed.filter(e=>!existIds.has(e.id));
+          rSave([...existing,...fresh].sort((a,b)=>a.date.localeCompare(b.date)));
+          const sk=parsed.length-fresh.length;
+          importMsg.textContent=`\u2713 Imported ${fresh.length} entr${fresh.length===1?'y':'ies'}${sk?` (${sk} skipped)`:''}`;
+          importMsg.className='r-save-msg r-save-ok';
+          setTimeout(()=>{importMsg.textContent='';},5000);
+          importFile.value=''; buildHistory();
+        } catch(e) { importMsg.textContent='\u26a0 '+e.message; importMsg.className='r-save-msg r-save-err'; }
+      };
+      reader.readAsText(file);
     });
-    hdr.appendChild(exportBtn);
-    hdr.appendChild(clearAllBtn);
-    el.appendChild(hdr);
+    const clearAllBtn=rEl('button','r-btn r-btn-sm r-btn-ghost r-btn-danger','\u2715 Clear All');
+    clearAllBtn.addEventListener('click',()=>{if(confirm('Delete all entries?')){rSave([]);buildHistory();}});
+    hdr.appendChild(exportBtn); hdr.appendChild(importBtn2); hdr.appendChild(importFile);
+    hdr.appendChild(clearAllBtn); hdr.appendChild(importMsg); el.appendChild(hdr);
 
-    /* Filter bar */
-    const filterBar = rEl('div', 'r-filter-bar');
-    const taskFilter = sel('r-filter-type', [['', 'All types'], ...RD.taskTypes.map(t => [t.id, t.label])]);
-    taskFilter.className = 'r-input r-filter-sel';
-    filterBar.appendChild(taskFilter);
-    el.appendChild(filterBar);
-
-    const tableWrap = rEl('div', 'r-history-table-wrap');
-    el.appendChild(tableWrap);
+    const filterBar=rEl('div','r-filter-bar');
+    const typeFilter=rEl('select','r-input r-filter-sel'); typeFilter.id='r-filter-type';
+    [['','All types'],...RD.taskTypes.map(t=>[t.id,t.label])].forEach(([v,t])=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=t; typeFilter.appendChild(o);
+    });
+    filterBar.appendChild(typeFilter); el.appendChild(filterBar);
+    if(!entries.length){el.appendChild(rEl('div','r-empty','No entries yet.'));return;}
+    const tableWrap=rEl('div','r-history-table-wrap'); el.appendChild(tableWrap);
 
     function renderTable() {
-      tableWrap.innerHTML = '';
-      const filterType = document.getElementById('r-filter-type')?.value || '';
-      const filtered = [...entries]
-        .reverse()
-        .filter(e => !filterType || e.taskType === filterType);
+      tableWrap.innerHTML='';
+      const ft=typeFilter.value;
+      const filtered=[...entries].reverse().filter(e=>!ft||e.taskType===ft);
+      if(!filtered.length){tableWrap.appendChild(rEl('div','r-empty','No entries match filter.'));return;}
 
-      if (!filtered.length) { tableWrap.appendChild(rEl('div', 'r-empty', 'No entries match filter.')); return; }
+      filtered.forEach(e=>{
+        const band=rScoreBand(e.finalScore);
+        const card=rEl('div','r-hist-card');
+        const top=rEl('div','r-hist-top');
+        const typeTag=rEl('span','r-hist-type');
+        typeTag.style.borderColor=rTaskColor(e.taskType); typeTag.textContent=rTaskLabel(e.taskType);
+        const title=rEl('div','r-hist-title',e.task+(e.quickLog?' <span class="r-ql-badge">quick</span>':''));
+        const ecLabel = e.evidenceClass && e.evidenceClass !== 'prospective'
+          ? ` \u00b7 <span class="r-ec-badge">${{classA:'A',classB:'B',classC:'C'}[e.evidenceClass]||e.evidenceClass}</span>` : '';
+        const domLabel = (e.primaryDomain||e.domain) ? ` \u00b7 ${e.primaryDomain||e.domain}` : '';
+        const roleLabel = e.primaryRole ? ` \u00b7 ${e.primaryRole}` : '';
+        const meta=rEl('div','r-hist-meta',
+          `${e.date} \u00b7 D${e.difficulty||'\u2014'} \u00b7 A${e.assistanceLevel??'\u2014'}${domLabel}${roleLabel}${ecLabel}`+
+          (e.problemLevel?` \u00b7 ${e.problemLevel} problem`:'')+
+          (e.demonstratedLevel?` \u00b7 ${e.demonstratedLevel}`:''));
+        const right=rEl('div','r-hist-right');
+        const score=rEl('span','r-hist-score '+band.cls,e.finalScore);
+        const del=rEl('button','r-hist-del','\u2715');
+        del.title='Delete entry';
+        del.addEventListener('click',()=>{if(confirm('Delete this entry?')){rSave(rLog().filter(x=>x.id!==e.id));renderTable();}});
+        right.appendChild(score); right.appendChild(del);
+        top.appendChild(typeTag); top.appendChild(title); top.appendChild(meta);
+        card.appendChild(top); card.appendChild(right);
 
-      filtered.forEach(e => {
-        const band = rScoreBand(e.finalScore);
-        const card = rEl('div', 'r-hist-card');
-        const top = rEl('div', 'r-hist-top');
+        const detail=rEl('div','r-hist-detail r-hist-collapsed');
+        const expandBtn=rEl('button','r-hist-expand','\u25b6 Details');
 
-        const scoreBadge = rEl('span', 'r-hist-score ' + band.cls, e.finalScore);
-        const typeTag = rEl('span', 'r-hist-type');
-        typeTag.style.borderColor = rTaskColor(e.taskType);
-        typeTag.textContent = rTaskLabel(e.taskType);
-
-        const title = rEl('div', 'r-hist-title', e.task);
-        const meta = rEl('div', 'r-hist-meta',
-          `${e.date} · D${e.difficulty} · A${e.assistanceLevel} · ${e.targetLevel || '—'} target · ${e.demonstratedLevel || '—'}`);
-        const right = rEl('div', 'r-hist-right');
-
-        const delBtn = rEl('button', 'r-hist-del', '✕');
-        delBtn.title = 'Delete entry';
-        delBtn.addEventListener('click', () => {
-          if (confirm('Delete this entry?')) {
-            const all = rLog().filter(x => x.id !== e.id);
-            rSave(all); renderTable();
-          }
-        });
-
-        right.appendChild(scoreBadge);
-        right.appendChild(delBtn);
-        top.appendChild(typeTag);
-        top.appendChild(title);
-        top.appendChild(meta);
-        card.appendChild(top);
-        card.appendChild(right);
-
-        /* Expandable detail */
-        const detail = rEl('div', 'r-hist-detail r-hist-collapsed');
-        const expandBtn = rEl('button', 'r-hist-expand', '▶ Details');
-
-        const rows = [
-          ['Domain', e.domain], ['Conf.', e.confidence],
-          ['Universal', e.universalScore], ['Task-Specific', e.taskSpecificScore],
-          ['Raw', e.rawScore], ['Cap', e.cap !== null ? e.cap : '—'],
-          ['Penalty', e.penalties], ['Final', e.finalScore],
-          ['L1 Score', e.levelScores?.L1 ?? '—'], ['L2 Score', e.levelScores?.L2 ?? '—'],
-          ['L3 Score', e.levelScores?.L3 ?? '—']
-        ];
-        const dtbl = rTbl(['Field', 'Value'], rows.map(([f, v]) => [f, String(v)]), 'r-hist-dtbl');
-        detail.appendChild(dtbl);
-
-        if (e.weaknessTags?.length) {
-          const trow = rEl('div', 'r-hist-detail-row');
-          trow.appendChild(rEl('span', 'r-hist-detail-lbl', 'Weakness tags'));
-          const tags = rEl('div', 'r-hist-tags');
-          e.weaknessTags.forEach(t => tags.appendChild(rEl('span', 'r-weak-tag r-weak-tag-sm', t)));
-          trow.appendChild(tags);
-          detail.appendChild(trow);
-        }
-        if (e.strengths) {
-          const s = rEl('div', 'r-hist-detail-row');
-          s.appendChild(rEl('span', 'r-hist-detail-lbl', 'Strengths'));
-          s.appendChild(rEl('p', 'r-hist-text', e.strengths));
-          detail.appendChild(s);
-        }
-        if (e.weaknesses) {
-          const w = rEl('div', 'r-hist-detail-row');
-          w.appendChild(rEl('span', 'r-hist-detail-lbl', 'Weaknesses'));
-          w.appendChild(rEl('p', 'r-hist-text', e.weaknesses));
-          detail.appendChild(w);
-        }
-        if (e.nextTarget) {
-          const n = rEl('div', 'r-hist-detail-row');
-          n.appendChild(rEl('span', 'r-hist-detail-lbl', 'Next target'));
-          n.appendChild(rEl('p', 'r-hist-text r-next-target', e.nextTarget));
-          detail.appendChild(n);
-        }
-
-        const gateEntries = Object.entries(e.gates || {}).filter(([, v]) => v);
-        if (gateEntries.length) {
-          const g = rEl('div', 'r-hist-detail-row');
-          g.appendChild(rEl('span', 'r-hist-detail-lbl', 'Gates'));
-          const glist = rEl('div', 'r-hist-gates');
-          gateEntries.forEach(([gate, result]) => {
-            const cls = result === 'Pass' ? 'gate-pass' : result === 'Fail' ? 'gate-fail' : 'gate-partial';
-            glist.appendChild(rEl('span', 'r-gate-badge ' + cls, `${gate}: ${result}`));
+        /* Three level scores */
+        if(e.levelScores&&(e.levelScores.L1!==null||e.levelScores.L2!==null||e.levelScores.L3!==null)){
+          const lvlRow=rEl('div','r-hist-level-row');
+          ['L1','L2','L3'].forEach(lk=>{
+            const v=e.levelScores[lk];
+            const col=rEl('div','r-hist-level-col');
+            col.appendChild(rEl('div','r-hist-level-label',{L1:'Level I',L2:'Level II',L3:'Level III'}[lk]));
+            const bnd=v!==null?rScoreBand(v):null;
+            col.appendChild(rEl('div','r-hist-level-val '+(bnd?bnd.cls:''),v!==null?v:'\u2014'));
+            lvlRow.appendChild(col);
           });
-          g.appendChild(glist);
-          detail.appendChild(g);
+          detail.appendChild(lvlRow);
         }
 
-        expandBtn.addEventListener('click', () => {
-          const open = !detail.classList.contains('r-hist-collapsed');
-          detail.classList.toggle('r-hist-collapsed', open);
-          expandBtn.textContent = open ? '▶ Details' : '▼ Details';
+        /* Radar */
+        const pcts=e.universalSubScores?rSubPct(e.universalSubScores):null;
+        if(pcts&&pcts.some(p=>p!==null)){
+          const radarRow=rEl('div','r-hist-radar-row');
+          radarRow.appendChild(rSpider(pcts,140,{showLabels:true,compact:true}));
+          const dimList=rEl('div','r-hist-dim-list');
+          RD.universalDims.forEach((d,i)=>{
+            if(pcts[i]===null) return;
+            const row2=rEl('div','r-hist-dim-row');
+            const bw=rEl('div','r-hist-dim-bar-wrap'),bf=rEl('div','r-hist-dim-bar');
+            bf.style.width=pcts[i]+'%';
+            bf.style.background=pcts[i]>=70?'var(--done)':pcts[i]>=50?'var(--doing)':'var(--audit)';
+            bw.appendChild(bf);
+            row2.appendChild(rEl('span','r-hist-dim-name',d.label));
+            row2.appendChild(rEl('span','r-hist-dim-val',`${e.universalSubScores[d.id]}/${d.max}`));
+            row2.appendChild(bw); dimList.appendChild(row2);
+          });
+          radarRow.appendChild(dimList); detail.appendChild(radarRow);
+        }
+
+        /* Score table */
+        const scoreRows=[
+          ['Problem level', e.problemLevel||'\u2014'],['Answer level', e.answerLevel||'\u2014'],
+          ['Universal', e.universalScore||'\u2014'],['Task-specific', e.taskSpecificScore||'\u2014'],
+          ['Raw', e.rawScore],['Cap', e.cap!==null&&e.cap!==undefined?e.cap:'\u2014'],
+          ['Penalty', e.penalties||0],['Final', e.finalScore],
+          ['Evidence class', e.evidenceClass||'\u2014'],['Autonomy', e.autonomyConfidence||'\u2014'],
+          ['Domain', e.primaryDomain||e.domain||'\u2014'],['Role', e.primaryRole||'\u2014'],
+          ['Confidence', e.confidence||'\u2014'],['Survive probing', e.surviveProbing||'\u2014']
+        ].filter(([,v])=>v!==undefined&&v!=='');
+        detail.appendChild(rTbl(['Field','Value'],scoreRows.map(([f,v])=>[f,String(v)]),'r-hist-dtbl'));
+
+        if(e.mainReasonNextLevelNotReached){
+          const nr=rEl('div','r-hist-detail-row');
+          nr.appendChild(rEl('span','r-hist-detail-lbl','Why next level not reached'));
+          nr.appendChild(rEl('p','r-hist-text',e.mainReasonNextLevelNotReached));
+          detail.appendChild(nr);
+        }
+        if(e.qualifyingEvidenceNote){
+          const qn=rEl('div','r-hist-detail-row');
+          qn.appendChild(rEl('span','r-hist-detail-lbl','Qualifying evidence note'));
+          qn.appendChild(rEl('p','r-hist-text',e.qualifyingEvidenceNote));
+          detail.appendChild(qn);
+        }
+        if(e.weaknessTags?.length){
+          const tr2=rEl('div','r-hist-detail-row');
+          tr2.appendChild(rEl('span','r-hist-detail-lbl','Weakness tags'));
+          const tg=rEl('div','r-hist-tags');
+          e.weaknessTags.forEach(t=>tg.appendChild(rEl('span','r-weak-tag r-weak-tag-sm',t)));
+          tr2.appendChild(tg); detail.appendChild(tr2);
+        }
+        [['Strengths',e.strengths],['Weaknesses',e.weaknesses],['Next target',e.nextTarget]].filter(([,v])=>v).forEach(([lbl,v])=>{
+          const r2=rEl('div','r-hist-detail-row');
+          r2.appendChild(rEl('span','r-hist-detail-lbl',lbl));
+          r2.appendChild(rEl('p','r-hist-text'+(lbl==='Next target'?' r-next-target':''),v));
+          detail.appendChild(r2);
         });
-        card.appendChild(expandBtn);
-        card.appendChild(detail);
-        tableWrap.appendChild(card);
+        const ge=Object.entries(e.gates||{}).filter(([,v])=>v);
+        if(ge.length){
+          const gr=rEl('div','r-hist-detail-row'); gr.appendChild(rEl('span','r-hist-detail-lbl','Gates'));
+          const gl=rEl('div','r-hist-gates');
+          ge.forEach(([gate,result])=>{
+            const cls=result==='Pass'?'gate-pass':result==='Fail'?'gate-fail':'gate-partial';
+            gl.appendChild(rEl('span','r-gate-badge '+cls,`${gate}: ${result}`));
+          });
+          gr.appendChild(gl); detail.appendChild(gr);
+        }
+        expandBtn.addEventListener('click',()=>{
+          const open=!detail.classList.contains('r-hist-collapsed');
+          detail.classList.toggle('r-hist-collapsed',open);
+          expandBtn.textContent=open?'\u25b6 Details':'\u25bc Details';
+        });
+        card.appendChild(expandBtn); card.appendChild(detail); tableWrap.appendChild(card);
       });
     }
-
-    taskFilter.addEventListener('change', renderTable);
-    renderTable();
+    typeFilter.addEventListener('change',renderTable); renderTable();
   }
 
-  /* ════════════════════════════════════════════════════
-     VIEW: REFERENCE  (all 27 document sections)
-  ════════════════════════════════════════════════════ */
+  /* ════ REFERENCE ══════════════════════════════════════ */
   (function buildReference() {
-    const el = panels['reference'];
-    el.className = 'r-view r-ref-view';
-
-    /* Layout */
+    const el = panels['reference']; el.className = 'r-view r-ref-view';
     const layout = rEl('div', 'r-ref-layout');
-
-    /* Sidebar nav */
     const nav = rEl('nav', 'r-ref-nav');
-    const navSections = [
-      { id: 'ref-calc',    label: '⟳ Score Calculator' },
-      { id: 'ref-hier',    label: '§2 Evaluation Hierarchy' },
-      { id: 'ref-tasks',   label: '§3 Task Classification' },
-      { id: 'ref-levels',  label: '§4 Level Definitions' },
-      { id: 'ref-gates',   label: '§5 Mandatory Gates' },
-      { id: 'ref-univ',    label: '§6 Universal Competency' },
-      { id: 'ref-taskrub', label: '§8–14 Task Rubrics' },
-      { id: 'ref-bands',   label: '§15 Score Bands' },
-      { id: 'ref-leveldet',label: '§16 Level Determination' },
-      { id: 'ref-caps',    label: '§17 Caps' },
-      { id: 'ref-pen',     label: '§18 Penalties' },
-      { id: 'ref-crit',    label: '§19 Critical Fails' },
-      { id: 'ref-diff',    label: '§20–21 Difficulty & Assistance' },
-      { id: 'ref-conf',    label: '§22 Confidence' },
-      { id: 'ref-promo',   label: '§24 Promotion Standard' },
-      { id: 'ref-output',  label: '§25 Eval Output Format' },
-      { id: 'ref-grading', label: '§26 Grading Principles' }
-    ];
-    navSections.forEach(ns => {
-      const a = rEl('a', 'r-ref-nav-link', ns.label);
-      a.href = '#' + ns.id;
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        const t = document.getElementById(ns.id);
-        if (t) { t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-      });
+    [
+      ['ref-contract',  '\u00a71.1 Output Contract'],
+      ['ref-calc',      '\u27f3 Score Calculator'],
+      ['ref-levels',    '\u00a73 Level Definitions'],
+      ['ref-3score',    '\u00a73.1\u20133.3 Three-Score Model'],
+      ['ref-gates',     '\u00a74 Mandatory Gates'],
+      ['ref-tasks',     '\u00a75 Task Classification'],
+      ['ref-diff',      '\u00a76 Difficulty System'],
+      ['ref-diffattr',  '\u00a76.1 Attribute Matrix'],
+      ['ref-univ',      '\u00a77 Universal Competency'],
+      ['ref-taskrub',   '\u00a78 Task Rubrics'],
+      ['ref-domains',   '\u00a79 Domain & Role Model'],
+      ['ref-retro',     '\u00a710 Retrospective Protocol'],
+      ['ref-multibug',  '\u00a711 Multi-Bug Debugging'],
+      ['ref-assist',    '\u00a712 Assistance'],
+      ['ref-caps',      '\u00a713 Caps & Penalties'],
+      ['ref-levelrules','\u00a714 Level Rules'],
+      ['ref-bands',     '\u00a715 Score Bands'],
+      ['ref-promo',     'Promotion Standard'],
+      ['ref-grading',   '\u00a719 Grading Principles']
+    ].forEach(([id, label]) => {
+      const a = rEl('a', 'r-ref-nav-link', label); a.href = '#' + id;
+      a.addEventListener('click', e => { e.preventDefault(); const t=document.getElementById(id); if(t){t.open=true;t.scrollIntoView({behavior:'smooth',block:'start'});} });
       nav.appendChild(a);
     });
     layout.appendChild(nav);
-
     const content = rEl('div', 'r-ref-content');
 
-    /* ── Calculator ── */
-    function addCalc() {
-      const sec = rEl('div', 'r-ref-calc-wrap');
-      sec.id = 'ref-calc';
-      sec.appendChild(rEl('div', 'r-ref-plain-title', '⟳ Score Calculator'));
-      sec.innerHTML += `
-        <div class="r-calc-grid">
-          <div class="r-calc-field"><label class="r-field-label">Universal Score (0–100)</label><input class="r-input" id="ref-calc-u" type="number" min="0" max="100"></div>
-          <div class="r-calc-field"><label class="r-field-label">Task-Specific Score (0–100)</label><input class="r-input" id="ref-calc-t" type="number" min="0" max="100"></div>
-          <div class="r-calc-field"><label class="r-field-label">Cap (if any)</label><input class="r-input" id="ref-calc-cap" type="number" min="0" max="100"></div>
-          <div class="r-calc-field"><label class="r-field-label">Penalty Total</label><input class="r-input" id="ref-calc-pen" type="number" min="0" value="0"></div>
-        </div>
-        <div id="ref-calc-result" class="r-result-strip r-result-hidden">
-          <div class="r-result-item"><span class="r-result-lbl">Raw (60/40)</span><span class="r-result-val" id="ref-calc-raw">—</span></div>
-          <div class="r-result-item"><span class="r-result-lbl">Final Score</span><span class="r-result-val r-result-big" id="ref-calc-final">—</span></div>
-          <div class="r-result-item"><span class="r-result-lbl">Verdict</span><span class="r-result-verdict" id="ref-calc-verdict">—</span></div>
-        </div>
-        <button class="r-btn" id="ref-calc-run">Calculate</button>
-        <button class="r-btn r-btn-ghost" id="ref-calc-clear">Clear</button>
-      `;
-      content.appendChild(sec);
-
-      document.getElementById('ref-calc-run')?.addEventListener('click', () => {
-        const u = parseFloat(document.getElementById('ref-calc-u')?.value);
-        const t = parseFloat(document.getElementById('ref-calc-t')?.value);
-        if (isNaN(u) || isNaN(t)) return;
-        const cap = document.getElementById('ref-calc-cap')?.value;
-        const pen = parseFloat(document.getElementById('ref-calc-pen')?.value) || 0;
-        const raw = rComputeRaw(u, t);
-        const final = rComputeFinal(raw, cap, pen);
-        const band = rScoreBand(final);
-        document.getElementById('ref-calc-raw').textContent = raw;
-        document.getElementById('ref-calc-final').textContent = final;
-        const v = document.getElementById('ref-calc-verdict');
-        v.textContent = band.verdict; v.className = 'r-result-verdict ' + band.cls;
-        document.getElementById('ref-calc-result').classList.remove('r-result-hidden');
-      });
-      document.getElementById('ref-calc-clear')?.addEventListener('click', () => {
-        ['ref-calc-u','ref-calc-t','ref-calc-cap'].forEach(id => { const e = document.getElementById(id); if(e) e.value=''; });
-        document.getElementById('ref-calc-pen').value = '0';
-        document.getElementById('ref-calc-result').classList.add('r-result-hidden');
-      });
+    function addAcc(id, title, fn, open) {
+      const body = rEl('div'); fn(body);
+      const acc = rAccordion(title, body, open); acc.id = id; content.appendChild(acc);
     }
-    addCalc();
 
-    /* ── §2 Evaluation Hierarchy ── */
-    const hierBody = rEl('div');
-    hierBody.appendChild(rList([
-      'Classify the task', 'Define the expected level', 'Check mandatory gates',
-      'Score universal competencies', 'Score task-specific competencies',
-      'Apply caps and penalties', 'Assign a demonstrated level', 'Record evidence and improvement targets'
-    ]));
-    const hierAcc = rAccordion('§2 — Evaluation Hierarchy', hierBody);
-    hierAcc.id = 'ref-hier';
-    content.appendChild(hierAcc);
+    /* §1.1 Mandatory grader output contract */
+    addAcc('ref-contract', '\u00a71.1 \u2014 Mandatory Grader Output Contract', body => {
+      body.appendChild(rEl('p', 'r-note', 'This section is controlling. Any evaluation that reports only one total score is <strong>invalid</strong>, even if it later labels Level I/II/III as demonstrated or not demonstrated.'));
+      body.appendChild(rEl('div', 'r-sub-title', 'Required output fields (in order)'));
+      body.appendChild(rList([
+        'Problem level: Level I / II / III',
+        'Difficulty: 1\u20135',
+        'Level I answer score: 0\u2013100 with verdict',
+        'Level II answer score: 0\u2013100 with verdict',
+        'Level III answer score: 0\u2013100 with verdict',
+        'Answer level: highest level whose score passes',
+        'Qualifying demonstrated level: answer level capped by problem level, difficulty, and autonomy requirements'
+      ]));
+      body.appendChild(rEl('div', 'r-sub-title', 'Required output template'));
+      body.appendChild(rEl('pre', 'r-template',
+`Problem level: Level __
+Difficulty: __/5
 
-    /* ── §3 Task Classification ── */
-    const taskClsBody = rEl('div');
-    taskClsBody.appendChild(rTbl(['Task Type', 'Examples'], [
-      ['Coding',                'LeetCode, implementation exercise, algorithm question'],
-      ['Debugging',             'Broken code, failing tests, production-style defect'],
-      ['Technical Knowledge',   'Java, Spring, React, SQL, RAG, AWS, SDLC questions'],
-      ['System Design',         'Service design, data model, architecture, scaling discussion'],
-      ['Production Engineering','APIs, CI, Docker, tests, logging, migrations, observability'],
-      ['Project Walkthrough',   'Explaining a portfolio project, design decisions, tradeoffs'],
-      ['Behavioral Technical',  'Ownership, incidents, disagreement, technical leadership']
-    ]));
-    taskClsBody.appendChild(rEl('p', 'r-note', 'A task may contain secondary categories, but one must be identified as primary so scoring remains consistent.'));
-    const taskClsAcc = rAccordion('§3 — Task Classification', taskClsBody);
-    taskClsAcc.id = 'ref-tasks';
-    content.appendChild(taskClsAcc);
+Level I answer score:   __/100 \u2014 Pass / Borderline / Fail
+Level II answer score:  __/100 \u2014 Pass / Borderline / Fail
+Level III answer score: __/100 \u2014 Pass / Borderline / Fail
 
-    /* ── §4 Level Definitions ── */
-    const levelBody = rEl('div', 'r-level-grid');
-    RD.levels.forEach(lv => {
-      const card = rEl('div', 'r-level-card');
-      card.appendChild(rEl('div', 'r-level-label', `${lv.label} <span class="r-level-sub">— ${lv.subtitle}</span>`));
-      card.appendChild(rEl('p', 'r-level-desc', lv.desc));
-      card.appendChild(rList(lv.traits));
-      levelBody.appendChild(card);
-    });
-    const levelAcc = rAccordion('§4 — Level Definitions', levelBody, true);
-    levelAcc.id = 'ref-levels';
-    content.appendChild(levelAcc);
+Answer level: Level __
+Qualifying demonstrated level: Level __
+Primary domain: __
+Primary role: __
+Assistance: __
+Caps/penalties: __
+Main reason the next level was not reached: __`));
+      body.appendChild(rEl('p', 'r-note', '<strong>Validation rule:</strong> If any of the three numerical answer scores is missing, the assessment must be regenerated before it is recorded in the progress tracker.'));
+    }, true);
 
-    /* ── §5 Mandatory Gates ── */
-    const gatesBody = rEl('div');
-    gatesBody.appendChild(rTbl(['Gate', 'Requirement'], RD.gates.map(g => [g.gate, g.req])));
-    gatesBody.appendChild(rEl('p', 'r-note', 'Failure in <strong>Correctness</strong>, <strong>Relevance</strong>, or <strong>Integrity</strong> normally results in an overall failing score regardless of strengths elsewhere.'));
-    const gatesAcc = rAccordion('§5 — Mandatory Gates', gatesBody);
-    gatesAcc.id = 'ref-gates';
-    content.appendChild(gatesAcc);
-
-    /* ── §6 Universal Competency ── */
-    const univBody = rEl('div');
-    univBody.appendChild(rTbl(['Competency', 'Weight'], [
-      ...RD.universal.map(u => [u.name, u.weight + ' pts']),
-      ['<strong>Total</strong>', '<strong>100</strong>']
-    ]));
-    RD.universal.forEach(u => {
-      univBody.appendChild(rEl('div', 'r-sub-title',
-        u.name + ` <span class="r-weight-badge">${u.weight} pts</span>`));
-      univBody.appendChild(rTbl(['Score', 'Standard'], u.bands.map(b => [b.range, b.std]), 'r-sub-tbl'));
-    });
-    const univAcc = rAccordion('§6 — Universal Competency Score (60% of final)', univBody);
-    univAcc.id = 'ref-univ';
-    content.appendChild(univAcc);
-
-    /* ── §7 formula note ── embedded in univAcc already, but add note */
-
-    /* ── §8–14 Task Rubrics ── */
-    const taskRubBody = rEl('div', 'r-task-rub-body');
-    const taskNav = rEl('div', 'r-task-nav');
-    const taskPanels = rEl('div', 'r-task-panels');
-
-    RD.taskRubrics.forEach((tr, idx) => {
-      const color = rTaskColor(tr.id);
-      const btn = rEl('button', 'r-task-btn' + (idx === 0 ? ' active' : ''), tr.label);
-      btn.style.borderColor = color;
-      if (idx === 0) btn.style.background = color + '22';
-
-      const panel = rEl('div', 'r-task-panel' + (idx === 0 ? ' active' : ''));
-      panel.appendChild(rTbl(['Category', 'Weight'],
-        [...tr.categories.map(c => [c.name, c.weight + ' pts']),
-         ['<strong>Total</strong>', '<strong>100</strong>']]));
-      if (tr.note) panel.appendChild(rEl('p', 'r-note', '⚠ ' + tr.note));
-
-      if (Object.values(tr.levels).some(l => l.length > 0)) {
-        const lg = rEl('div', 'r-task-level-grid');
-        RD.levels.forEach(lv => {
-          const items = tr.levels[lv.id];
-          if (!items?.length) return;
-          const col = rEl('div', 'r-task-level-col');
-          col.appendChild(rEl('div', 'r-task-level-lbl', lv.label));
-          col.appendChild(rList(items));
-          lg.appendChild(col);
-        });
-        panel.appendChild(lg);
-      }
-
-      btn.addEventListener('click', () => {
-        taskNav.querySelectorAll('.r-task-btn').forEach((b, bi) => {
-          b.classList.toggle('active', bi === idx);
-          b.style.background = bi === idx ? rTaskColor(RD.taskRubrics[bi].id) + '22' : '';
-        });
-        taskPanels.querySelectorAll('.r-task-panel').forEach((p, pi) =>
-          p.classList.toggle('active', pi === idx));
+    /* Calculator */
+    const calcWrap = rEl('div', 'r-ref-calc-wrap'); calcWrap.id = 'ref-calc';
+    calcWrap.appendChild(rEl('div', 'r-ref-plain-title', '\u27f3 Score Calculator'));
+    calcWrap.innerHTML += `
+      <p style="font-size:11px;color:var(--text-dim);margin:0 0 10px">For each level separately: Level Score = Universal \u00d7 0.60 + Task-Specific \u00d7 0.40</p>
+      <div class="r-calc-grid">
+        <div class="r-calc-field"><label class="r-field-label">Universal Score</label><input class="r-input" id="rc-u" type="number" min="0" max="100"></div>
+        <div class="r-calc-field"><label class="r-field-label">Task-Specific Score</label><input class="r-input" id="rc-t" type="number" min="0" max="100"></div>
+        <div class="r-calc-field"><label class="r-field-label">Cap (if any)</label><input class="r-input" id="rc-cap" type="number"></div>
+        <div class="r-calc-field"><label class="r-field-label">Penalty Total</label><input class="r-input" id="rc-pen" type="number" value="0"></div>
+      </div>
+      <div id="rc-result" class="r-result-strip r-result-hidden">
+        <div class="r-result-item"><span class="r-result-lbl">Raw (60/40)</span><span class="r-result-val" id="rc-raw">\u2014</span></div>
+        <div class="r-result-item"><span class="r-result-lbl">Final Score</span><span class="r-result-val r-result-big" id="rc-final">\u2014</span></div>
+        <div class="r-result-item"><span class="r-result-lbl">Verdict</span><span class="r-result-verdict" id="rc-verdict">\u2014</span></div>
+      </div>
+      <button class="r-btn" id="rc-run">Calculate</button>
+      <button class="r-btn r-btn-ghost" id="rc-clear">Clear</button>`;
+    content.appendChild(calcWrap);
+    setTimeout(() => {
+      document.getElementById('rc-run')?.addEventListener('click', ()=>{
+        const u=parseFloat(document.getElementById('rc-u')?.value);
+        const t=parseFloat(document.getElementById('rc-t')?.value);
+        if(isNaN(u)||isNaN(t)) return;
+        const raw=rComputeRaw(u,t);
+        const final=rComputeFinal(raw,document.getElementById('rc-cap')?.value,parseFloat(document.getElementById('rc-pen')?.value)||0);
+        const band=rScoreBand(final);
+        document.getElementById('rc-raw').textContent=raw;
+        document.getElementById('rc-final').textContent=final;
+        const v=document.getElementById('rc-verdict'); v.textContent=band.verdict; v.className='r-result-verdict '+band.cls;
+        document.getElementById('rc-result').classList.remove('r-result-hidden');
       });
+      document.getElementById('rc-clear')?.addEventListener('click',()=>{
+        ['rc-u','rc-t','rc-cap'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+        document.getElementById('rc-pen').value='0';
+        document.getElementById('rc-result').classList.add('r-result-hidden');
+      });
+    }, 0);
 
-      taskNav.appendChild(btn);
-      taskPanels.appendChild(panel);
+    addAcc('ref-levels', '\u00a73 \u2014 Level Definitions', body => {
+      body.appendChild(rTbl(['Level','Standard','Typical Scope'],
+        RD.levels.map(l => [l.label+' \u2014 '+l.subtitle, l.standard, l.scope])));
     });
-    taskRubBody.appendChild(taskNav);
-    taskRubBody.appendChild(taskPanels);
-    const taskRubAcc = rAccordion('§8–14 — Task-Specific Rubrics (40% of final)', taskRubBody);
-    taskRubAcc.id = 'ref-taskrub';
-    content.appendChild(taskRubAcc);
 
-    /* ── §15 Score Bands ── */
-    const bandsBody = rEl('div');
-    bandsBody.appendChild(rTbl(['Score', 'Verdict'],
-      RD.scoreBands.map(b => [b.range, `<span class="${b.cls}">${b.verdict}</span>`])));
-    bandsBody.appendChild(rEl('p', 'r-note', 'A score of <strong>70</strong> is the minimum clean pass. Do not inflate scores because the task was difficult.'));
-    const bandsAcc = rAccordion('§15 — Score Interpretation', bandsBody);
-    bandsAcc.id = 'ref-bands';
-    content.appendChild(bandsAcc);
-
-    /* ── §16 Level Determination ── */
-    const levelDetBody = rEl('div');
-    levelDetBody.appendChild(rEl('p', 'r-note',
-      'Demonstrated level = the <strong>highest level</strong> where: score ≥ 70 · correctness gate passes · no critical competency below 60 · no cap reduces below 70 · evidence reflects required autonomy.'));
-    levelDetBody.appendChild(rTbl(['Result', 'Meaning'], [
-      ['Below Level I', 'Does not yet meet the minimum professional bar'],
-      ['Emerging Level I', 'Some Level I evidence, but inconsistent'],
-      ['Level I', 'Reliably performs scoped work'],
-      ['Strong Level I', 'Consistently strong Level I; partial Level II evidence'],
-      ['Level II', 'Reliably owns features or investigations independently'],
-      ['Strong Level II', 'Strong independent ownership; partial Level III evidence'],
-      ['Level III', 'Reliably owns ambiguous, system-level problems'],
-      ['Strong Level III', 'Performs above the expected Level III scope']
-    ]));
-    const levelDetAcc = rAccordion('§16 — Level Determination', levelDetBody);
-    levelDetAcc.id = 'ref-leveldet';
-    content.appendChild(levelDetAcc);
-
-    /* ── §17 Caps ── */
-    const capsBody = rEl('div');
-    capsBody.appendChild(rTbl(['Condition', 'Max Score'], RD.caps.map(c => [c.condition, c.max])));
-    capsBody.appendChild(rEl('p', 'r-note', 'Applied after raw score. The lowest applicable cap wins.'));
-    const capsAcc = rAccordion('§17 — Caps', capsBody);
-    capsAcc.id = 'ref-caps';
-    content.appendChild(capsAcc);
-
-    /* ── §18 Penalties ── */
-    const penBody = rEl('div');
-    penBody.appendChild(rTbl(['Deficiency', 'Typical Penalty'], RD.penalties.map(p => [p.deficiency, p.penalty])));
-    penBody.appendChild(rEl('p', 'r-note', 'Penalties must be tied to observable evidence.'));
-    const penAcc = rAccordion('§18 — Penalties', penBody);
-    penAcc.id = 'ref-pen';
-    content.appendChild(penAcc);
-
-    /* ── §19 Critical Fails ── */
-    const critBody = rEl('div');
-    critBody.appendChild(rEl('p', 'r-note', 'Usually result in failure regardless of numerical subtotal:'));
-    critBody.appendChild(rList(RD.criticalFails, 'r-crit-list'));
-    const critAcc = rAccordion('§19 — Critical-Failure Conditions', critBody);
-    critAcc.id = 'ref-crit';
-    content.appendChild(critAcc);
-
-    /* ── §20 & §21 Difficulty & Assistance ── */
-    const diffBody = rEl('div');
-    diffBody.appendChild(rEl('div', 'r-sub-title', 'Difficulty Scale'));
-    diffBody.appendChild(rTbl(['D', 'Description'], RD.difficulty.map(d => [d.d, d.desc])));
-    diffBody.appendChild(rEl('div', 'r-sub-title', 'Prompting / Assistance Scale'));
-    diffBody.appendChild(rTbl(['Level', 'Description'], RD.assistance.map(a => [a.lvl, a.desc])));
-    const diffAcc = rAccordion('§20–21 — Difficulty & Assistance', diffBody);
-    diffAcc.id = 'ref-diff';
-    content.appendChild(diffAcc);
-
-    /* ── §22 Confidence Rating ── */
-    const confBody = rEl('div');
-    confBody.appendChild(rTbl(['Confidence', 'Meaning'], [
-      ['High',   'Enough evidence exists to support the score'],
-      ['Medium', 'Score is reasonable, but the sample is limited'],
-      ['Low',    'Important evidence is missing']
-    ]));
-    confBody.appendChild(rEl('p', 'r-note', 'A single answer should not establish a final career level with high confidence. Level conclusions should be based on repeated evidence across different task categories.'));
-    const confAcc = rAccordion('§22 — Confidence Rating', confBody);
-    confAcc.id = 'ref-conf';
-    content.appendChild(confAcc);
-
-    /* ── §24 Promotion Evidence Standard ── */
-    const promoBody = rEl('div');
-    ['L1', 'L2', 'L3'].forEach(lvl => {
-      const lbl = { L1: 'Level I', L2: 'Level II', L3: 'Level III' }[lvl];
-      promoBody.appendChild(rEl('div', 'r-sub-title', lbl + ' — Minimum Evidence'));
-      promoBody.appendChild(rList(RD.promotionEvidence[lvl].map(r => {
-        const parts = [r.label];
-        if (r.maxAssist !== undefined) parts.push(`assistance ≤ ${r.maxAssist}`);
-        if (r.minDiff !== undefined)   parts.push(`difficulty ≥ ${r.minDiff}`);
-        return parts.join(' · ');
-      })));
+    addAcc('ref-3score', '\u00a73.1\u20133.3 \u2014 Three-Score Answer Model', body => {
+      body.appendChild(rEl('p','r-note','Every question receives one problem level and one difficulty rating. Every answer receives <strong>three separate criterion-referenced scores</strong>: Level I, Level II, and Level III. The prior single-score output is retired.'));
+      body.appendChild(rEl('div','r-sub-title','Scoring lenses'));
+      body.appendChild(rTbl(['Level score','Scoring lens'], RD.scoringLenses.map(l=>[l.level,l.lens])));
+      body.appendChild(rEl('div','r-sub-title','Key rules'));
+      body.appendChild(rList([
+        'The same evidence is evaluated three times against progressively stricter standards.',
+        'Higher-level scores must not exceed lower-level scores: Level III \u2264 Level II \u2264 Level I.',
+        'Answer level = highest level score \u226570 that also passes mandatory gates and autonomy requirements.',
+        'Qualifying demonstrated level = the lower of answer level and problem level.',
+        'A Level I problem cannot establish Level II or Level III readiness.',
+        'Do not average the three scores. They answer different questions.'
+      ]));
+      body.appendChild(rEl('div','r-sub-title','Example'));
+      body.appendChild(rEl('p','r-note','Problem Level II, Difficulty 4. Level I score 93, Level II score 78, Level III score 54. Answer level = Level II (78 \u2265 70). Qualifying demonstrated level = Level II (matches problem level). If same scores but problem was Level I, qualifying evidence = Level I only.'));
     });
-    promoBody.appendChild(rEl('p', 'r-note', 'Meeting the count alone does not guarantee the level. Quality and breadth of evidence must also meet the bar.'));
-    const promoAcc = rAccordion('§24 — Promotion Evidence Standard', promoBody);
-    promoAcc.id = 'ref-promo';
-    content.appendChild(promoAcc);
 
-    /* ── §25 Standard Evaluation Output Format ── */
-    const outputBody = rEl('div');
-    outputBody.appendChild(rEl('pre', 'r-template', `## Evaluation
+    addAcc('ref-gates', '\u00a74 \u2014 Mandatory Gates', body => {
+      body.appendChild(rTbl(['Gate','Requirement'], RD.gates.map(g=>[g.gate,g.req])));
+      body.appendChild(rEl('p','r-note','Failure in correctness, relevance, or integrity normally produces an overall failing result regardless of other strengths.'));
+    });
 
-Task:             [description]
-Task type:        [coding | debugging | knowledge | sysdesign | prodeng | walkthrough | behavioral]
-Difficulty:       [1–5]
-Target level:     [I | II | III]
-Assistance level: [0–5]
+    addAcc('ref-tasks', '\u00a75 \u2014 Task Classification', body => {
+      body.appendChild(rTbl(['Primary task type','Examples'],[
+        ['Coding','LeetCode, implementation exercises, algorithms, data structures.'],
+        ['Debugging','Broken code, failing tests, semantic defects, production-style failures.'],
+        ['Technical knowledge','Java, Spring, React, TypeScript, Python, SQL, AWS, RAG, ML, SDLC.'],
+        ['System design','Services, APIs, data models, architecture, scaling, reliability.'],
+        ['Production engineering','Testing, CI, Docker, logging, migrations, observability, security.'],
+        ['Project walkthrough','Architecture explanation, ownership, tradeoffs, limitations, failure stories.'],
+        ['Behavioral technical','Ownership, incidents, disagreement, leadership, cross-functional delivery.']
+      ]));
+    });
 
-### Scores
-| Measure                          | Score |
-|----------------------------------|-------|
-| Universal competency             | /100  |
-| Task-specific competency         | /100  |
-| Raw weighted score               | /100  |
-| Final score (after caps/penalties)| /100 |
+    addAcc('ref-diff', '\u00a76 \u2014 Formal Difficulty System', body => {
+      body.appendChild(rEl('p','r-note','Difficulty measures the <strong>task</strong>, not the candidate\u2019s struggle. Assign before the attempt whenever possible.'));
+      body.appendChild(rTbl(['D','Label','Definition','Typical level'],
+        RD.difficulty.map(d=>[d.d,d.label,d.desc,d.level])));
+      body.appendChild(rEl('div','r-sub-title','Calibration rules'));
+      body.appendChild(rList([
+        'Do not raise difficulty because the candidate struggled.',
+        'Do not lower difficulty because the candidate solved it quickly.',
+        'Task category alone does not determine difficulty.',
+        'A cache bug is not automatically Difficulty 5.',
+        'Difficulty affects what the score proves; it does not provide bonus points or excuse weak work.'
+      ]));
+    });
 
-### Level Scores
-| Level    | Score | Verdict                    |
-|----------|-------|----------------------------|
-| Level I  | /100  | Pass / Borderline / Fail   |
-| Level II | /100  | Pass / Borderline / Fail   |
-| Level III| /100  | Pass / Borderline / Fail   |
+    addAcc('ref-diffattr', '\u00a76.1 \u2014 Difficulty Attribute Matrix', body => {
+      body.appendChild(rTbl(['Dimension','Score 0','Score 1','Score 2'],
+        RD.difficultyAttributes.map(a=>[a.dim,a.v0,a.v1,a.v2])));
+      body.appendChild(rTbl(['Attribute total','Difficulty'],
+        RD.difficultyThresholds.map(t=>[t.range,t.d])));
+    });
 
-### Mandatory Gates
-| Gate                    | Result                  |
-|-------------------------|-------------------------|
-| Correctness             | Pass / Partial / Fail   |
-| Relevance               | Pass / Partial / Fail   |
-| Independent explanation | Pass / Partial / Fail   |
-| Evidence                | Pass / Partial / Fail   |
-| Integrity               | Pass / Partial / Fail   |
-| Completion              | Pass / Partial / Fail   |
+    addAcc('ref-univ', '\u00a77 \u2014 Universal Competency Score (60% of final)', body => {
+      body.appendChild(rTbl(['Competency','Weight'],[...RD.universal.map(u=>[u.name,u.weight+' pts']),['<strong>Total</strong>','<strong>100</strong>']]));
+      RD.universal.forEach(u=>{
+        body.appendChild(rEl('div','r-sub-title',u.name+` <span class="r-weight-badge">${u.weight} pts</span>`));
+        body.appendChild(rTbl(['Score','Standard'],u.bands.map(b=>[b.range,b.std]),'r-sub-tbl'));
+      });
+    });
 
-### Caps Applied
-[None, or list each cap and reason]
+    addAcc('ref-taskrub', '\u00a78 \u2014 Task-Specific Rubrics (40% of final)', body => {
+      const taskNav=rEl('div','r-task-nav'), taskPanels=rEl('div');
+      RD.taskRubrics.forEach((tr,idx)=>{
+        const btn=rEl('button','r-task-btn'+(idx===0?' active':''),tr.label);
+        btn.style.borderColor=rTaskColor(tr.id);
+        if(idx===0) btn.style.background=rTaskColor(tr.id)+'22';
+        const panel=rEl('div','r-task-panel'+(idx===0?' active':''));
+        panel.appendChild(rTbl(['Category','Weight'],[...tr.categories.map(c=>[c.name,c.weight+' pts']),['<strong>Total</strong>','<strong>100</strong>']]));
+        if(tr.note) panel.appendChild(rEl('p','r-note','\u26a0 '+tr.note));
+        btn.addEventListener('click',()=>{
+          taskNav.querySelectorAll('.r-task-btn').forEach((b,bi)=>{b.classList.toggle('active',bi===idx);b.style.background=bi===idx?rTaskColor(RD.taskRubrics[bi].id)+'22':'';});
+          taskPanels.querySelectorAll('.r-task-panel').forEach((p,pi)=>p.classList.toggle('active',pi===idx));
+        });
+        taskNav.appendChild(btn); taskPanels.appendChild(panel);
+      });
+      body.appendChild(taskNav); body.appendChild(taskPanels);
+    });
 
-### Penalties Applied
-[List each deduction and its evidence]
+    addAcc('ref-domains', '\u00a79 \u2014 Domain & Role Evidence Model', body => {
+      body.appendChild(rEl('div','r-sub-title','Technical Domain Taxonomy'));
+      RD.domainGroups.forEach(g=>{
+        body.appendChild(rEl('div','r-sub-title',g.group));
+        body.appendChild(rList(g.domains));
+      });
+      body.appendChild(rEl('div','r-sub-title','Role Competency Taxonomy'));
+      body.appendChild(rTbl(['Role','Primary competency weights'],RD.roles.map(r=>[r.label,r.weights])));
+      body.appendChild(rEl('div','r-sub-title','Contribution Weights'));
+      body.appendChild(rTbl(['Evidence mapping','Default contribution'],RD.domainContributionWeights.map(c=>[c.role,c.pct])));
+      body.appendChild(rEl('p','r-note','Contribution weights determine how much an assessment influences rolling domain and role scores. They do not change the underlying performance score.'));
+      body.appendChild(rEl('div','r-sub-title','Domain Subcompetencies'));
+      RD.domainSubcompetencies.forEach(d=>{
+        body.appendChild(rEl('div','r-sub-title',d.domain));
+        body.appendChild(rEl('p',null,d.subs));
+      });
+    });
 
-### Confirmed Strengths
-[Only strengths demonstrated by the attempt]
+    addAcc('ref-retro', '\u00a710 \u2014 Retrospective Scoring Protocol', body => {
+      body.appendChild(rTbl(['Evidence class','Definition','Trend weight'],
+        RD.evidenceClasses.map(e=>[e.label,e.desc,e.weight.toFixed(2)])));
+      body.appendChild(rEl('div','r-sub-title','Rules'));
+      body.appendChild(rList([
+        'Mark difficulty as retrospectively estimated.',
+        'Record autonomy as verified, partially verified, or unverified.',
+        'Do not infer favorable missing evidence.',
+        'Do not score project summaries as if they were observed performances.',
+        'Use retrospective results to establish a baseline, not to claim perfect historical comparability.',
+        'Prospective assessments become the primary evidence as the dataset grows.'
+      ]));
+    });
 
-### Confirmed Weaknesses
-[Only weaknesses supported by evidence]
+    addAcc('ref-multibug', '\u00a711 \u2014 Multi-Bug Debugging Assessments', body => {
+      body.appendChild(rEl('p','r-note','Recommended seeded exercise mix: 1\u00d7 D3, 2\u00d7 D4, 1\u00d7 D5'));
+      body.appendChild(rEl('div','r-sub-title','Per-Bug Completion Standard'));
+      body.appendChild(rTbl(['Evidence achieved','Max credit'],RD.bugCompletionStandards.map(b=>[b.evidence,b.maxCredit])));
+      body.appendChild(rEl('div','r-sub-title','Difficulty Multipliers'));
+      body.appendChild(rTbl(['Difficulty','Multiplier'],RD.difficultyMultipliers.map(m=>[m.d,m.mult])));
+      body.appendChild(rEl('p','r-note','Exercise Score = \u03a3(Bug Score \u00d7 Difficulty Multiplier) \u00f7 \u03a3(Difficulty Multipliers)'));
+    });
 
-### Final Verdict
-[Whether the attempt passed · highest demonstrated level · 
-whether it would survive deeper probing · evaluator confidence]
+    addAcc('ref-assist', '\u00a712 \u2014 Assistance & Autonomy', body => {
+      body.appendChild(rTbl(['Level','Assistance','Autonomy implication'],
+        RD.assistance.map(a=>[a.lvl,a.desc,a.autonomy])));
+    });
 
-### Next Improvement Target
-[Single highest-leverage deficiency to correct before next comparable attempt]
+    addAcc('ref-caps', '\u00a713 \u2014 Caps & Penalties', body => {
+      body.appendChild(rEl('div','r-sub-title','Caps'));
+      body.appendChild(rTbl(['Condition','Max score'],RD.caps.map(c=>[c.condition,c.max])));
+      body.appendChild(rEl('p','r-note','Applied after raw score. The lowest applicable cap wins.'));
+      body.appendChild(rEl('div','r-sub-title','Penalties'));
+      body.appendChild(rTbl(['Deficiency','Typical penalty'],RD.penalties.map(p=>[p.deficiency,p.penalty])));
+    });
 
-Rubric version: 1.0
-Scoring date:   ${new Date().toISOString().slice(0,10)}`));
-    const outputAcc = rAccordion('§25 — Standard Evaluation Output Format', outputBody);
-    outputAcc.id = 'ref-output';
-    content.appendChild(outputAcc);
+    addAcc('ref-levelrules', '\u00a714 \u2014 Demonstrated-Level Rules', body => {
+      body.appendChild(rTbl(['Level','Minimum qualifying pattern'],RD.levelRules.map(r=>[r.level,r.pattern])));
+      body.appendChild(rEl('div','r-sub-title','All of the following must hold'));
+      body.appendChild(rList([
+        'The matching level score must be at least 70.',
+        'Correctness gate must pass.',
+        'No critical competency may be below 60.',
+        'Required difficulty evidence must exist.',
+        'Required autonomy level must be met.',
+        'Applicable caps must not reduce the score below 70.'
+      ]));
+    });
 
-    /* ── §26 Grading Principles ── */
-    const gpBody = rEl('div');
-    gpBody.appendChild(rList(RD.gradingPrinciples));
-    const gpAcc = rAccordion('§26 — Grading Principles', gpBody);
-    gpAcc.id = 'ref-grading';
-    content.appendChild(gpAcc);
+    addAcc('ref-bands', '\u00a715 \u2014 Score Interpretation', body => {
+      body.appendChild(rTbl(['Score','Verdict'],RD.scoreBands.map(b=>[b.range,`<span class="${b.cls}">${b.verdict}</span>`])));
+    });
 
-    layout.appendChild(content);
-    el.appendChild(layout);
+    addAcc('ref-promo', 'Promotion Evidence Standard', body => {
+      ['L1','L2','L3'].forEach(lvl=>{
+        body.appendChild(rEl('div','r-sub-title',{L1:'Level I',L2:'Level II',L3:'Level III'}[lvl]+' \u2014 Minimum Evidence'));
+        body.appendChild(rList(RD.promotionEvidence[lvl].map(r=>{
+          const parts=[r.label];
+          if(r.maxAssist!==undefined) parts.push(`assistance \u2264${r.maxAssist}`);
+          if(r.minDiff!==undefined)   parts.push(`difficulty \u2265${r.minDiff}`);
+          return parts.join(' \u00b7 ');
+        })));
+      });
+      body.appendChild(rEl('p','r-note','Meeting the count alone does not guarantee the level. Quality and breadth of evidence must also meet the bar.'));
+    });
+
+    addAcc('ref-grading', '\u00a719 \u2014 Grading Principles', body => {
+      body.appendChild(rList(RD.gradingPrinciples));
+    });
+
+    layout.appendChild(content); el.appendChild(layout);
   })();
 
-  /* Init default view */
   switchView('progress');
 }
 
-/* ── RUBRIC INIT ── */
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', buildRubric);
 } else {
