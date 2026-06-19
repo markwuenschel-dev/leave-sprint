@@ -2498,6 +2498,52 @@ function rTaskLabel(id) {
   return (RD.taskTypes.find(t => t.id === id) || {}).label || id;
 }
 
+/* ── ENTRY NORMALISER ───────────────────────────────── */
+function rNormaliseEntry(raw) {
+  const id = raw.id || (Date.now() + '-' + Math.random().toString(36).slice(2, 6));
+  const u  = parseFloat(raw.universalScore)    || 0;
+  const t  = parseFloat(raw.taskSpecificScore) || 0;
+
+  /* If all 6 sub-scores are present, compute universalScore from them */
+  const DIMS = ['correctness','reasoning','judgment','validation','communication','completeness'];
+  const subs = raw.universalSubScores || null;
+  const subTotal = subs
+    ? (() => { const vals = DIMS.map(d => parseFloat(subs[d])); return vals.some(isNaN) ? null : +vals.reduce((s,v)=>s+v,0).toFixed(1); })()
+    : null;
+  const uFinal = (subTotal !== null && !raw.universalScore) ? subTotal : u;
+
+  const rawScore   = raw.rawScore   !== undefined ? raw.rawScore   : rComputeRaw(uFinal, t);
+  const finalScore = raw.finalScore !== undefined ? raw.finalScore : rComputeFinal(rawScore, raw.cap ?? null, raw.penalties ?? 0);
+
+  return {
+    id,
+    date:              raw.date              || new Date().toISOString().slice(0, 10),
+    task:              raw.task              || '',
+    taskType:          raw.taskType          || '',
+    domain:            raw.domain            || '',
+    difficulty:        parseInt(raw.difficulty)      || 0,
+    targetLevel:       raw.targetLevel       || '',
+    assistanceLevel:   parseInt(raw.assistanceLevel) ?? 0,
+    universalScore:    uFinal,
+    taskSpecificScore: t,
+    rawScore,
+    cap:               raw.cap !== undefined ? raw.cap : null,
+    penalties:         raw.penalties         || 0,
+    finalScore,
+    levelScores:       raw.levelScores       || { L1: null, L2: null, L3: null },
+    demonstratedLevel: raw.demonstratedLevel || '',
+    confidence:        raw.confidence        || '',
+    weaknessTags:      raw.weaknessTags      || [],
+    strengths:         raw.strengths         || '',
+    weaknesses:        raw.weaknesses        || '',
+    nextTarget:        raw.nextTarget        || '',
+    gates:             raw.gates             || {},
+    universalSubScores: subs,
+    quickLog:          raw.quickLog          || false,
+    rubricVersion:     raw.rubricVersion     || RUBRIC_VERSION
+  };
+}
+
 /* ── DOM HELPERS ─────────────────────────────────────── */
 function rEl(tag, cls, inner) {
   const el = document.createElement(tag);
