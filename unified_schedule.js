@@ -2824,259 +2824,215 @@ function buildRubric() {
   (function buildLogEntry() {
     const el = panels['log-entry'];
 
-    const form = rEl('div', 'r-form');
+    /* ── MODE BAR ── */
+    const modeBar = rEl('div', 'r-mode-bar');
+    const pasteBtn = rEl('button', 'r-mode-btn active', '{ } Paste JSON');
+    const quickBtn = rEl('button', 'r-mode-btn', '⚡ Quick Log');
+    const modeDesc = rEl('p', 'r-mode-desc', 'Paste one entry or an array of entries.');
+    modeBar.appendChild(pasteBtn);
+    modeBar.appendChild(quickBtn);
+    modeBar.appendChild(modeDesc);
+    el.appendChild(modeBar);
 
-    function field(id, label, input) {
-      const wrap = rEl('div', 'r-field');
-      wrap.appendChild(rEl('label', 'r-field-label', label));
-      wrap.appendChild(input);
-      form.appendChild(wrap);
-      return input;
-    }
-    function inp(id, type, placeholder) {
-      const i = rEl('input', 'r-input');
-      i.type = type || 'text'; i.id = id;
-      if (placeholder) i.placeholder = placeholder;
-      return i;
-    }
-    function sel(id, opts) {
-      const s = rEl('select', 'r-input');
-      s.id = id;
-      opts.forEach(([v, t]) => {
-        const o = document.createElement('option');
-        o.value = v; o.textContent = t; s.appendChild(o);
-      });
+    /* ══════════════════════════════════════════════
+       PASTE JSON PANEL
+    ══════════════════════════════════════════════ */
+    const pastePanel = rEl('div', 'r-paste-panel');
+
+    const schemaToggle = rEl('button', 'r-schema-toggle', '▶ Show JSON schema');
+    const schemaBlock  = rEl('div', 'r-schema-block r-hidden');
+    schemaBlock.appendChild(rEl('pre', 'r-template', JSON.stringify([{
+      date: "2026-06-19",
+      task: "Description of the task",
+      taskType: "coding | debugging | knowledge | sysdesign | prodeng | walkthrough | behavioral",
+      domain: "e.g. Java / Data Structures",
+      difficulty: "1–5",
+      targetLevel: "L1 | L2 | L3",
+      assistanceLevel: "0–5",
+      universalScore: "0–100 (or omit if using subScores)",
+      taskSpecificScore: "0–100",
+      finalScore: "0–100 (computed if omitted)",
+      cap: "number or null",
+      penalties: 0,
+      levelScores: { L1: null, L2: null, L3: null },
+      demonstratedLevel: "e.g. Strong Level I",
+      confidence: "High | Medium | Low",
+      weaknessTags: ["Shallow reasoning", "Thin tradeoffs"],
+      strengths: "...",
+      weaknesses: "...",
+      nextTarget: "...",
+      universalSubScores: {
+        correctness: "0–25",
+        reasoning: "0–20",
+        judgment: "0–15",
+        validation: "0–15",
+        communication: "0–15",
+        completeness: "0–10"
+      },
+      gates: {
+        Correctness: "Pass | Partial | Fail",
+        Relevance: "Pass | Partial | Fail",
+        "Independent explanation": "Pass | Partial | Fail",
+        Evidence: "Pass | Partial | Fail",
+        "Safety and integrity": "Pass | Partial | Fail",
+        Completion: "Pass | Partial | Fail"
+      }
+    }], null, 2)));
+
+    schemaToggle.addEventListener('click', () => {
+      const open = !schemaBlock.classList.contains('r-hidden');
+      schemaBlock.classList.toggle('r-hidden', open);
+      schemaToggle.textContent = open ? '▶ Show JSON schema' : '▼ Hide JSON schema';
+    });
+    pastePanel.appendChild(schemaToggle);
+    pastePanel.appendChild(schemaBlock);
+
+    const textarea = rEl('textarea', 'r-input r-paste-textarea');
+    textarea.placeholder = 'Paste a single entry { } or an array [ { }, { } ] and hit Import.';
+    pastePanel.appendChild(textarea);
+
+    const pasteActions = rEl('div', 'r-form-actions');
+    const importBtn  = rEl('button', 'r-btn', '↑ Import');
+    const clearBtn2  = rEl('button', 'r-btn r-btn-ghost', 'Clear');
+    const pasteMsg   = rEl('div', 'r-save-msg');
+    pasteActions.appendChild(importBtn);
+    pasteActions.appendChild(clearBtn2);
+    pasteActions.appendChild(pasteMsg);
+    pastePanel.appendChild(pasteActions);
+    el.appendChild(pastePanel);
+
+    importBtn.addEventListener('click', () => {
+      const raw = textarea.value.trim();
+      if (!raw) { pasteMsg.textContent = '⚠ Nothing to import.'; pasteMsg.className = 'r-save-msg r-save-err'; return; }
+      try {
+        let parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) parsed = [parsed];
+        if (!parsed.length || typeof parsed[0] !== 'object') throw new Error('Expected an object or array of objects');
+
+        const existing  = rLog();
+        const existIds  = new Set(existing.map(e => e.id));
+        const normalised = parsed.map(rNormaliseEntry);
+        const fresh     = normalised.filter(e => !existIds.has(e.id));
+        const merged    = [...existing, ...fresh].sort((a, b) => a.date.localeCompare(b.date));
+        rSave(merged);
+
+        const skipped = parsed.length - fresh.length;
+        pasteMsg.textContent = `✓ Imported ${fresh.length} entr${fresh.length === 1 ? 'y' : 'ies'}${skipped ? ` (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped)` : ''}.`;
+        pasteMsg.className = 'r-save-msg r-save-ok';
+        textarea.value = '';
+        setTimeout(() => { pasteMsg.textContent = ''; }, 5000);
+      } catch (e) {
+        pasteMsg.textContent = '⚠ ' + e.message;
+        pasteMsg.className = 'r-save-msg r-save-err';
+      }
+    });
+
+    clearBtn2.addEventListener('click', () => { textarea.value = ''; pasteMsg.textContent = ''; });
+
+    /* ══════════════════════════════════════════════
+       QUICK LOG PANEL
+    ══════════════════════════════════════════════ */
+    const quickPanel = rEl('div', 'r-quick-form r-hidden');
+
+    function qSel(id, opts) {
+      const s = rEl('select', 'r-input'); s.id = id;
+      opts.forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; s.appendChild(o); });
       return s;
     }
-    function ta(id, rows, placeholder) {
-      const t = rEl('textarea', 'r-input r-textarea');
-      t.id = id; t.rows = rows || 3;
-      if (placeholder) t.placeholder = placeholder;
-      return t;
+    function qField(label, input) {
+      const w = rEl('div', 'r-field');
+      w.appendChild(rEl('label', 'r-field-label', label));
+      w.appendChild(input); quickPanel.appendChild(w); return input;
     }
 
-    /* Today's date default */
-    const dateInp = inp('rf-date', 'date');
-    dateInp.value = new Date().toISOString().slice(0, 10);
-    field('rf-date', 'Date', dateInp);
+    const qDate = Object.assign(rEl('input', 'r-input'), { type: 'date', id: 'ql-date', value: new Date().toISOString().slice(0, 10) });
+    qField('Date', qDate);
+    const qTask = Object.assign(rEl('input', 'r-input'), { type: 'text', id: 'ql-task', placeholder: 'e.g. Implement LRU Cache' });
+    qField('Task', qTask);
+    const qType = qSel('ql-type', [['', '— type —'], ...RD.taskTypes.map(t => [t.id, t.label])]);
+    qField('Task Type', qType);
 
-    field('rf-task', 'Task', inp('rf-task', 'text', 'e.g. Implement LRU Cache, Explain RAG retrieval, Debug Spring 500'));
-
-    const taskTypeSel = sel('rf-tasktype', [['', '— select —'], ...RD.taskTypes.map(t => [t.id, t.label])]);
-    field('rf-tasktype', 'Task Type', taskTypeSel);
-
-    field('rf-domain', 'Technology / Domain', inp('rf-domain', 'text', 'e.g. Java / Data Structures, Python / RAG'));
-
-    const diffSel = sel('rf-diff', [['', '—'], ...RD.difficulty.map(d => [d.d, `${d.d} — ${d.desc}`])]);
-    field('rf-diff', 'Difficulty (1–5)', diffSel);
-
-    const targetSel = sel('rf-target', [['', '—'], ['L1', 'Level I'], ['L2', 'Level II'], ['L3', 'Level III']]);
-    field('rf-target', 'Target Level', targetSel);
-
-    const assistSel = sel('rf-assist', RD.assistance.map(a => [a.lvl, `${a.lvl} — ${a.desc.split('—')[0].trim()}`]));
-    field('rf-assist', 'Assistance Level (0–5)', assistSel);
-
-    /* Score inputs — row layout */
-    const scoreRow = rEl('div', 'r-score-row');
-    ['Universal Score (0–100)', 'Task-Specific Score (0–100)', 'Cap (if any)', 'Penalty Total'].forEach((lbl, i) => {
-      const ids = ['rf-univ', 'rf-task-score', 'rf-cap', 'rf-penalty'];
-      const wrap2 = rEl('div', 'r-score-field');
-      wrap2.appendChild(rEl('label', 'r-field-label', lbl));
-      const inp2 = rEl('input', 'r-input');
-      inp2.type = 'number'; inp2.id = ids[i];
-      inp2.min = '0'; inp2.max = i < 2 ? '100' : undefined;
-      if (i === 3) inp2.value = '0';
-      wrap2.appendChild(inp2);
-      scoreRow.appendChild(wrap2);
+    const qMiniRow = rEl('div', 'r-score-row');
+    [['ql-diff', 'Difficulty', [['','—'], ...RD.difficulty.map(d=>[d.d,`D${d.d}`])]],
+     ['ql-assist','Assistance', RD.assistance.map(a=>[a.lvl,`A${a.lvl}`])]].forEach(([id, lbl, opts]) => {
+      const f = rEl('div', 'r-score-field');
+      f.appendChild(rEl('label', 'r-field-label', lbl));
+      f.appendChild(qSel(id, opts));
+      qMiniRow.appendChild(f);
     });
-    form.appendChild(scoreRow);
+    const qScoreField = rEl('div', 'r-score-field');
+    qScoreField.appendChild(rEl('label', 'r-field-label', 'Final Score'));
+    const qScore = Object.assign(rEl('input', 'r-input'), { type: 'number', id: 'ql-score', min: '0', max: '100', placeholder: '0–100' });
+    qScoreField.appendChild(qScore);
+    qMiniRow.appendChild(qScoreField);
+    quickPanel.appendChild(qMiniRow);
 
-    /* Computed result strip */
-    const resultStrip = rEl('div', 'r-result-strip r-result-hidden');
-    resultStrip.id = 'rf-result-strip';
-    resultStrip.innerHTML = `
-      <div class="r-result-item"><span class="r-result-lbl">Raw Score</span><span class="r-result-val" id="rf-raw">—</span></div>
-      <div class="r-result-item"><span class="r-result-lbl">Final Score</span><span class="r-result-val r-result-big" id="rf-final">—</span></div>
-      <div class="r-result-item"><span class="r-result-lbl">Verdict</span><span class="r-result-verdict" id="rf-verdict">—</span></div>
-    `;
-    form.appendChild(resultStrip);
-
-    function recompute() {
-      const u = parseFloat(document.getElementById('rf-univ')?.value);
-      const t = parseFloat(document.getElementById('rf-task-score')?.value);
-      if (isNaN(u) || isNaN(t)) return;
-      const cap = document.getElementById('rf-cap')?.value;
-      const pen = parseFloat(document.getElementById('rf-penalty')?.value) || 0;
-      const raw = rComputeRaw(u, t);
-      const final = rComputeFinal(raw, cap, pen);
-      const band = rScoreBand(final);
-      document.getElementById('rf-raw').textContent = raw;
-      document.getElementById('rf-final').textContent = final;
-      const vEl = document.getElementById('rf-verdict');
-      vEl.textContent = band.verdict;
-      vEl.className = 'r-result-verdict ' + band.cls;
-      resultStrip.classList.remove('r-result-hidden');
-    }
-    ['rf-univ', 'rf-task-score', 'rf-cap', 'rf-penalty'].forEach(id => {
-      document.getElementById(id)?.addEventListener('input', recompute);
-    });
-
-    /* Level scores */
-    const lvlRow = rEl('div', 'r-score-row');
-    ['Level I Score', 'Level II Score', 'Level III Score'].forEach((lbl, i) => {
-      const ids = ['rf-l1', 'rf-l2', 'rf-l3'];
-      const wrap2 = rEl('div', 'r-score-field');
-      wrap2.appendChild(rEl('label', 'r-field-label', lbl));
-      const inp2 = rEl('input', 'r-input');
-      inp2.type = 'number'; inp2.id = ids[i]; inp2.min = '0'; inp2.max = '100'; inp2.placeholder = '—';
-      wrap2.appendChild(inp2);
-      lvlRow.appendChild(wrap2);
-    });
-    form.appendChild(lvlRow);
-
-    const demoSel = sel('rf-demo', [['', '— select —'], ...RD.demonstratedLevels.map(l => [l, l])]);
-    field('rf-demo', 'Demonstrated Level', demoSel);
-
-    const confSel = sel('rf-conf', [['', '—'], ['High', 'High — enough evidence exists'], ['Medium', 'Medium — score is reasonable but sample is limited'], ['Low', 'Low — important evidence is missing']]);
-    field('rf-conf', 'Evaluator Confidence', confSel);
-
-    /* Weakness tags */
-    const tagWrap = rEl('div', 'r-field');
-    tagWrap.appendChild(rEl('label', 'r-field-label', 'Weakness Tags (recurring failure categories)'));
-    const tagGrid = rEl('div', 'r-tag-grid');
+    const qTagWrap = rEl('div', 'r-field');
+    qTagWrap.appendChild(rEl('label', 'r-field-label', 'Weakness Tags'));
+    const qTagGrid = rEl('div', 'r-tag-grid');
     RD.weaknessTags.forEach(tag => {
       const lbl = rEl('label', 'r-tag-label');
-      const cb = rEl('input', 'r-tag-cb');
-      cb.type = 'checkbox'; cb.value = tag; cb.name = 'weakness-tags';
-      lbl.appendChild(cb);
-      lbl.appendChild(document.createTextNode(' ' + tag));
-      tagGrid.appendChild(lbl);
+      const cb = rEl('input', 'r-tag-cb'); cb.type = 'checkbox'; cb.value = tag; cb.name = 'ql-tags';
+      lbl.appendChild(cb); lbl.appendChild(document.createTextNode(' ' + tag));
+      qTagGrid.appendChild(lbl);
     });
-    tagWrap.appendChild(tagGrid);
-    form.appendChild(tagWrap);
+    qTagWrap.appendChild(qTagGrid);
+    quickPanel.appendChild(qTagWrap);
 
-    field('rf-strengths', 'Confirmed Strengths', ta('rf-strengths', 3, 'Only strengths demonstrated by the attempt...'));
-    field('rf-weaknesses', 'Confirmed Weaknesses', ta('rf-weaknesses', 3, 'Only weaknesses supported by evidence...'));
-    field('rf-next', 'Next Improvement Target', inp('rf-next', 'text', 'Single highest-leverage deficiency to correct before next comparable attempt'));
+    const qNextField = rEl('div', 'r-field');
+    qNextField.appendChild(rEl('label', 'r-field-label', 'Next Target'));
+    const qNext = Object.assign(rEl('input', 'r-input'), { type: 'text', id: 'ql-next', placeholder: 'Optional' });
+    qNextField.appendChild(qNext);
+    quickPanel.appendChild(qNextField);
 
-    /* Gate results */
-    const gateWrap = rEl('div', 'r-field');
-    gateWrap.appendChild(rEl('label', 'r-field-label', 'Mandatory Gates'));
-    const gateGrid = rEl('div', 'r-gate-grid');
-    RD.gates.forEach(g => {
-      const row = rEl('div', 'r-gate-row');
-      row.appendChild(rEl('span', 'r-gate-name', g.gate));
-      const s = sel(`rf-gate-${g.gate.replace(/\s+/g, '_')}`,
-        [['', '—'], ['Pass', '✓ Pass'], ['Partial', '◑ Partial'], ['Fail', '✗ Fail']]);
-      s.className = 'r-input r-gate-sel';
-      row.appendChild(s);
-      gateGrid.appendChild(row);
+    const qActions = rEl('div', 'r-form-actions');
+    const qSave  = rEl('button', 'r-btn', '✓ Save');
+    const qClear = rEl('button', 'r-btn r-btn-ghost', 'Clear');
+    const qMsg   = rEl('div', 'r-save-msg');
+    qActions.appendChild(qSave); qActions.appendChild(qClear); qActions.appendChild(qMsg);
+    quickPanel.appendChild(qActions);
+    el.appendChild(quickPanel);
+
+    qSave.addEventListener('click', () => {
+      const task = qTask.value.trim(), taskType = qType.value, score = parseFloat(qScore.value);
+      if (!task)      { qMsg.textContent = '⚠ Task required.';      qMsg.className = 'r-save-msg r-save-err'; return; }
+      if (!taskType)  { qMsg.textContent = '⚠ Task type required.'; qMsg.className = 'r-save-msg r-save-err'; return; }
+      if (isNaN(score)){ qMsg.textContent = '⚠ Score required.';    qMsg.className = 'r-save-msg r-save-err'; return; }
+      const tags = [...quickPanel.querySelectorAll('input[name="ql-tags"]:checked')].map(c => c.value);
+      const entry = rNormaliseEntry({
+        date: qDate.value, task, taskType,
+        difficulty:      parseInt(document.getElementById('ql-diff')?.value)   || 0,
+        assistanceLevel: parseInt(document.getElementById('ql-assist')?.value) ?? 0,
+        universalScore: 0, taskSpecificScore: 0,
+        finalScore: score, rawScore: score,
+        weaknessTags: tags, nextTarget: qNext.value, quickLog: true
+      });
+      const entries = rLog(); entries.push(entry); rSave(entries);
+      qMsg.textContent = '✓ Saved.'; qMsg.className = 'r-save-msg r-save-ok';
+      setTimeout(() => { qMsg.textContent = ''; }, 3000);
+      [qTask, qNext, qScore].forEach(i => { i.value = ''; });
+      qType.value = '';
+      quickPanel.querySelectorAll('input[name="ql-tags"]:checked').forEach(c => { c.checked = false; });
     });
-    gateWrap.appendChild(gateGrid);
-    form.appendChild(gateWrap);
-
-    /* Action buttons */
-    const actions = rEl('div', 'r-form-actions');
-    const saveBtn = rEl('button', 'r-btn', '✓ Save Entry');
-    const clearBtn = rEl('button', 'r-btn r-btn-ghost', 'Clear');
-    actions.appendChild(saveBtn);
-    actions.appendChild(clearBtn);
-
-    const msg = rEl('div', 'r-save-msg');
-    actions.appendChild(msg);
-    form.appendChild(actions);
-
-    saveBtn.addEventListener('click', () => {
-      const task = document.getElementById('rf-task')?.value.trim();
-      const taskType = document.getElementById('rf-tasktype')?.value;
-      const u = parseFloat(document.getElementById('rf-univ')?.value);
-      const t = parseFloat(document.getElementById('rf-task-score')?.value);
-      if (!task) { msg.textContent = '⚠ Task is required.'; msg.className = 'r-save-msg r-save-err'; return; }
-      if (!taskType) { msg.textContent = '⚠ Task type is required.'; msg.className = 'r-save-msg r-save-err'; return; }
-      if (isNaN(u) || isNaN(t)) { msg.textContent = '⚠ Universal and Task-Specific scores are required.'; msg.className = 'r-save-msg r-save-err'; return; }
-
-      const cap = document.getElementById('rf-cap')?.value;
-      const pen = parseFloat(document.getElementById('rf-penalty')?.value) || 0;
-      const raw = rComputeRaw(u, t);
-      const finalScore = rComputeFinal(raw, cap, pen);
-
-      const tags = [...document.querySelectorAll('input[name="weakness-tags"]:checked')].map(c => c.value);
-
-      const gates = {};
-      RD.gates.forEach(g => {
-        const id = `rf-gate-${g.gate.replace(/\s+/g, '_')}`;
-        gates[g.gate] = document.getElementById(id)?.value || '';
-      });
-
-      const entry = {
-        id: Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-        date: document.getElementById('rf-date')?.value || new Date().toISOString().slice(0, 10),
-        task,
-        taskType,
-        domain:            document.getElementById('rf-domain')?.value || '',
-        difficulty:        parseInt(document.getElementById('rf-diff')?.value) || 0,
-        targetLevel:       document.getElementById('rf-target')?.value || '',
-        assistanceLevel:   parseInt(document.getElementById('rf-assist')?.value) || 0,
-        universalScore:    u,
-        taskSpecificScore: t,
-        rawScore:          raw,
-        cap:               cap !== '' ? parseFloat(cap) : null,
-        penalties:         pen,
-        finalScore,
-        levelScores: {
-          L1: parseFloat(document.getElementById('rf-l1')?.value) || null,
-          L2: parseFloat(document.getElementById('rf-l2')?.value) || null,
-          L3: parseFloat(document.getElementById('rf-l3')?.value) || null
-        },
-        demonstratedLevel: document.getElementById('rf-demo')?.value || '',
-        confidence:        document.getElementById('rf-conf')?.value || '',
-        weaknessTags: tags,
-        strengths:    document.getElementById('rf-strengths')?.value || '',
-        weaknesses:   document.getElementById('rf-weaknesses')?.value || '',
-        nextTarget:   document.getElementById('rf-next')?.value || '',
-        gates,
-        rubricVersion: RUBRIC_VERSION
-      };
-
-      const entries = rLog();
-      entries.push(entry);
-      rSave(entries);
-
-      msg.textContent = '✓ Entry saved.';
-      msg.className = 'r-save-msg r-save-ok';
-      setTimeout(() => { msg.textContent = ''; }, 3000);
-
-      // Reset checkboxes and textareas, keep date
-      document.querySelectorAll('input[name="weakness-tags"]').forEach(c => { c.checked = false; });
-      ['rf-task', 'rf-domain', 'rf-univ', 'rf-task-score', 'rf-cap', 'rf-l1', 'rf-l2', 'rf-l3', 'rf-next'].forEach(id => {
-        const el2 = document.getElementById(id);
-        if (el2) el2.value = id === 'rf-penalty' ? '0' : '';
-      });
-      ['rf-strengths', 'rf-weaknesses'].forEach(id => { const el2 = document.getElementById(id); if (el2) el2.value = ''; });
-      ['rf-tasktype', 'rf-diff', 'rf-target', 'rf-demo', 'rf-conf'].forEach(id => {
-        const el2 = document.getElementById(id);
-        if (el2) el2.value = '';
-      });
-      RD.gates.forEach(g => {
-        const el2 = document.getElementById(`rf-gate-${g.gate.replace(/\s+/g, '_')}`);
-        if (el2) el2.value = '';
-      });
-      document.getElementById('rf-penalty').value = '0';
-      resultStrip.classList.add('r-result-hidden');
+    qClear.addEventListener('click', () => {
+      [qTask, qNext, qScore].forEach(i => { i.value = ''; });
+      qDate.value = new Date().toISOString().slice(0, 10);
+      qType.value = '';
+      quickPanel.querySelectorAll('input[name="ql-tags"]').forEach(c => { c.checked = false; });
+      qMsg.textContent = '';
     });
 
-    clearBtn.addEventListener('click', () => {
-      form.querySelectorAll('input:not([type=checkbox]), textarea, select').forEach(i => {
-        if (i.id === 'rf-date') i.value = new Date().toISOString().slice(0, 10);
-        else if (i.id === 'rf-penalty') i.value = '0';
-        else i.value = '';
-      });
-      document.querySelectorAll('input[name="weakness-tags"]').forEach(c => { c.checked = false; });
-      resultStrip.classList.add('r-result-hidden');
-      msg.textContent = '';
+    /* Mode switching */
+    pasteBtn.addEventListener('click', () => {
+      pasteBtn.classList.add('active'); quickBtn.classList.remove('active');
+      pastePanel.classList.remove('r-hidden'); quickPanel.classList.add('r-hidden');
+      modeDesc.textContent = 'Paste one entry or an array of entries.';
     });
-
-    el.appendChild(form);
+    quickBtn.addEventListener('click', () => {
+      quickBtn.classList.add('active'); pasteBtn.classList.remove('active');
+      quickPanel.classList.remove('r-hidden'); pastePanel.classList.add('r-hidden');
+      modeDesc.textContent = 'Five fields. Score first, details later.';
+    });
   })();
 
   /* ════════════════════════════════════════════════════
