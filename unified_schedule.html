@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mark Wuenschel — Unified Build Schedule</title>
+  <link rel="stylesheet" href="unified_schedule.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Unified Build Schedule — Q1 2026</h1>
+    <p>May 4 → July 15 · Workbench monorepo · Chewy internal · MLE preferred · SWE full-stack secondary</p>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--rag)"></div>RAG engine</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--spring)"></div>Spring API</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--ui)"></div>Review UI</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--infra)"></div>CI / Infra</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--audit)"></div>Audit</div>
+    <div class="legend-item" style="border-left:1px solid var(--border);padding-left:16px;margin-left:4px;"><div class="legend-dot" style="background:var(--mle)"></div>MLE signal</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--swe)"></div>SWE signal</div>
+  </div>
+  <div class="theme-toggle" role="group" aria-label="Color theme">
+    <button class="theme-btn" data-theme-btn="dark"   title="Dark mode">🌙</button>
+    <button class="theme-btn" data-theme-btn="light"  title="Light mode">☀️</button>
+    <button class="theme-btn" data-theme-btn="system" title="Use system setting">💻</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('weekly')">Week by Week</button>
+  <button class="tab" onclick="showTab('rhythm')">Daily Rhythm</button>
+  <button class="tab" onclick="showTab('tracks')">Workbench Modules</button>
+  <button class="tab" onclick="showTab('courses')">Coding Bank & Refs</button>
+  <button class="tab" onclick="showTab('calendar')">📅 Calendar</button>
+  <button class="tab" onclick="showTab('qbank')">📚 Q Bank</button>
+  <button class="tab" onclick="showTab('rubric')">⚖️ Rubric</button>
+</div>
+
+<div class="content">
+
+  <!-- WEEKLY TAB -->
+  <div id="tab-weekly" class="tab-panel active">
+
+    <!-- MAY 24 STATUS BANNER — workbench monorepo pivot -->
+    <div class="status-banner">
+      <div class="status-banner-header">
+        <span class="status-banner-title">June 14 — Phase 5 Complete · Leave Begins June 17 · Applications July 8</span>
+        <span class="status-banner-date">Updated June 14</span>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-cell done">
+          <div class="status-cell-label">✓ Week 6 shipped — Phase 5 done (3 PRs)</div>
+          <div class="status-cell-text"><strong>PR 1 — React polish:</strong> branded shell · 4-step progress indicator · metric cards · evidence cards · two-column reviewer form · handling-path banner · demo sidebar · responsive layout. <strong>PR 2 — Demo script:</strong> <code>browser_demo_script.md</code> · Vite proxy → Spring · PowerShell API checks · troubleshooting guide. <strong>PR 3 — Operator controls + hardening:</strong> <code>demoCases.ts</code> typed cases · <code>DemoToolbar</code> selector/load/reset · <code>assessmentSummary.ts</code> clipboard export · clipboard test fix · Python UTF-8 encoding fix. All checks: ✅ <code>npm test</code> ✅ <code>npm run build</code> ✅ <code>gradlew.bat test</code> ✅ full browser workflow.</div>
+        </div>
+        <div class="status-cell doing">
+          <div class="status-cell-label">▶ Tomorrow (Jun 15) — pre-leave</div>
+          <div class="status-cell-text">Demo quality polish for tomorrow's rehearsal. README update with screenshots and architecture framing. Phase 5 gate check — confirm the 5-minute manual demo script works end-to-end against the running Spring Boot service.</div>
+        </div>
+        <div class="status-cell next">
+          <div class="status-cell-label">→ Leave Sprint: Jun 17 – Jul 15</div>
+          <div class="status-cell-text">Phase 5 already done: leave Week 1 shifts to <strong>Phase 6 CI/Docker + interview prep start</strong>. Applications <strong>deliberately scheduled July 8 (Day 22)</strong> — intentional, not a slip. Coding drills + file defense every day starting Day 1.</div>
+        </div>
+      </div>
+
+      <div class="status-narrative">
+        Phase 5 (React/TypeScript Review UI) is complete ahead of the leave sprint plan. The system is now demoable end-to-end: concern → checklist → evidence → reviewer notes → final assessment, with operator controls for a repeatable live demo. Leave starts June 17 with Phase 6 (CI/Docker/runbook) and daily interview prep as the parallel tracks. The applications going in on July 8 is an intentional decision to have Phase 6 done before applying so the portfolio is reproducible.
+
+        <div class="signal-row">
+          <div class="signal-card mle">
+            <div class="signal-card-label">⊙ MLE track — portfolio interview-ready</div>
+            <div class="signal-card-text">Full stack working: Python RAG engine · Spring Boot API · React HITL review surface. 27 failure log entries. Retriever abstraction. Evaluation metrics. LLM extraction. Refusal behavior. Now: shift prep time toward talking about it, not building more of it.</div>
+          </div>
+          <div class="signal-card swe">
+            <div class="signal-card-label">⊙ SWE full-stack — complete signal</div>
+            <div class="signal-card-text">Python + Spring Boot + React all live in one repo. Typed API client, async state model, discriminated unions, DemoToolbar, evidence cards, clipboard export. CI/Docker in leave sprint. Focus: applications + mock interviews.</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-left:3px solid #a78bfa;border-radius:6px;padding:12px 14px;margin-top:14px;font-size:12px;line-height:1.6;">
+          <strong style="color:#a78bfa;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.08em;">DECISION — Stay with React, not Streamlit</strong><br>
+          <span style="color:var(--text-mid);">Phase 5 React is done with 3 shipped PRs. Switching to Streamlit now would discard <code>demoCases.ts</code>, <code>DemoToolbar</code>, <code>ReviewSummaryForm</code>, <code>FinalAssessmentPanel</code>, clipboard export, Vite proxy, and the full browser demo that already works. <strong style="color:var(--text);">React is a stronger SWE II interview signal than Streamlit.</strong> Streamlit is a valid <em>future addition</em> as an MLE eval dashboard (separate tool), not a replacement for the review UI. The demo is already repeatable — don't rebuild what works.</span>
+        </div>
+
+        <div style="font-size:11px;color:var(--text-dim);margin-top:12px;line-height:1.5;">
+          <strong style="color:var(--done);">Build: complete through Phase 5.</strong> All five layers working: Python RAG engine → api_runner.py bridge → Spring Boot API → Vite proxy → React review UI.
+          &nbsp;·&nbsp;
+          <strong style="color:var(--doing);">Leave focus: Phase 6 CI/Docker + daily interview prep (coding drills + file defense + Q&amp;A bank).</strong>
+          &nbsp;·&nbsp;
+          <strong style="color:#a78bfa);">Applications: intentionally scheduled July 8 (Day 22 of leave).</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <div class="arch-diagram">
+      <div class="arch-title">Workbench Architecture — Three Modules, One Repo</div>
+      <div class="arch-stack">
+        <div class="arch-module py">
+          <div class="arch-module-label">🐍 rag-engine-python/</div>
+          <div class="arch-module-name">AI / RAG Engine</div>
+          <div style="font-size:11px;color:var(--text-mid);line-height:1.5;">Owns everything the model and data touch.</div>
+          <div class="arch-module-owns">Owns</div>
+          <ul>
+            <li>• SOP ingestion + chunking (<code>ingestion.py</code>)</li>
+            <li>• Keyword retrieval + eval (<code>retrieval.py</code>, <code>retrieval_evaluate.py</code>)</li>
+            <li>• IntakeUnderstanding LLM extraction (<code>extract_intake_understanding.py</code>)</li>
+            <li>• Phase 1 checklist generation (<code>checklist.py</code>)</li>
+            <li>• Refusal behavior — 3 boundary types (<code>refusal.py</code>)</li>
+            <li>• ReviewSummary LLM extraction (<code>review_summary_extraction.py</code>)</li>
+            <li>• Deterministic final assessment (<code>final_assessment.py</code>)</li>
+            <li>• ~190 tests · 12 documented failure modes</li>
+          </ul>
+        </div>
+        <div class="arch-module spring">
+          <div class="arch-module-label">☕ services/review-api/</div>
+          <div class="arch-module-name">Spring Boot API Boundary</div>
+          <div style="font-size:11px;color:var(--text-mid);line-height:1.5;">Owns everything an enterprise API should.</div>
+          <div class="arch-module-owns">Owns</div>
+          <ul>
+            <li>• <code>GET /health</code> + <code>HealthResponse</code> DTO ✅</li>
+            <li>• Swagger/OpenAPI (<code>springdoc</code>) ✅</li>
+            <li>• <code>@RestControllerAdvice</code> + <code>ApiErrorResponse</code> ← today</li>
+            <li>• Mocked <code>POST /api/checklist</code> + DTOs ← Thu</li>
+            <li>• <code>RagEngineClient</code> interface ← Fri</li>
+            <li>• Bean Validation (<code>@Valid</code>, <code>@NotBlank</code>)</li>
+            <li>• Structured logging + timing · Future auth/audit</li>
+          </ul>
+        </div>
+        <div class="arch-module ui">
+          <div class="arch-module-label">⚛️ apps/review-ui/</div>
+          <div class="arch-module-name">React / TS Review UI</div>
+          <div style="font-size:11px;color:var(--text-mid);line-height:1.5;">Owns the human-in-the-loop workflow.</div>
+          <div class="arch-module-owns">Owns</div>
+          <ul>
+            <li>• Concern intake form</li>
+            <li>• Checklist display</li>
+            <li>• Evidence cards (citations)</li>
+            <li>• Reviewer note input</li>
+            <li>• Final assessment panel</li>
+            <li>• Limitations / refusal banner</li>
+            <li>• Debug toggle</li>
+          </ul>
+        </div>
+      </div>
+      <div class="arch-flow">
+        <strong>Controller</strong> → <strong>Service</strong> → <strong>RagEngineClient</strong> (interface) → <strong>PythonProcessRagEngineClient</strong> → <code>python -m app.api_runner checklist</code> (JSON stdin/stdout)<br>
+        <span style="opacity:0.7;">Later swap-in: <strong>HttpRagEngineClient</strong> → FastAPI on the Python side. Controllers and services don't change.</span>
+      </div>
+    </div>
+
+    <!-- 20-STAGE PROGRESSION TRACKER -->
+    <div class="progression-tracker">
+      <div class="progression-tracker-title">20-Stage Progression Tracker</div>
+      <div class="stage-row done"><span class="stage-num">0</span><span class="stage-name">Project framing — synthetic-data-only compounding quality RAG prototype</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">1</span><span class="stage-name">Schemas — strict Pydantic contracts (intake, product context, review summary, derived assessment, IntakeUnderstanding, RefusalResult)</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">2</span><span class="stage-name">Expected outputs — hand-written gold labels for structured-output validation</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">3</span><span class="stage-name">SOP corpus — markdown corpus supports current workflow (frozen)</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">4</span><span class="stage-name">Ingestion / chunking — SOP frontmatter parsed, <code>chunks.jsonl</code> emitted</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">5</span><span class="stage-name">Keyword retrieval — top_k, score ordering, source filtering, matched terms · wrapped as <code>KeywordRetriever</code></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">6</span><span class="stage-name">Retrieval evaluation — hit_rate@k, MRR, failed question IDs · hit_rate@5 = 0.833 keyword baseline</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">7</span><span class="stage-name">Checklist generation — Phase 1 checklist, IntakeUnderstanding suppresses already-stated facts, evidence, limitations</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">8</span><span class="stage-name">Final assessment — Phase 2 deterministic routing from <code>ReviewSummary</code> · structured severe triggers only</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">9</span><span class="stage-name">Reporting / CLI — two-phase demo, manager-readable output, debug toggle</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">10</span><span class="stage-name">Refusal behavior — 3 boundary types: external drug ref, internal record access, clinical/legal conclusion</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">11</span><span class="stage-name">LLM extraction — IntakeUnderstanding (Phase 1) + ReviewSummary (Phase 2) via schema-validated OpenAI calls</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">12</span><span class="stage-name">Failure log — 25 documented failures · Jackson 3, subprocess protocol, metric definitions, negation, retrieval misses</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">13</span><span class="stage-name">Docs — README, data dictionary, DECISIONS.md, failure log, interview framing, workflow taxonomy · pushed to GitHub</span><span class="stage-status">DONE</span></div>
+      <div class="stage-row later"><span class="stage-num">14</span><span class="stage-name">Citation precision — map each checklist item to directly supporting chunk_ids <span class="signal-tag mle">MLE</span></span><span class="stage-status">DEFERRED</span></div>
+      <div class="stage-row done"><span class="stage-num">15a</span><span class="stage-name">Retriever abstraction — <code>Retriever</code> protocol · <code>KeywordRetriever</code> · <code>EmbeddingModel</code> protocol <span class="signal-tag mle">MLE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">15b</span><span class="stage-name">Embedding baseline — <code>HashingEmbeddingModel</code> + <code>EmbeddingRetriever</code> · cosine similarity · same <code>SearchResult</code> contract <span class="signal-tag mle">MLE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">15c</span><span class="stage-name">Retrieval comparison scaffold — <code>retrieval_compare.py</code> · hit_rate@k · MRR · latency · failed IDs per retriever <span class="signal-tag mle">MLE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row next"><span class="stage-num">15d</span><span class="stage-name">Generate + commit retrieval comparison report — keyword vs local embedding on frozen eval set <span class="signal-tag mle">MLE</span></span><span class="stage-status">LEAVE WK 1</span></div>
+      <div class="stage-row next"><span class="stage-num">15e</span><span class="stage-name">Real semantic embedding model (sentence-transformers) behind <code>EmbeddingModel</code> protocol <span class="signal-tag mle">MLE</span></span><span class="stage-status">LEAVE WK 1</span></div>
+      <div class="stage-row later"><span class="stage-num">15f</span><span class="stage-name">HybridRetriever — keyword + semantic RRF blend · 3-way comparison table <span class="signal-tag mle">MLE</span></span><span class="stage-status">LEAVE WK 3</span></div>
+      <div class="stage-row done"><span class="stage-num">16a</span><span class="stage-name">Gradle monorepo · Spring Boot 4.0 / Java 25 toolchain <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">16b</span><span class="stage-name">Spring Boot shell · <code>GET /health</code> · <code>HealthResponse</code> DTO · MockMvc test · Swagger/OpenAPI <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">16c</span><span class="stage-name"><code>GlobalExceptionHandler</code> + <code>ApiErrorResponse</code> · all HTTP status codes mapped · requestId + fieldErrors + code <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">16d</span><span class="stage-name"><code>RagEngineClient</code> interface · <code>PythonProcessRagEngineClient</code> subprocess adapter · Jackson 3 · working-dir fix <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">17</span><span class="stage-name"><code>app/api_runner.py</code> bridge · all 3 endpoints backed by real Python · 27 failure log entries <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row next"><span class="stage-num">17b</span><span class="stage-name"><code>RetrieveControllerTest</code> + <code>FinalAssessmentControllerTest</code> · one local workflow smoke test Java→Python <span class="signal-tag swe">SWE</span></span><span class="stage-status">LEAVE WK 1</span></div>
+      <div class="stage-row done"><span class="stage-num">18a</span><span class="stage-name">Vite + React + TS scaffold · <code>reviewApi.ts</code> typed client · <code>types.ts</code> DTOs · discriminated <code>AsyncState</code> <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">18b</span><span class="stage-name"><code>ConcernInputForm</code> (5k counter, disabled-while-loading) · <code>ChecklistPanel</code> (metric cards, evidence cards, takeaway) · <code>EvidencePanel</code>/<code>EvidenceCard</code> <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">18c</span><span class="stage-name"><code>ReviewSummaryForm</code> (two-column, accessible labels) · <code>FinalAssessmentPanel</code> (handling-path banner, summary metrics, refusal state) <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">18d</span><span class="stage-name"><code>demoCases.ts</code> typed cases · <code>DemoToolbar</code> selector/load/reset/copy · <code>assessmentSummary.ts</code> clipboard export · 4-step progress indicator <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">18e</span><span class="stage-name">Vite proxy → Spring Boot · <code>browser_demo_script.md</code> · full-stack browser demo verified · responsive tablet + mobile layout <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row done"><span class="stage-num">18f</span><span class="stage-name">Clipboard test hardening (userEvent before spy, async await) · Python UTF-8 fix (PYTHONIOENCODING + PYTHONUTF8=1) · failure log entries 26–27 <span class="signal-tag swe">SWE</span></span><span class="stage-status">DONE</span></div>
+      <div class="stage-row next"><span class="stage-num">18g</span><span class="stage-name">README update — Phase 5 screenshots · architecture framing · startup commands · end-to-end walkthrough · Phase 5 gate complete <span class="signal-tag swe">SWE</span></span><span class="stage-status">LEAVE DAY 1</span></div>
+      <div class="stage-row next"><span class="stage-num">19</span><span class="stage-name">CI/Docker/runbook — GitHub Actions (3-job: pytest + gradle + npm) · Dockerfiles · Docker Compose · health checks · <code>RUNBOOK.md</code></span><span class="stage-status">LEAVE WK 1–2</span></div>
+      <div class="stage-row later"><span class="stage-num">20</span><span class="stage-name">Eval persistence — SQLite/<code>review_case</code> + <code>eval_run</code> tables · structured logs + correlation IDs · latency p95 notes</span><span class="stage-status">LEAVE WK 3</span></div>
+      <div class="stage-row later"><span class="stage-num">21</span><span class="stage-name">Applications submitted to active Chewy internal reqs · advocate (Kenny Wallace) engaged · mock interviews 1 + 2 complete · at least one loop scheduled or external search active</span><span class="stage-status">LEAVE DAY 22+</span></div>
+    </div>
+
+    <!-- PORTFOLIO SIGNAL MAP -->
+    <div class="jd-alignment">
+      <div class="jd-header">
+        <span class="jd-role mle">Portfolio → Role Signal</span>
+        <span class="jd-title-text">What the workbench demonstrates for Chewy internal roles</span>
+        <span class="jd-meta">MLE preferred · SWE full-stack secondary · advocate: Kenny Wallace</span>
+      </div>
+      <div class="jd-grid">
+        <div class="jd-bucket">
+          <div class="jd-bucket-label">MLE signal — what it proves</div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>RAG pipeline end-to-end</strong> — corpus ingestion, chunking, keyword + embedding retrieval, hybrid blending, evaluation harness with Recall@k and MRR.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>Evaluation discipline</strong> — 15 labeled questions, frozen eval set, comparison report with hit_rate@k and MRR per retriever, p95 latency note.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>LLM integration + output control</strong> — schema-validated extraction with Pydantic, structured severe-trigger routing, refusal contract, deterministic final assessment.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>Human-in-the-loop workflow</strong> — review UI is the product boundary, not a demo wrapper. Model proposes; reviewer confirms; final assessment depends on reviewer-confirmed facts.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>Failure discipline</strong> — 27+ failure log entries with symptom, root cause, fix, and prevention. Clipboard mock replacement, UTF-8 encoding, coordinated negation scope, stdout pollution.</span></div>
+          <div class="jd-req"><span class="jd-req-status planned">▶</span><span class="jd-req-text"><strong>Eval persistence</strong> — SQLite <code>review_case</code> + <code>eval_run</code> tables with timestamped retriever runs and metric snapshots (Phase 7, Leave Wk 3).</span></div>
+        </div>
+        <div class="jd-bucket">
+          <div class="jd-bucket-label">SWE signal — what it proves</div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>Polyglot full-stack</strong> — Python + Java + TypeScript in one Gradle monorepo. Three layers with hard ownership boundaries; no domain logic in the wrong layer.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>API design</strong> — typed interface (<code>RagEngineClient</code>), subprocess adapter pattern, stable error contract (<code>ApiErrorResponse</code>), Swagger docs, structured 4xx/5xx mapping.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>React HITL UI</strong> — discriminated async state, evidence cards, operator controls, clipboard export, accessible form labels, responsive layout. No CSS framework dependency.</span></div>
+          <div class="jd-req"><span class="jd-req-status planned">▶</span><span class="jd-req-text"><strong>CI/Docker/runbook</strong> — GitHub Actions 3-job pipeline (pytest + Gradle + npm), Docker Compose with healthchecks, correlation IDs across all three runtimes (Leave Wk 1–2).</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>Domain transfer story</strong> — pharmacy compounding QA is the same archetype as internal workflow tools: structured intake, evidence surfacing, reviewer judgment, audit trail. Not incidental.</span></div>
+          <div class="jd-req"><span class="jd-req-status covered">✓</span><span class="jd-req-text"><strong>ORBIT + Kenny Wallace</strong> — cross-functional HR data consolidation at Chewy. Mapped three systems, debugged LLM reconciliation, influenced without authority. Direct internal advocate.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="phase-header p1-accent">
+      <span class="phase-badge p1">Phase 1</span>
+      <div class="phase-meta">
+        <h2>v8 Freeze · Monorepo Spine · Spring Boot Shell</h2>
+        <p>Weeks 1–4 · May 4 – May 31</p>
+      </div>
+      <div class="phase-goal">RAG engine frozen through v8 (stages 0–13). Gradle monorepo. Spring Boot service with /health, Swagger, validation, error handler. Mocked POST /api/checklist. Python bridge designed.</div>
+    </div>
+
+    <!-- WEEKS 1–3 RETROSPECTIVE — v8 baseline -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">WK 1–3</span>
+        <span class="week-title">v8 Baseline — Stages 0–13 Shipped <span class="signal-tag mle" style="margin-left:6px;">MLE</span></span>
+        <span class="week-dates">May 4–24 · DONE</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">v8 spine complete — see 20-stage tracker above. Synthetic-data RAG with eval, refusal, LLM extraction, deterministic routing.</span></div>
+        </div>
+        <div class="day-block rag-day">
+          <div class="day-name">Week 1 · May 4–10</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Project framing · Pydantic schemas · expected-output gold labels · SOP corpus seeded (stages 0–3)</span></div>
+          </div>
+        </div>
+        <div class="day-block rag-day">
+          <div class="day-name">Week 2 · May 11–17</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Ingestion / chunking with frontmatter parsing · <code>chunks.jsonl</code> writer · keyword retrieval baseline with top_k, score ordering, source filter (stages 4–5)</span></div>
+          </div>
+        </div>
+        <div class="day-block rag-day">
+          <div class="day-name">Week 3 · May 18–24</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Retrieval eval (hit_rate@k, MRR, failed IDs) · Phase 1 checklist generation · Phase 2 deterministic final assessment · two-phase CLI · refusal behavior · OpenAI reviewer-note extraction · failure log (stages 6–12)</span></div>
+            <div class="task"><span class="task-tag rag">v8 docs</span><span class="task-text">README, data dictionary, routing matrix, guide updated (stage 13) — commit <code>docs: freeze v8 rag baseline and routing matrix</code> first thing Monday.</span></div>
+          </div>
+        </div>
+        <div class="day-block mixed-day">
+          <div class="day-name">Carried items</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag audit">AUDIT</span><span class="task-text">3-system reconciliation: work hours only. No personal-time slot unless something blocks the workbench build.</span></div>
+            <div class="task"><span class="task-tag py">ETL</span><span class="task-text">Existing Chewy ETL stays a portfolio bullet (production data + root cause for the SWE II JD). No active refactor work.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEEK 4 — DONE -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">WEEK 4</span>
+        <span class="week-title">Monorepo · Spring Shell · Exception Handler · Applications ✅ Complete</span>
+        <span class="week-dates">May 25–31 · DONE</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text"><code>rag-engine-python/</code> + Gradle root + Spring Boot 4.0 / Java 25 running<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text"><code>GET /health</code> · <code>HealthResponse</code> DTO · MockMvc test · Swagger UI · <code>gradlew test</code> green<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">🔄</span><span class="milestone-text">Global exception handler — <code>@RestControllerAdvice</code> + <code>ApiErrorResponse</code> · <em>in progress today</em><span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">📨</span><span class="milestone-text">MLE internal application — targeted submission during leave sprint</span></div>
+          <div class="milestone-item"><span class="milestone-icon">📨</span><span class="milestone-text">SWE full-stack internal application — targeted submission during leave sprint · Kenny Wallace advocate</span></div>
+        </div>
+        <div class="day-block rag-day">
+          <div class="day-name">Monday — May 25 ✅</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Python moved to <code>rag-engine-python/</code>. Root <code>settings.gradle.kts</code> + <code>build.gradle.kts</code> added (Spring Boot 4.0, Java 25 toolchain, springdoc). Monorepo spine committed to GitHub.</span></div>
+          </div>
+        </div>
+        <div class="day-block spring-day">
+          <div class="day-name">Tuesday — May 26 ✅</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text"><code>services/review-api/</code> scaffold with Spring Initializr. <code>HealthController</code> + <code>HealthResponse</code> DTO. <code>GET /health</code> endpoint. <code>HealthControllerTest</code> with MockMvc. <code>gradlew test</code> passing.</span></div>
+          </div>
+        </div>
+        <div class="day-block spring-day">
+          <div class="day-name">Wednesday — May 28 ← TODAY</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Swagger/OpenAPI UI confirmed rendering. springdoc dependency wired.</span></div>
+            <div class="task"><span class="task-tag spring">IN PROGRESS</span><span class="task-text">Write <code>ApiExceptionHandler</code> with <code>@RestControllerAdvice</code>. Add <code>ApiErrorResponse</code> DTO. Add springdoc annotations so Swagger shows error response shapes. Confirm <code>gradlew test</code> still green.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+        <div class="day-block mixed-day">
+          <div class="day-name">Thursday — May 29 · Application Target</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag rag">MLE</span><span class="task-text"><strong>Prepare MLE application materials.</strong> Cover letter angle: v8 frozen baseline · 27 documented failures with root causes · IntakeUnderstanding schema-validated LLM extraction · semantic boundary detection · two-phase CLI demo. Message recruiter same day. Submit to active Chewy internal MLE req.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag spring">SPRING</span><span class="task-text">Add mocked <code>POST /api/checklist</code>: <code>ChecklistController</code>, <code>ChecklistRequest</code> DTO with <code>@NotBlank</code>/<code>@Valid</code>, <code>ChecklistResponse</code> DTO, <code>ChecklistService</code> returning a hard-coded response. Write <code>ChecklistControllerTest</code> with MockMvc.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+        <div class="day-block spring-day">
+          <div class="day-name">Friday — May 30</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag spring">SPRING</span><span class="task-text">Design Java→Python boundary: write <code>RagEngineClient</code> Java interface (<code>buildChecklist</code>, <code>retrieve</code>, <code>buildFinalAssessment</code>). Document JSON shape of each call in <code>docs/api_contract.md</code>. No subprocess implementation yet — interface only.</span><span class="task-time">60m</span></div>
+            <div class="task"><span class="task-tag swe">JD</span><span class="task-text">Draft SWE full-stack cover letter template. Python + React + Java + RAG + OpenAPI + HITL = all in one repo. Domain transfer: pharmacy compounding QA → internal workflow is the same archetype. Tune to the specific req before submitting.</span><span class="task-time">30m</span></div>
+          </div>
+        </div>
+        <div class="day-block ui-day">
+          <div class="day-name">Saturday — May 31</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag ui">UI</span><span class="task-text">Create <code>apps/review-ui/</code> with Vite + React + TypeScript. Render a static page that calls <code>GET /health</code> via fetch and displays the response. Goal: prove all three modules exist and can talk to each other.</span><span class="task-time">90m</span></div>
+            <div class="task"><span class="task-tag spring">SPRING</span><span class="task-text">Enable CORS for <code>http://localhost:5173</code>. Verify browser can call <code>/health</code> without CORS error.</span><span class="task-time">20m</span></div>
+          </div>
+        </div>
+        <div class="day-block mixed-day">
+          <div class="day-name">Sunday — June 1</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag swe">JD</span><span class="task-text"><strong>Submit to active Chewy internal SWE req via Workday.</strong> Confirm req is open, tailor cover letter to JD, engage recruiter same day.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag rag">ADR</span><span class="task-text">Write <code>docs/adr/0001-python-rag-engine.md</code> and <code>0002-spring-api-boundary.md</code>. One screen each. These are SWE interview artifacts — explain why Python owns the engine and why Java owns the service boundary.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag rest">RETRO</span><span class="task-text">Week 4 retro: what shipped, what slipped, what carries to Week 5. Both applications in? Engine and Spring shell committed? If yes, Phase 1 is complete.</span><span class="task-time">20m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase-header p2-accent">
+      <span class="phase-badge p2">Phase 2</span>
+      <div class="phase-meta">
+        <h2>Real Vertical Slice · Hybrid Retrieval · Review UI</h2>
+        <p>Weeks 5–8 · June 1 – June 28</p>
+      </div>
+      <div class="phase-goal">Java→Python adapter working end-to-end through <code>app/api_runner.py</code>. Hybrid retrieval comparison reported (MLE evidence). React UI renders real checklist from real Spring endpoint backed by real Python. Two real interview artifacts.</div>
+    </div>
+
+    <!-- WEEK 5 — DONE -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">WEEK 5</span>
+        <span class="week-title">Full Backend Workflow Slice · All 3 Endpoints Live · Retriever Abstraction ✅ Complete</span>
+        <span class="week-dates">June 1–7 · DONE</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text"><code>app/api_runner.py</code> bridge live — all 3 commands: checklist, retrieve, final_assessment<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text"><code>POST /api/retrieve</code> + <code>POST /api/final-assessment</code> backed by real Python bridge — ahead of plan<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">Jackson 3 migration · working-directory binding fix · all integration bugs resolved (failure log 13–19)<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text"><code>Retriever</code> protocol · <code>KeywordRetriever</code> wrapper · retrieval comparison scaffold<span class="signal-tag mle">MLE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text"><code>HashingEmbeddingModel</code> + <code>EmbeddingRetriever</code> — local deterministic vector baseline for comparison<span class="signal-tag mle">MLE</span></span></div>
+        </div>
+        <div class="day-block mixed-day">
+          <div class="day-name">What actually shipped</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Full Python bridge for all 3 commands. <code>PythonProcessRagEngineClient</code> with timeout, exit-code, stdout, and error mapping. Expand <code>RagEngineClient</code> interface to include <code>retrieve</code> and <code>createFinalAssessment</code>. <code>POST /api/retrieve</code> + <code>POST /api/final-assessment</code> wired end-to-end.</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Jackson 3 migration complete. <code>rag.python.working-directory</code> bound as String + <code>Path.of(...)</code> fix. <code>@Bean</code> restored on <code>RagEngineClient</code>. Interface/implementation drift caught and fixed. 25 failure log entries.</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Retriever abstraction: <code>Retriever</code> protocol, <code>KeywordRetriever</code>, <code>EmbeddingModel</code> protocol, <code>HashingEmbeddingModel</code>, <code>EmbeddingRetriever</code>. <code>retrieval_compare.py</code> scaffold with hit_rate@k, MRR, latency, failed IDs. Metric definitions fixed (failure log 21–25).</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Full PowerShell smoke tests in README. Five-minute demo script in interview_framing.md. DECISIONS.md updated through June 9. Workflow taxonomy updated with retrieval strategy and metrics contracts.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEEK 6 — DONE -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">WEEK 6</span>
+        <span class="week-title">Phase 5 Complete — 3 PRs Shipped — React UI Done ✅</span>
+        <span class="week-dates">June 8–14 · DONE</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">PR 1 shipped: branded shell · 4-step progress · metric cards · evidence cards · two-column reviewer form · handling-path banner · demo sidebar · responsive layout<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">PR 2 shipped: <code>browser_demo_script.md</code> · Vite proxy → Spring Boot · PowerShell API checks · troubleshooting guide<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">PR 3 shipped: <code>demoCases.ts</code> + <code>DemoToolbar</code> + <code>assessmentSummary.ts</code> · clipboard hardening · Python UTF-8 fix · failure log entries 26–27<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">All checks green: ✅ <code>npm test</code> · ✅ <code>npm run build</code> · ✅ <code>gradlew.bat test</code> · ✅ full browser workflow against running Spring Boot API</span></div>
+        </div>
+        <div class="day-block ui-day">
+          <div class="day-name">Jun 8–10 — PR 1: React UI Polish</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Branded application header + synthetic-demo badge + hero section + footer. Four-step progress indicator (Concern → Checklist → Reviewer Findings → Final Assessment) responding to workflow state. Card-based concern entry with 5,000-character counter matching backend limit.</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Checklist panel: metric cards (concern type, risk lane, review scope) · initial-takeaway callout · evidence cards (source ID, title, section heading) · missing info / escalation / limitations display. Final assessment: handling-path banner + summary metrics + escalation trigger layout.</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Demo sidebar (synthetic-data boundary, human reviewer ownership, refusal behavior, keyword-retrieval default, embedding evaluation-only note). Responsive: tablet + mobile stacked layout. No CSS framework dependency. Accessible labels and button text preserved.</span></div>
+          </div>
+        </div>
+        <div class="day-block ui-day">
+          <div class="day-name">Jun 11–12 — PR 2: Browser Demo Script + Vite Proxy</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text"><code>docs/browser_demo_script.md</code> with: exact startup sequence for Spring + Vite, health-check command, the exact synthetic vomiting concern text, reviewer findings for final-assessment, expected checklist and final-assessment behavior, refusal demo for unsupported real-record access, PowerShell API checks.</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Vite proxy configuration: <code>/api</code> → <code>http://localhost:8080</code>. Troubleshooting guidance for: Vite proxy 404, Gradle wrapper location, Spring 404, mocked tests vs real browser networking, disabled final-assessment submission, browser network errors.</span></div>
+          </div>
+        </div>
+        <div class="day-block ui-day">
+          <div class="day-name">Jun 13–14 — PR 3: Demo Operator Controls + Hardening</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text"><code>demoCases.ts</code>: typed reusable demo cases (vomiting walkthrough + unsupported record-access). <code>DemoToolbar</code>: selector, load, start-over. <code>assessmentSummary.ts</code>: deterministic plain-text serialization (classification/category/risk/handling/triggers/options/rationale). "Copy assessment summary" clipboard action with accessible success/failure feedback.</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">Clipboard test hardening: <code>userEvent</code> before spy, await async feedback, verify copied content. Python UTF-8 encoding fix: <code>PYTHONIOENCODING=utf-8</code> + <code>PYTHONUTF8=1</code> — prevents Windows code-page corruption (<code>can&#xFFFD;t</code>). Failure log entries 26 (clipboard mock) and 27 (encoding).</span></div>
+            <div class="task"><span class="task-tag done">DONE</span><span class="task-text">All validation checks: ✅ <code>npm test</code> ✅ <code>npm run build</code> ✅ <code>.\gradlew.bat test</code> ✅ demo cases load ✅ reviewer prefills editable ✅ start-over clears ✅ copy succeeds ✅ refusal text without encoding corruption ✅ full browser workflow against Spring Boot.</span></div>
+          </div>
+        </div>
+        <div class="day-block mixed-day">
+          <div class="day-name">Jun 14–16 — Pre-Leave (Today through Monday)</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag ui">DEMO</span><span class="task-text">Demo quality polish for tomorrow's rehearsal (June 15). Improve answer quality in the RAG engine so checklist output is more concrete. README update with screenshots and architecture framing. Phase 5 gate check — confirm the 5-minute manual demo works end-to-end cold.</span><span class="task-time">Today</span></div>
+            <div class="task"><span class="task-tag rest">PREP</span><span class="task-text">June 15–16 pre-leave cleanup: commit anything outstanding, ensure <code>npm test</code> + <code>gradlew test</code> still green after answer quality changes. Leave starts June 17.</span><span class="task-time">Jun 15–16</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 — LEAVE SPRINT -->
+    <div class="phase-header p3-accent">
+      <span class="phase-badge p3">Leave Sprint</span>
+      <div class="phase-meta">
+        <h2>Phase 6 CI/Docker · Phase 7 Eval/Persistence · Applications · Interview Hardening</h2>
+        <p>June 17 – July 15 · 29 days · 4 hours/day</p>
+      </div>
+      <div class="phase-goal">Every day has four disciplines: 30-min coding drill (specific problem), 20-min file defense (explain why it exists + terminology), 15-min Q&amp;A bank (answer one interview question aloud), build task. Applications on Day 22 (July 8) — intentional deadline, not a slip. Primary narrative: full-stack SWE II with data/MLE differentiation. MLE preferred; SWE full-stack more likely.</div>
+    </div>
+
+    <div class="leave-sprint-header">
+      <div class="leave-sprint-title">Leave Sprint Structure — Every Day</div>
+      <div class="leave-sprint-meta">
+        <strong style="color:var(--text);">Daily discipline (fixed, non-negotiable):</strong>
+        &nbsp;🔢 <strong style="color:#a78bfa;">Coding drill 30m</strong> — specific problem from the Tier A–D bank, Java preferred for SWE screens; implement without hints, then explain pattern and complexity aloud.
+        &nbsp;📁 <strong style="color:#2dd4bf;">File defense 20m</strong> — pick one file from the 20-file map; explain why it exists, what it owns, what terminology it demonstrates, and what it deliberately does not own.
+        &nbsp;🎤 <strong style="color:#fbbf24;">Interview Q&amp;A 15m</strong> — answer one question from the bank aloud without notes. If you stumble, write down the answer, then say it again.
+        &nbsp;🔨 <strong style="color:var(--spring);">Build block(s)</strong> — the phase deliverable for the day.
+        <br><br>
+        <strong style="color:var(--text);">Coding problem tiers:</strong>
+        &nbsp;<span style="background:rgba(16,185,129,0.15);color:var(--done);border:1px solid rgba(16,185,129,0.3);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700;">A</span> Foundation — O(n) hashmap/pointer basics.
+        &nbsp;<span style="background:rgba(249,115,22,0.12);color:var(--mle);border:1px solid rgba(249,115,22,0.3);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700;">B</span> SWE II patterns — the problems that actually show up in Level II screens.
+        &nbsp;<span style="background:rgba(244,114,182,0.12);color:var(--gate);border:1px solid rgba(244,114,182,0.3);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700;">C</span> Level III systems — design and implementation that shows senior instinct.
+        &nbsp;<span style="background:rgba(139,92,246,0.12);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:3px;font-weight:700;">D</span> MLE/DS/DE — retrieval metrics, data quality, SQL window functions.
+      </div>
+    </div>
+
+    <!-- LEAVE WEEK 1: Jun 17–23 — Phase 5 Gate + Phase 6 Start + Coding Foundation -->
+    <div class="week-card open">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">LEAVE WK 1</span>
+        <span class="week-title">Phase 5 Gate · Phase 6 CI/Docker Start · Coding Foundation (Tier A) <span class="leave-pill">Starts Jun 17</span></span>
+        <span class="week-dates">June 17–23</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">Phase 5 gate: 5-minute demo runs end-to-end without improvising · README updated with screenshots</span></div>
+          <div class="milestone-item"><span class="milestone-icon">🟢</span><span class="milestone-text">CI pipeline green — UI + Spring + Python jobs all pass on push<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">🐳</span><span class="milestone-text">Both service images build locally — Spring + Python Dockerfiles exist<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">🔢</span><span class="milestone-text">All 5 Tier A problems solved clean — Two Sum → Merge Two Sorted Lists</span></div>
+          <div class="milestone-item"><span class="milestone-icon">📁</span><span class="milestone-text">File defense practiced for: <code>api_runner.py</code> · <code>retrieval.py</code> · <code>refusal.py</code> · <code>RagEngineClient</code> · <code>PythonProcessRagEngineClient</code></span></div>
+        </div>
+
+        <div class="day-block ui-day">
+          <div class="day-name">Day 1 — Wed Jun 17 · Phase 5 Gate</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER A</span><span class="task-text"><strong>Two Sum + Contains Duplicate</strong> · HashMap/HashSet · Explain O(n²) vs O(n); when HashMap buys you the second linear pass; why HashSet works for duplicate check but not Two Sum. Implement both in Java without hints.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>api_runner.py</code> — Process bridge: Java sends one JSON request through stdin; Python reads it, routes to existing functions, writes one JSON response to stdout. <strong>Terminology: process boundary, subprocess, protocol discipline, adapter pattern.</strong> Interview line: "Lets Spring wrap the tested engine without rewriting it."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Why does stdout have to be JSON-only?"</em> Answer must include: the Java client parses stdout; any debug text or log line breaks the integration; diagnostics belong on stderr; this is why stdout-pollution tests exist (failure log #11).</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag ui">GATE</span><span class="task-text">Run full 5-minute demo against the running Spring Boot service — concern → checklist → evidence → reviewer notes → final assessment → refusal case. Record what breaks or is awkward. Update README with Phase 5 screenshots and startup commands. Confirm <code>npm test</code> + <code>npm run build</code> + <code>gradlew test</code> green.</span><span class="task-time">90m</span></div>
+            <div class="task"><span class="task-tag rag">EMBED</span><span class="task-text">Start retrieval comparison report: run <code>python -m app.retrieval_compare</code> against the frozen eval set. Note hit_rate@k, MRR, latency for keyword vs local embedding. Save output to <code>reports/retrieval_comparison_v1.md</code>.</span><span class="task-time">45m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block infra-day">
+          <div class="day-name">Day 2 — Thu Jun 18 · CI Pipeline</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER A</span><span class="task-text"><strong>Valid Anagram + Valid Parentheses</strong> · int[26] array vs HashMap (fixed alphabet); Stack/ArrayDeque for parentheses. Explain: when a fixed-size array beats a HashMap; how Unicode changes the int[26] assumption; why ArrayDeque is preferred over Stack in Java. Implement both.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>retrieval.py</code> — Owns the retrieval contract, scoring, and ranking. Contains <code>Retriever</code> protocol, <code>KeywordRetriever</code>, <code>EmbeddingRetriever</code>. <strong>Terminology: protocol (structural subtyping), strategy pattern, Recall@k, MRR, cosine similarity, top-k.</strong> Interview line: "Retrieval quality drives answer quality more than prompt polish."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"What does a green CI check actually prove to a reviewer?"</em> Answer must include: it proves the build is reproducible; it separates 'works on my machine' from 'works reproducibly'; it shows testing discipline; a green badge next to a repo communicates professional practice without explanation.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag infra">CI</span><span class="task-text">GitHub Actions: add <code>.github/workflows/ci.yml</code> with three jobs — (1) UI: <code>npm ci</code>, <code>npm run build</code>, <code>npm run typecheck</code>; (2) Spring: <code>./gradlew :services:review-api:test</code>; (3) Python: install deps, <code>python -m pytest</code>, <code>python -m app.retrieval_evaluate</code>. Fail the build on any error. Test by pushing a branch.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block infra-day">
+          <div class="day-name">Day 3 — Fri Jun 19 · Docker Images</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER A</span><span class="task-text"><strong>Best Time to Buy and Sell Stock + Binary Search</strong> · Single-pass min tracking; loop invariant binary search. Explain: why you can't buy and sell on the same day affects state; why loop invariant matters at <code>left &lt;= right</code> vs <code>left &lt; right</code>; how to avoid off-by-one on empty or one-element arrays.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>refusal.py</code> — Owns the three boundary detection paths: external drug reference, internal record access, clinical/legal conclusion. <strong>Terminology: guardrail, boundary detection, substring matching, controlled vocabulary, fail-safe behavior.</strong> Interview line: "The correct answer can be 'I do not have enough evidence.'"</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Why containerize the Java/Python boundary instead of just documenting setup?"</em> Answer: reproducibility — a container eliminates 'works on my machine' for the Java+Python combination; it pins Python version, dependencies, and encoding behavior; it also proves you can operate what you built, not just describe it.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag infra">DOCKER</span><span class="task-text">Write <code>Dockerfile.review-api</code> (multi-stage: Gradle build → JRE image; pin JDK 25). Write <code>Dockerfile.rag-engine</code> (Python slim; pin version; copy requirements; set <code>PYTHONIOENCODING=utf-8</code>). Add <code>.dockerignore</code> for both. Run <code>docker build</code> locally — both images must build without errors.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block infra-day">
+          <div class="day-name">Day 4 — Sat Jun 20 · Docker Compose + Health Checks</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER A</span><span class="task-text"><strong>Reverse String (in-place) + Running Sum of 1D Array</strong> · Two-pointer swap; prefix sum accumulation. Explain: why in-place matters (O(1) space vs O(n)); how prefix sums enable O(1) range queries; when you'd use a prefix sum in a retrieval pipeline (term frequency pre-computation). Write without helper functions.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>RagEngineClient.java</code> (interface) — Stable abstraction for the Python engine. Hides subprocess details behind <code>createChecklist</code>, <code>retrieve</code>, <code>createFinalAssessment</code>. <strong>Terminology: polymorphism, dependency inversion principle, interface segregation, contract-based design.</strong> Interview line: "Controllers depend on the contract, not on subprocess details — that's why swapping to HTTP later doesn't change the controller."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"How do the services find each other in Docker Compose, and who owns configuration?"</em> Answer must include: Docker Compose creates a bridge network; services reference each other by service name as hostname; the Spring API needs <code>RAG_ENGINE_HOST=python-engine</code> or similar; configuration ownership is in the API layer, not the engine; <code>.env.example</code> documents required variables without committing secrets.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag infra">COMPOSE</span><span class="task-text">Write <code>infra/docker-compose.yml</code> with three services: Spring API, Python engine, and UI on a shared network. Add healthchecks (<code>GET /health</code> for Spring, a Python startup check). Add <code>.env.example</code> documenting all required variables. Run <code>docker compose up</code> and verify the full demo flow works through the containerized stack.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block infra-day">
+          <div class="day-name">Day 5 — Sun Jun 21 · Structured Logging + Correlation IDs</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER A</span><span class="task-text"><strong>Merge Two Sorted Lists + FizzBuzz</strong> · Two-pointer merge with dummy head; modulo for FizzBuzz. Explain: why dummy head avoids special-casing the first node; how FizzBuzz is really about precedence and modulo; state the pattern cold. These are filter tests — get them perfectly correct and fast.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>PythonProcessRagEngineClient.java</code> — Implements <code>RagEngineClient</code> via <code>ProcessBuilder</code>. Owns: subprocess launch, JSON write to stdin, stdout read, exit-code handling, error envelope parsing, timeout mapping to HTTP 504. <strong>Terminology: adapter pattern, process boundary, error envelope, timeout handling, subprocess, UTF-8 encoding boundary.</strong> Interview line: "This is where Java-to-Python integration risk is isolated — everything messy lives in this one file."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"How do you trace a single failed request across React, Spring, and Python?"</em> Answer: correlation ID generated at the Spring boundary, logged on every request, passed into the Python subprocess as part of the request envelope or environment, logged by Python on receipt. React shows it in the UI error response. One ID traces the full path across three runtimes.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag spring">LOGGING</span><span class="task-text">Add a request-correlation filter in Spring Boot: generate a UUID per request, store in MDC, log it with every log line, include it in <code>ApiErrorResponse.requestId</code>. Pass the correlation ID into the Python subprocess (as an env var or in the JSON payload). Verify the same ID appears in Spring logs and Python stderr for one request.</span><span class="task-time">90m</span></div>
+            <div class="task"><span class="task-tag rag">EMBED</span><span class="task-text">Add real semantic embedding model: <code>pip install sentence-transformers</code>; implement <code>SentenceTransformerEmbeddingModel</code> behind <code>EmbeddingModel</code> protocol using <code>all-MiniLM-L6-v2</code>. Run comparison report again. Does it improve hit_rate on the questions the hashing model missed?</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block infra-day">
+          <div class="day-name">Day 6 — Mon Jun 22 · RUNBOOK.md + Error Contract</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Longest Substring Without Repeating Characters</strong> · Sliding window with a HashMap tracking last-seen index. Explain: why you move <code>left</code> to <code>lastSeen + 1</code> rather than <code>left + 1</code>; the distinction between window shrink and pointer jump; time O(n), space O(min(n, charset)). This is Tier B — it will appear in SWE II screens.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>reviewApi.ts</code> — Transport boundary to Spring; error mapping. Returns typed <code>AsyncState&lt;T&gt;</code>. <strong>Terminology: API client, DTO, discriminated union, unknown vs any at boundaries, runtime validation gap.</strong> Interview line: "Fetch logic should not be scattered across presentational components — this boundary prevents that and makes async states explicit."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"What belongs in a RUNBOOK versus a README?"</em> README = what it is, how to set it up, what it does. RUNBOOK = how to start it, stop it, restart it, check health, recover from common failures, read logs, and what to do when the phone rings at 2am. The RUNBOOK is for operators; the README is for contributors and evaluators.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag infra">RUNBOOK</span><span class="task-text">Write <code>RUNBOOK.md</code>: start/stop commands for each service, health-check commands, how to read logs and find the correlation ID, the two documented failure modes (clipboard mock, UTF-8 encoding), recovery steps for each. Follow the runbook from a cold start to confirm it works. Add API error contract table.</span><span class="task-time">90m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block mixed-day">
+          <div class="day-name">Day 7 — Tue Jun 23 · Phase 6 Gate + Controller Tests</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Group Anagrams</strong> · Sort each word as a canonical key → HashMap&lt;String, List&lt;String&gt;&gt;. Explain: sorted string as canonical signature; why this works for all anagram groups; time O(n·k·log k) where k is word length; variation: char-count array as key for O(n·k). Practice on 3 examples, state both approaches.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>types.ts</code> — Shared DTO and UI-facing types. Defines <code>AsyncState&lt;T&gt;</code> discriminated union (idle/loading/success/error), <code>ApiError</code>, and all response shapes. <strong>Terminology: discriminated union, exhaustive switch, impossible states, structural typing, generic constraints.</strong> Interview line: "Types make state explicit at compile time; runtime validation still matters at the network boundary."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Why TypeScript discriminated unions for async state?"</em> Must include: without them, you can write <code>{ loading: true, data: {...} }</code> which is an impossible state; a discriminated union on <code>state</code> makes contradictions unrepresentable; the TypeScript compiler catches missing cases in switch; and the UI can't accidentally render a success panel while still loading.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag spring">TESTS</span><span class="task-text">Add <code>RetrieveControllerTest</code> and <code>FinalAssessmentControllerTest</code> with MockMvc + mocked <code>RagEngineClient</code>. Cover: happy path, validation failure (400), engine refusal (422), timeout (504). Add one local workflow smoke test that actually shells out to Python with a small fixture corpus and asserts structured output shape. Gate: <code>./gradlew test</code> passes.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE WEEK 2: Jun 24–30 — Phase 6 Complete + SWE II Interview Prep -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">LEAVE WK 2</span>
+        <span class="week-title">Phase 6 Gate · Code Tour Prep · File Defense Depth · SWE II Patterns (Tier B) <span class="leave-pill">Jun 24–30</span></span>
+        <span class="week-dates">June 24–30</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">✅</span><span class="milestone-text">Phase 6 gate: <code>docker compose up</code> → full demo works against containerized stack<span class="signal-tag swe">SWE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">📚</span><span class="milestone-text">10-file code tour drafted and practiced cold — can explain any file in 60 seconds</span></div>
+          <div class="milestone-item"><span class="milestone-icon">🔢</span><span class="milestone-text">Tier B core patterns: sliding window, heap/top-k, merge intervals, graph traversal</span></div>
+          <div class="milestone-item"><span class="milestone-icon">🎤</span><span class="milestone-text">Can answer all backend Q&amp;A questions (polymorphism, adapter, error contract, subprocess, RagEngineClient) without notes</span></div>
+        </div>
+
+        <div class="day-block infra-day">
+          <div class="day-name">Day 8 — Wed Jun 24 · Phase 6 Reproducible Demo</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Top K Frequent Elements</strong> · Min-heap of size K or bucket sort approach. Explain: why a min-heap of size K beats sorting all elements (O(n log k) vs O(n log n)); how bucket sort gives O(n) when values are bounded. <em>Top-k is directly analogous to RAG retrieval ranking — mention this in the interview.</em></span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>ConcernInputForm.tsx</code> — Controlled textarea with 5k character counter, disabled-while-loading submit, validation feedback. <strong>Terminology: controlled component, single source of truth, uncontrolled fallback, form validation, accessibility (aria-label, role).</strong> Interview line: "Controlled inputs support predictable submission — the component always reflects what React state says."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"What does the 2-minute CI/Docker story sound like?"</em> Practice: "The Python tests, Spring tests, and UI build all run on every push in GitHub Actions. Docker Compose wires all three services with a shared network so docker compose up reproduces the demo on any machine. The correlation ID flows from the Spring filter through the Python subprocess log so I can trace a failed request end-to-end."</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag infra">GATE</span><span class="task-text">Run the full Phase 6 gate: clean checkout → <code>docker compose up</code> → full demo flow → CI badge showing green. Refresh the demo script and README screenshots to match the containerized run. Commit Phase 6 gate status. If anything breaks, fix it before moving on.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 9 — Thu Jun 25 · Code Tour Prep</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Merge Intervals</strong> · Sort by start time, then iterate: if current start ≤ previous end, merge by extending the end. Explain: why sorting first enables single-pass merging; the merge condition; time O(n log n); edge cases: touching intervals, single interval, all-overlapping. Write in Java.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>ChecklistPanel.tsx</code> — Renders checklist items, metric cards (concern type, risk lane, review scope), evidence cards, initial takeaway, missing information, escalation triggers, limitations. <strong>Terminology: presentational component, props drilling, derived render data, empty/loading/error states, conditional rendering.</strong> Interview line: "Makes retrieved output reviewable rather than chatbot-like — the goal is transparency, not convenience."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"What is polymorphism in your project?"</em> Must name: <code>RagEngineClient</code> is the interface; <code>PythonProcessRagEngineClient</code> is the concrete implementation today; <code>HttpRagEngineClient</code> would be another implementation that wraps a FastAPI service instead of a subprocess. Spring controllers depend on <code>RagEngineClient</code>, so the implementation can change without changing the controller. That's runtime polymorphism via interface.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rag">TOUR</span><span class="task-text">Draft the 10-minute code tour route. Choose 10 files that together tell the story of the system: one from each major layer. Write a 60-second "why it exists" card for each. Route example: <code>demoCases.ts</code> → <code>reviewApi.ts</code> → <code>types.ts</code> → <code>ChecklistPanel</code> → Spring controller → Spring service → <code>RagEngineClient</code> → <code>PythonProcessRagEngineClient</code> → <code>api_runner.py</code> → <code>retrieval.py</code>. Practice aloud once.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 10 — Fri Jun 26 · File Defense Cards</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Meeting Rooms II</strong> · Min-heap of end times. Process meetings sorted by start; if the earliest-ending meeting ends before the next one starts, reuse that room (pop and push); otherwise add a new room. Heap size = answer. Explain: why heap gives O(n log n); how this generalizes to interval scheduling problems.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>EvidencePanel.tsx</code> / <code>EvidenceCard.tsx</code> — Displays retrieved evidence with source ID, title, section heading, score, matched terms, supporting text snippet, and selection state. <strong>Terminology: citation display, RAG grounding, evidence-aware UI, trust boundary, stale evidence state.</strong> Interview line: "Evidence cards are the UI expression of RAG grounding — they prevent the model output from looking authoritative without support."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Where does state live in your React app?"</em> Must cover: draft concern text = <code>ConcernInputForm</code> local state; workflow result (checklist, evidence, final assessment) = <code>ReviewWorkflowPage</code>/<code>App</code> because multiple children need it; evidence selection = wherever <code>FinalAssessmentPanel</code> needs it. One owner per piece. Lift only when genuinely shared.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rag">CARDS</span><span class="task-text">Write file defense cards for the remaining 10 files in the map (the other half from the code tour). For each: why it exists, what it owns, what it deliberately does not own, one terminology term, one interview line. Files: <code>ReviewSummaryForm</code>, <code>FinalAssessmentPanel</code>, <code>DemoToolbar</code>, <code>demoCases.ts</code>, <code>assessmentSummary.ts</code>, Spring DTO classes, Spring service layer, <code>GlobalExceptionHandler</code>, <code>final_assessment.py</code>, <code>ingestion.py</code>.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block interview-day">
+          <div class="day-name">Day 11 — Sat Jun 27 · Mock Demo Run #0</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Number of Islands</strong> · Grid DFS, mark visited in-place. Explain: why marking cells '0' in-place avoids a visited array; how BFS would work instead; what happens on an all-ocean grid; the 4-directional adjacency. State time O(m·n) and space O(m·n) for recursion stack. Graph traversal is high ROI for SWE II screens.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>ReviewSummaryForm.tsx</code> — Two-column controlled form capturing reviewer-confirmed findings: record review result, lot/batch summary, inventory result, severe triggers observed, customer context, missing info. <strong>Terminology: human-in-the-loop, reviewer confirmation, form state, props vs state boundary, controlled form.</strong> Interview line: "The model proposes; the reviewer owns confirmed facts — this form is the boundary."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Why is the UI thin?"</em> The purpose of Phase 5 is workflow clarity and contract validation, not a design system. A thin UI keeps attention on evidence, limitations, and human decision boundaries. Adding a component library or design system would hide that the differentiation is in the workflow, not in the polish. It also makes the SWE tradeoff reasoning visible — you chose what not to build.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag mock">MOCK #0</span><span class="task-text">Run the first full demo cold — no notes. Time it. Deliver the 5-minute demo as if it's a real interview. Then write down: what you stumbled on, what felt natural, what you're going to change before Mock #1. The goal is to find where preparation has gaps, not to perform perfectly.</span><span class="task-time">60m</span></div>
+            <div class="task"><span class="task-tag rest">RETRO</span><span class="task-text">Post-mock notes: what three things need more practice — demo flow, file explanation, or a specific Q&amp;A answer? Write them down. These become the focus for Days 12–14.</span><span class="task-time">20m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 12 — Sun Jun 28 · Behavioral Stories + ORBIT Narrative</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Rotting Oranges</strong> · Multi-source BFS from all initial rotten oranges simultaneously. Explain: why multi-source BFS (all starting nodes in queue at time 0) gives the minimum time correctly; how to handle unreachable fresh oranges; time O(m·n). BFS time-layer reasoning is a common interview pattern.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>FinalAssessmentPanel.tsx</code> — Displays classification, risk lane, handling path, resolution-review requirement, escalation triggers, resolution options, rationale, and limitations. Owns the "copy assessment summary" clipboard action. <strong>Terminology: side effect, async feedback, accessible status, refusal state, clipboard API.</strong> Interview line: "Separates final structured output from evidence; keeps limitations visible rather than hiding them below the fold."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Tell me about a time you had cross-functional influence without authority."</em> ORBIT story: three teams disagreed on source of truth for HR data; mapped three systems, advised reconciliation, troubleshot LLM issues with Kenny Wallace. Result: unified view became a foundation for the HR data platform. Quantify: three systems, multiple teams, data-quality improvement with measurable reduction in manual reconciliation.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rest">BEHAVIORAL</span><span class="task-text">Write 5–6 STAR stories covering: ORBIT cross-functional influence · Chewy ETL pipeline (2,200+ lines, 75% formula setup time reduction, 80% overtime reduction, Director-level dashboard) · flip-old MILP optimizer (built and packaged for non-technical teammates) · self-taught polyglot stack (React+Spring+Python while working full-time) · test/demo failure postmortem (clipboard, UTF-8). Practice the ORBIT and ETL stories aloud without notes.</span><span class="task-time">90m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 13 — Mon Jun 29 · Architecture Walkthrough Cold</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Course Schedule (detect cycle in directed graph)</strong> · Topological sort via BFS (Kahn's algorithm) or DFS with 3-state coloring (white/gray/black). Explain: why a cycle means no valid ordering; how in-degree array drives Kahn's; why DFS coloring detects back edges. If this role involves building data pipelines or task scheduling, this pattern is directly relevant — say that.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>DemoToolbar.tsx</code> — Operator controls: demo case selector, load action, start-over action, not part of the product workflow. <strong>Terminology: operator tooling, separation of concerns, component composition, seeded state, fixture injection.</strong> Interview line: "Not product core — demo/operator tooling that reduces live-demo risk. The test fixtures and production concerns stay separate."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Run the 10-minute architecture walkthrough."</em> Start with the boundaries: Python RAG engine, Spring Boot API boundary, React review UI. Then walk each key file. End with: what's production-shaped (contracts, tests, error handling, CI, Docker) and what's not production yet (auth, audit, cloud deploy, real-record access, adjudicated labels). Practice until you can do it without looking at notes.</span><span class="task-time">60m</span></div>
+            <div class="task"><span class="task-tag rag">PREP</span><span class="task-text">Build the Q&amp;A bank for the project. Write out answers to: Why React + not Streamlit? Why subprocess and not HTTP? Why keyword retrieval first? Why discriminated unions? Why structured severe triggers? What's production-shaped and what's not? How do you measure retrieval? Where do labels come from? Answer each aloud once, then write a 2-line summary for each to refresh before interviews.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block interview-day">
+          <div class="day-name">Day 14 — Tue Jun 30 · Phase 6 Retrospective + Mock Prep</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>LRU Cache</strong> · Doubly-linked list + HashMap for O(1) get/put. Explain: why you need both structures (map for O(1) lookup, list for O(1) eviction); the sentinel head/tail trick to avoid null checks; why this is an implementation question, not just a design one. This is Tier B but often appears as a partial implementation question even at Level II.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>demoCases.ts</code> — Typed reusable synthetic demo data: primary vomiting walkthrough case, unsupported record-access case, prefilled reviewer findings. <strong>Terminology: separation of concerns, typed fixtures, test data strategy, synthetic data boundary.</strong> Interview line: "Demo data lives outside components so UI logic stays testable and the demo is repeatable without typing."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"What makes this production-shaped rather than just a demo?"</em> Must include: explicit request/response contracts with validation; typed API client with error handling; structured error responses with correlation IDs; CI running on every push; Docker Compose for reproducible runs; runbook for ops; failure log with root causes; honest 'not production yet' language about what's missing (auth, real data, cloud deploy).</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rest">RETRO</span><span class="task-text">Phase 6 retrospective: Did CI go green on every push? Does Docker Compose work end-to-end? Is the correlation ID visible across all three layers? Write the Phase 6 gate pass/fail. Then: what's the weakest part of the interview prep right now — the coding drills, the file defense, or the Q&amp;A answers? That determines Week 3 emphasis.</span><span class="task-time">45m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE WEEK 3: Jul 1–7 — Phase 7 Eval/Persistence + Interview Hardening -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">LEAVE WK 3</span>
+        <span class="week-title">Phase 7 Eval Persistence · MLE/DS Drills (Tier D) · Mock Interview #1 <span class="leave-pill">Jul 1–7</span></span>
+        <span class="week-dates">July 1–7</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">💾</span><span class="milestone-text">Eval runs persist across sessions — <code>review_case</code> + <code>eval_run</code> tables queryable<span class="signal-tag mle">MLE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">📊</span><span class="milestone-text">Retrieval metrics computed from scratch: Recall@k + MRR + p95 latency note<span class="signal-tag mle">MLE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">🧹</span><span class="milestone-text">Ingestion idempotent with dedupe + null checks · leakage-safe split note documented<span class="signal-tag mle">MLE</span></span></div>
+          <div class="milestone-item"><span class="milestone-icon">🎤</span><span class="milestone-text">Mock #1 complete — full DSA + project deep-dive — written feedback committed</span></div>
+          <div class="milestone-item"><span class="milestone-icon">🔢</span><span class="milestone-text">Tier B graph patterns and Tier D MLE metrics problems solved clean</span></div>
+        </div>
+
+        <div class="day-block rag-day">
+          <div class="day-name">Day 15 — Wed Jul 1 · Eval Persistence</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER D</span><span class="task-text"><strong>Recall@k + MRR from scratch</strong> · Implement <code>recall_at_k(retrieved_ids, expected_ids, k)</code> and <code>mean_reciprocal_rank(retrieved_ids, expected_ids)</code> in Python. Distinguish: Recall@k = fraction of expected sources found in top-k; hit_rate@k = binary per question (at least one hit); MRR = average 1/rank of first hit. These are your own evaluation metrics — you must be able to implement them cold.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>retrieval_evaluate.py</code> — Runs labeled retrieval questions against a retriever and computes hit_rate@k, MRR, and failed question IDs. <strong>Terminology: evaluation harness, golden dataset, retrieval metrics, labeled evaluation, offline metrics, leakage.</strong> Interview line: "I measure retrieval before claiming it improved — the eval harness is what makes 'the new retriever is better' a claim with evidence."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Why persist eval runs instead of just printing them?"</em> Answer: printed metrics are gone after the session; persisted runs let you compare retriever versions over time; they create an audit trail of what changed and when; they let you ask "did my corpus change hurt retrieval?" by comparing run N-1 to run N. This is the difference between a script and a system.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rag">PERSIST</span><span class="task-text">Add <code>review_case</code> and <code>eval_run</code> tables in SQLite (or Postgres with Flyway if you want the migration signal). Schema: <code>eval_run</code>(id, timestamp, retriever_name, top_k, hit_rate, mrr, failed_ids, latency_seconds). Add a function that writes a row after each eval run. Verify by running the eval and querying the table.</span><span class="task-time">100m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block rag-day">
+          <div class="day-name">Day 16 — Thu Jul 2 · Retrieval Metrics Depth</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER D</span><span class="task-text"><strong>Cosine similarity top-k retrieval from scratch</strong> · Implement: embed query and all docs into vectors; compute cosine similarity for each (dot product / product of norms); use a min-heap of size k to find top-k. Explain: time O(n·d + n·log k) where d is dimension; why normalization makes the dot product equal cosine similarity; why a heap beats sorting for top-k. This maps directly to your <code>EmbeddingRetriever</code>.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>retrieval.py</code> deeper — focus on the <code>SearchResult</code> contract: why all retrievers must return the same shape; how <code>score</code> is retriever-specific and shouldn't be compared across keyword/embedding without normalization; why <code>matched_terms</code> exists even for embedding results (transparency). <strong>Terminology: Liskov substitution, uniform interface, score normalization, retrieval transparency.</strong></span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Recall@k vs MRR — when does each matter?"</em> Recall@k: when you want to know if the evidence was findable at all. MRR: when you care about ranking — whether the best evidence appeared at rank 1 vs rank 5 matters for what the reviewer sees first. In your system: Recall@k tells you if the SOP was retrieved; MRR tells you if the most relevant SOP appeared early enough to drive the checklist.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rag">METRICS</span><span class="task-text">Add a rough p95 latency note to the retrieval eval. Log wall-clock time per query across the eval set; take the 95th percentile. Document it in <code>reports/retrieval_comparison_v2.md</code> alongside hit_rate@k and MRR for keyword, local embedding, and semantic embedding. This is the 3-way comparison table — commit it.</span><span class="task-time">90m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block rag-day">
+          <div class="day-name">Day 17 — Fri Jul 3 · Data Quality + Leakage</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER D</span><span class="task-text"><strong>Dedupe by hash + row-count and null checks</strong> · Hash each document by content (use SHA-256 or MD5 of normalized text); keep a seen-hashes set; on re-ingest, skip duplicates. Then: add row-count and null checks to ingestion — assert no None in required fields. Explain: why idempotent ingest prevents silent data bloat; where silent quality loss begins in a data pipeline.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>ingestion.py</code> — Loads and normalizes SOP markdown files, parses frontmatter, splits into chunks with stable <code>chunk_id</code>s, writes to <code>chunks.jsonl</code>. <strong>Terminology: ETL, idempotent ingest, deterministic chunking, stable identifiers, data quality, chunk boundary strategy.</strong> Interview line: "Ingestion is where silent quality loss begins — the retrieval quality is bounded by how well chunks are formed."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Where does silent data-quality loss usually begin?"</em> Answer must hit: at ingestion — missing fields become nulls that pass type checks but fail at query time; duplicate records inflate eval set; inconsistent normalization (case, whitespace) creates vocabulary gaps; chunk boundary placement affects whether a relevant sentence is split across two unhelpful chunks. Mention your failure log entry for corpus wording gaps (failure #9).</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rag">QUALITY</span><span class="task-text">Add dedupe + row-count + null checks to <code>ingestion.py</code>. Write a leakage-aware split note in <code>docs/data_quality.md</code>: explain why you can't have the same SOP section in both the train and test split for retrieval evaluation (it would artificially inflate metrics). Add a test that re-ingests the same corpus and asserts no duplicate chunk IDs.</span><span class="task-time">90m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 18 — Sat Jul 4 · SQL Drills (Tier D) + DS/DE Bridge</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER D</span><span class="task-text"><strong>Latest event per task + left join semantics</strong> · Window: <code>ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY created_at DESC)</code> then filter <code>WHERE rn = 1</code>. Left join: <code>tasks LEFT JOIN reviews ON tasks.id = reviews.task_id</code> to include unreviewed tasks. Explain: when <code>GROUP BY + MAX</code> fails (need all columns); why LEFT JOIN includes nulls; how this maps to "show all cases including ones with no reviewer note."</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>final_assessment.py</code> — Deterministic routing from <code>ReviewSummary</code> to a structured <code>DerivedAssessment</code>. Routing depends on <code>severe_triggers_observed</code> (structured list), not free-text keyword matching. <strong>Terminology: deterministic routing, structured extraction, safety-critical decision, structured vs free-text, fail-safe defaults.</strong> Interview line: "Final assessment depends on reviewer-confirmed facts, not inference from prose — that's why negated severe terms don't accidentally escalate."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Window function vs GROUP BY — when do you need a window?"</em> <code>GROUP BY + MAX(created_at)</code> gives you the latest timestamp but loses the other columns. <code>ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)</code> keeps all columns and lets you rank within each group without collapsing them. Use windows when you need more than just the aggregate value.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rag">SQL</span><span class="task-text">Write both SQL drills against the <code>eval_run</code> table you added on Day 15: (1) window query for latest eval run per retriever; (2) left join between retrievers and eval runs to include retrievers with no runs yet. Explain the results. This doubles as DS/DE interview prep and validates the persistence layer.</span><span class="task-time">90m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 19 — Sun Jul 5 · Coding Recovery + Tier B Patterns</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>K Closest Points to Origin + Product of Array Except Self</strong> · K Closest: min-heap by distance, or quickselect. Product: two-pass with prefix-product and suffix-product, no division, O(n) time O(1) extra space. Explain: why the no-division constraint forces the two-pass approach; why quickselect beats heap for large n. Implement both in Java.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>assessmentSummary.ts</code> — Plain-text formatting of the final assessment for clipboard export. Owns deterministic serialization: classification, category, risk lane, handling path, escalation triggers, resolution options, rationale. <strong>Terminology: pure function, deterministic serialization, side-effect isolation, clipboard API, accessibility feedback.</strong></span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Top-k as a retrieval/ranking analogy."</em> In RAG, top-k retrieval is exactly the top-k heap problem: score all chunks, return the k highest-scoring ones. The same pattern — maintaining a bounded heap of the best candidates seen so far — appears in retrieval ranking, recommendation systems, and the K Closest Points problem. When you solve the heap problem, you're solving retrieval ranking in disguise.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rest">RECOVERY</span><span class="task-text">Lighter day. Revisit the two coding problems from Week 1–2 that felt shakiest. Solve them from memory. If both are solid, add one graph problem: Clone Graph (BFS + HashMap for object identity). Rest. Tomorrow is Mock #1.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 20 — Mon Jul 6 · Architecture Walkthrough (No Notes)</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Subarray Sum Equals K</strong> · Prefix sum + HashMap: <code>prefixSum[i] - k == prefixSum[j]</code> means subarray [j+1..i] sums to k. Initialize map with {0: 1}. Explain: the shift from "is this sum reachable?" to "how many times?"; why the initialization handles subarrays starting at index 0; time O(n) space O(n).</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>GlobalExceptionHandler.java</code> — Maps all exception types to structured <code>ApiErrorResponse</code>. <strong>Terminology: @RestControllerAdvice, cross-cutting concern, exception mapping, stable error contract, 4xx vs 5xx semantics.</strong> Interview line: "Clients need stable error shapes, not stack traces — the handler is the contract for what bad looks like."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Run the full 10-minute architecture walkthrough without notes."</em> Time it. Start with the problem statement, walk through each layer, name the key file at each layer, explain one design decision, end with what's production-shaped and what's not. If you stumble on a file, add it to tomorrow's mock prep list.</span><span class="task-time">75m</span></div>
+            <div class="task"><span class="task-tag rest">PREP</span><span class="task-text">Mock #1 prep: write the three Q&amp;A answers you're least confident about. Write the 30-second pitch. Practice the ORBIT behavioral story once. Review the Tier B problems you solved this week — can you state the pattern and edge cases for each in 20 seconds?</span><span class="task-time">45m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block mock-day">
+          <div class="day-name">Day 21 — Tue Jul 7 · Phase 7 Gate + Mock #1</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B + D</span><span class="task-text"><strong>Mixed review — 2 easy + 2 medium</strong> · Solve: Two Sum (60 sec), Merge Two Sorted Lists (2 min), Merge Intervals (5 min), one Tier D problem from the bank. Treat this as a warm-up to the mock, not the main event. State time/space complexity for each after solving.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text">Speed round: pick any 3 files from the full 20-file map. For each: 45 seconds to state why it exists, what it owns, and one terminology term. This is interview speed, not study speed.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag rest">RETRO</span><span class="task-text">Phase 7 gate: did eval runs persist? Is the retrieval comparison report committed? Is ingestion idempotent? Write pass/fail for each.</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag mock">MOCK #1</span><span class="task-text">Run the first full mock interview. One DSA problem (aim for Tier B, unseen). Then a project deep-dive — the interviewer asks questions about your code, you explain. Target 45–60 minutes total. After: write down exactly what you stumbled on, what was clean, and what you'd answer differently. Commit the feedback notes to the repo as <code>docs/mock_interview_notes.md</code>.</span><span class="task-time">90m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE WEEK 4: Jul 8–15 — Applications (Day 22) + Final Hardening -->
+    <div class="week-card">
+      <div class="week-header" onclick="toggleWeek(this)">
+        <span class="week-num">LEAVE WK 4</span>
+        <span class="week-title">⭐ Submit Applications (Day 22) · Advocate + Recruiter · Mock #2 · Final Hardening <span class="leave-pill">Jul 8–15</span></span>
+        <span class="week-dates">July 8–15</span>
+        <span class="week-toggle">▼</span>
+      </div>
+      <div class="week-body">
+        <div class="milestone-row">
+          <div class="milestone-item"><span class="milestone-icon">⭐</span><span class="milestone-text"><strong>Day 22 (Jul 8): Submit applications to active Chewy internal reqs — MLE preferred, SWE full-stack secondary</strong></span></div>
+          <div class="milestone-item"><span class="milestone-icon">📨</span><span class="milestone-text">Kenny Wallace warm intro activated · recruiter thread open</span></div>
+          <div class="milestone-item"><span class="milestone-icon">🎤</span><span class="milestone-text">Mock #2 complete — full loop including behavioral · all weak spots from Mock #1 addressed</span></div>
+          <div class="milestone-item"><span class="milestone-icon">📋</span><span class="milestone-text">Pitch ladder memorized: 30-second · 2-minute · 5-minute demo · 10-minute architecture walkthrough</span></div>
+          <div class="milestone-item"><span class="milestone-icon">🚦</span><span class="milestone-text">Day 29 decision: at least one loop scheduled or contingency plan activated</span></div>
+        </div>
+
+        <div class="day-block apply-day">
+          <div class="day-name">Day 22 — Wed Jul 8 · ⭐ SUBMIT BOTH APPLICATIONS</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Search in Rotated Sorted Array</strong> · Modified binary search: find which half is sorted, then determine if target is in that half. Explain: why the standard binary search fails; the three conditions for the sorted-half check; time O(log n). Practice saying: "Binary search on the invariant — at least one half is always sorted."</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><strong>Speed round — 30-second pitch</strong>: "A production-shaped human-in-the-loop AI review workbench — Python RAG engine for retrieval and assessment, Spring Boot API boundary, React reviewer UI. Synthetic data only. Surfaces evidence and limitations. Human review remains the final decision point." Say it three times. No stumbling.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag apply-now">⭐ APPLY</span><span class="task-text"><strong>Submit to active Chewy internal MLE req.</strong> Cover letter angle: full-stack AI workflow system with measured retrieval (keyword + semantic comparison), 27+ documented failure modes with root causes, schema-validated LLM extraction, human-in-the-loop HITL review surface, CI/Docker reproducible. Quantify: 3 languages, 3 service layers. Message the recruiter the same day. If no active MLE req: note in tracker, escalate through Kenny.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag apply-now">⭐ APPLY</span><span class="task-text"><strong>Submit to active Chewy internal SWE req (full-stack preferred).</strong> Cover letter angle: Python + React + Java in one monorepo — all three layers production-shaped. RAG/agentic workflow, evaluation frameworks, HITL — bonus items, all built. Domain transfer: pharmacy compounding QA → internal workflow is the same archetype. If no active SWE req: apply to the strongest match and note in tracker.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Deliver the 30-second pitch to a non-technical recruiter."</em> Then the 2-minute version to a technical recruiter. Then the 5-minute demo path to a hiring manager. The three versions use the same system but emphasize different things: workflow value → technical architecture → engineering depth.</span><span class="task-time">20m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block interview-day">
+          <div class="day-name">Day 23 — Thu Jul 9 · Advocate + Recruiter Outreach</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Clone Graph</strong> · BFS + HashMap for object identity: map old_node → new_node; clone each neighbor. Explain: why you need the map (without it, cycles cause infinite recursion); how the HashMap simultaneously tracks visited nodes and maps to clones; why BFS ensures all neighbors are processed. This is a graph problems that tests object identity, not just graph structure.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><strong>ORBIT behavioral story.</strong> Rehearse the story as if it's a file defense: Situation (three teams, HR data consolidation), Action (mapped systems, advised reconciliation, troubleshot LLM issues with Kenny Wallace), Result (unified data view, Kenny is now your advocate). Terminology for the interview: cross-functional influence, stakeholder alignment, technical problem-solving. Practice aloud in under 90 seconds.</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Why this transition from pharmacy to engineering?"</em> Pharmacy trained me to reason about evidence, safety boundaries, and human judgment under regulatory constraints — exactly what makes an AI review system trustworthy. The domain expertise is not incidental; it's why the system knows to refuse clinical/legal conclusions, why evidence is surfaced rather than hidden, and why human review is the final decision point. I'm turning that judgment into engineering.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag apply-now">NETWORK</span><span class="task-text"><strong>Ask Kenny Wallace for a warm intro to the hiring manager(s) on the reqs you applied to.</strong> Reference the ORBIT collaboration so the intro is natural. Suggested message: "Kenny — you and I worked on ORBIT together when you were debugging the LLM reconciliation. I've built out that AI work into a full workbench project and applied to [role]. Would you be comfortable passing along a note about our collaboration?" Open recruiter threads as appropriate: confirm leveling expectations and process timeline.</span><span class="task-time">45m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 24 — Fri Jul 10 · SWE II Pattern Drills</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER B</span><span class="task-text"><strong>Meeting Rooms II + Decode String</strong> · Meeting Rooms II: min-heap of end times (full pattern review). Decode String: stack-based — when you hit <code>]</code>, pop until <code>[</code>, repeat the string, push back. Explain: why the stack naturally handles nested <code>2[a3[b]]</code>; time O(n·k) where k is the max repetition factor. Practice both in Java.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><strong>Spring Controller layer</strong> (any of the three controllers). Controllers own: HTTP route, request binding, validation trigger, response status code selection. <strong>Terminology: @RestController, @PostMapping, @Valid, ResponseEntity, DTO binding, status code semantics.</strong> Controllers do NOT own: domain logic, orchestration, client invocation details. Interview line: "Controllers translate HTTP into use cases — no business logic lives here."</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"Backend and API Q&amp;A drills — three questions in sequence."</em> (1) What does the service layer own vs the controller? (2) How are validation errors returned to the client? (3) What HTTP status is returned when Python refuses a request vs when the Python process times out? Answer all three without notes. These are the questions that prove you built the system, not just described it.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag spring">REVIEW</span><span class="task-text">Deep review of the full API boundary end-to-end: Spring controller → service → <code>RagEngineClient</code> → <code>PythonProcessRagEngineClient</code> → <code>api_runner.py</code> → domain functions → response. Walk it without looking at code. Then open the code and note anything you got wrong. These are the gaps to close before Mock #2.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block code-day">
+          <div class="day-name">Day 25 — Sat Jul 11 · MLE/DS Systems + Hallucination Q&amp;A</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER D</span><span class="task-text"><strong>Precision + Recall + F1 + Confusion Matrix from scratch</strong> · Implement in Python: TP, FP, TN, FN from a list of (predicted, actual) pairs. Then precision = TP/(TP+FP), recall = TP/(TP+FN), F1 = 2PR/(P+R). Explain when to optimize precision vs recall (a false positive in your escalation system means unnecessary leadership involvement; a false negative means a missed severe case — which is worse?). This is the MLE screen question.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><code>final_assessment.py</code> deeper — focus on the severe-trigger routing logic. <strong>Terminology: precision/recall tradeoff, safety-critical classification, structured vs free-text features, false-positive cost, false-negative cost.</strong> The question "what's the cost of a false positive vs false negative in your escalation system?" should be answerable using this file. A false negative (missed severe case) is more dangerous than a false positive — your design reflects that by using conservative structured triggers.</span><span class="task-time">25m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text"><em>"How do you avoid hallucination in your system?"</em> Must hit all five layers: (1) improve retrieval — the answer is only as good as what was retrieved; (2) show citations — the reviewer can verify what the system used; (3) require human review — the reviewer owns confirmed facts, not the LLM; (4) refuse when evidence is weak — the system says 'I don't have enough to support this'; (5) log failures — failure log entry for coordinated negation scope (entry #9) shows that real failure modes exist and are documented.</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag rag">MLE</span><span class="task-text">Implement precision/recall/F1 in Python and run it over the retrieval eval set (treat "hit" as the positive class). Document the results in <code>reports/retrieval_comparison_v2.md</code>. Add a brief note on what metric you'd optimize in production (recall — you'd rather surface extra evidence than miss a relevant SOP) and how the current system approaches that.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block mock-day">
+          <div class="day-name">Day 26 — Sun Jul 12 · Mock #2 + Recovery</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER C</span><span class="task-text"><strong>Rate Limiter (sliding window)</strong> · Keep a deque of timestamps; on each request, remove timestamps older than the window; if deque size &lt; limit, allow and add current time; else reject. Explain: why deque supports O(1) enqueue/dequeue at both ends; memory is bounded by the limit; distributed caveats (this approach is single-node). Tier C — shows you think about systems, not just algorithms.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text">Full system walkthrough speed round: name one file from each layer (React/TS, Spring controller, Spring service, Spring client, Python bridge, Python engine). For each: one sentence on why it exists and one terminology term. Aim for under 3 minutes total.</span><span class="task-time">15m</span></div>
+            <div class="task"><span class="task-tag mock">MOCK #2</span><span class="task-text">Full mock interview loop — DSA problem + short system design + project deep-dive + 2 behavioral questions. This should feel like a real 60-minute screen. After: write a postmortem. Which questions were clean? Which ones did you stumble? Fix the two weakest spots today before you sleep.</span><span class="task-time">90m</span></div>
+            <div class="task"><span class="task-tag rest">RECOVERY</span><span class="task-text">Lighter afternoon. Revisit the one DSA problem that felt hardest this week. Solve it from memory. Rest. The last three days are polish and follow-up, not new material.</span><span class="task-time">45m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block interview-day">
+          <div class="day-name">Day 27 — Mon Jul 13 · Behavioral Bank + Questions to Ask</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER C</span><span class="task-text"><strong>Cursor Pagination</strong> · vs offset: offset skips/duplicates when rows are inserted/deleted between pages; cursor uses the last-seen stable key (e.g., <code>WHERE created_at &lt; :cursor ORDER BY created_at DESC LIMIT :n</code>). Explain: why cursor is stable for real-time data; why offset works for static datasets; how to encode the cursor opaquely (base64) so clients can't tamper. Level III thinking — shows you know the tradeoffs.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text"><strong>ETL pipeline story as a "file defense."</strong> The 2,200-line Python ETL at Chewy: why it exists (Smartsheet + Excel + Snowflake all had the data but in different shapes), what it owns (ingestion, reconciliation, multi-format output to CSV/XLSX/Tableau Hyper), what it doesn't own (the database that feeds it). Terminology: ETL, data reconciliation, multi-format output, production data pipeline, regulatory implication. This is a portfolio bullet — you need to be able to explain it as fluently as any code file.</span><span class="task-time">20m</span></div>
+            <div class="task"><span class="task-tag interview">Q&amp;A</span><span class="task-text">Behavioral round: practice all 5 STAR stories at interview pace. (1) ORBIT cross-functional influence. (2) ETL pipeline ownership and impact (quantify: 2,200 lines, 75% setup time reduction, 80% overtime reduction, Director-level visibility). (3) flip-old MILP optimizer (user empathy, shipping for non-technical teammates). (4) Self-taught polyglot (fast learning, persistence). (5) Test/demo failure postmortem (debugging, honesty, prevention). 90 seconds each, no notes.</span><span class="task-time">45m</span></div>
+            <div class="task"><span class="task-tag rest">PREP</span><span class="task-text">Prepare reverse questions for each interviewer type: hiring manager (what does success look like in 6 months?), engineer (how does the team ship — review cadence, release process?), recruiter (how is leveling determined for an internal transfer?). Write them down so you don't forget under pressure.</span><span class="task-time">30m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block interview-day">
+          <div class="day-name">Day 28 — Tue Jul 14 · Final Polish + Follow-Ups</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER C</span><span class="task-text"><strong>Idempotency Key Store</strong> · A client retries on timeout; without idempotency, the operation runs twice. Solution: on first request, store idempotency_key → response; on retry, return the stored response. Explain: key expiry (TTL), conflict detection (same key, different payload), why this matters for payment/order systems. This is Level III instinct — knowing what happens when the network is unreliable.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag file-def">FILE</span><span class="task-text">Speed round — pitch ladder. 30 seconds: what is this project? 2 minutes: how does it work and what can it do? 5 minutes: full demo walkthrough. 10 minutes: architecture, key files, design decisions, what's production-shaped. Practice all four versions. The 10-minute version should be fluent enough that you can pause for questions without losing your place.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag apply-now">FOLLOW-UP</span><span class="task-text">Send application follow-ups: confirm all applications are in the system, a polite nudge to the relevant recruiter(s) referencing the application date, a note to Kenny confirming the intro has been sent. If you have heard nothing, escalate through the hiring manager. Don't wait passively.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag rest">POLISH</span><span class="task-text">Final demo run: clean browser session, no prep, cold start. Record what happens. Fix any remaining friction. Then: commit any final README updates, ensure the demo script is up-to-date. The portfolio is complete.</span><span class="task-time">60m</span></div>
+          </div>
+        </div>
+
+        <div class="day-block mixed-day">
+          <div class="day-name">Day 29 — Wed Jul 15 · Buffer + Decision Point</div>
+          <div class="day-tasks">
+            <div class="task"><span class="task-tag code">TIER A–C</span><span class="task-text"><strong>Weakest patterns review</strong> — identify which 2–3 coding problems felt least solid across the 29 days. Solve each once more from memory. State time/space complexity aloud. Then stop — don't try to learn new problems on the final day.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag interview">READINESS</span><span class="task-text">Final readiness self-check across 6 domains: (1) Coding — can you solve Tier B problems cleanly? (2) Full-stack — can you explain all three service layers? (3) Backend — can you explain the error contract, adapter pattern, polymorphism? (4) MLE/RAG — retrieval metrics, refusal, evaluation, human review? (5) DS/DE — SQL windows, ingestion quality, leakage-safe splits? (6) Career — do you have a 30s pitch, 2-min walkthrough, 5-min demo, behavioral stories? Score each 1–5.</span><span class="task-time">30m</span></div>
+            <div class="task"><span class="task-tag gate">DECISION</span><span class="task-text"><strong>Contingency calls — make them today.</strong> If at least one interview loop is scheduled: the plan worked. Confirm prep for the loop and return to work on July 16. If no loop is scheduled for either role: escalate through Kenny and/or Kristen with a specific ask; begin external applications in parallel to 3–5 SWE II / MLE II roles at other companies. If a target req has closed: re-run the internal role search; Seattle preference widens Bellevue options. Nothing is left undecided at the end of today.</span><span class="task-time">60m</span></div>
+            <div class="task"><span class="task-tag rest">POST-LEAVE</span><span class="task-text">Sketch the post-leave cadence: daily 30-min coding drill continues; 1 build improvement per week; continue mock interviews until a loop is scheduled; track all applications in the Applications Tracker. The leave sprint created momentum — don't lose it when you return to work.</span><span class="task-time">20m</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </div><!-- end weekly tab -->
+
+  <!-- RHYTHM TAB -->
+  <div id="tab-rhythm" class="tab-panel">
+    <div class="section-title">Workbench Daily Rhythm (60–75 min weekdays · 2–3 h Saturday)</div>
+    <div class="rhythm-grid">
+      <div class="rhythm-day">
+        <div class="rhythm-day-name">Monday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag rag">Engine</div>
+          <div class="rhythm-tag rag">60–75m</div>
+        </div>
+      </div>
+      <div class="rhythm-day">
+        <div class="rhythm-day-name">Tuesday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">Spring API</div>
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">60–75m</div>
+        </div>
+      </div>
+      <div class="rhythm-day">
+        <div class="rhythm-day-name">Wednesday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">Spring API</div>
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">60m</div>
+          <div class="rhythm-tag rag">+ ADR</div>
+        </div>
+      </div>
+      <div class="rhythm-day">
+        <div class="rhythm-day-name">Thursday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">Spring API</div>
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">45m</div>
+          <div class="rhythm-tag rag">Engine</div>
+          <div class="rhythm-tag rag">30m</div>
+        </div>
+      </div>
+      <div class="rhythm-day">
+        <div class="rhythm-day-name">Friday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">API contract</div>
+          <div class="rhythm-tag" style="background:var(--spring-bg);color:var(--spring);">45m</div>
+          <div class="rhythm-tag rest">Review</div>
+          <div class="rhythm-tag rest">15m</div>
+        </div>
+      </div>
+      <div class="rhythm-day weekend">
+        <div class="rhythm-day-name">Saturday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag" style="background:var(--ui-bg);color:var(--ui);">Review UI</div>
+          <div class="rhythm-tag" style="background:var(--ui-bg);color:var(--ui);">2–3 h</div>
+        </div>
+      </div>
+      <div class="rhythm-day weekend">
+        <div class="rhythm-day-name">Sunday</div>
+        <div class="rhythm-tasks">
+          <div class="rhythm-tag rag">Engine</div>
+          <div class="rhythm-tag rag">45m</div>
+          <div class="rhythm-tag rest">Retro / ADR</div>
+          <div class="rhythm-tag rest">30m</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Time Budget Summary (per week)</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;">
+      <div style="background:var(--python-bg);border:1px solid var(--python-dim);border-left:3px solid var(--python);border-radius:6px;padding:14px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--python);margin-bottom:4px;">🐍 RAG ENGINE</div>
+        <div style="font-size:22px;font-weight:600;color:#fff;">~3 hrs</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Mon main · Thu top-up · Sun maintenance</div>
+      </div>
+      <div style="background:var(--spring-bg);border:1px solid var(--spring-dim);border-left:3px solid var(--spring);border-radius:6px;padding:14px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--spring);margin-bottom:4px;">☕ SPRING API</div>
+        <div style="font-size:22px;font-weight:600;color:#fff;">~3.5 hrs</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Tue–Fri primary</div>
+      </div>
+      <div style="background:var(--ui-bg);border:1px solid var(--ui-dim);border-left:3px solid var(--ui);border-radius:6px;padding:14px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--ui);margin-bottom:4px;">⚛️ REVIEW UI</div>
+        <div style="font-size:22px;font-weight:600;color:#fff;">~2–3 hrs</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Saturday block · later UI weeks</div>
+      </div>
+      <div style="background:var(--infra-bg);border:1px solid var(--infra-dim);border-left:3px solid var(--infra);border-radius:6px;padding:14px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--infra);margin-bottom:4px;">🧰 CI / ADR / DOCS</div>
+        <div style="font-size:22px;font-weight:600;color:#fff;">~1 hr</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Sunday + Wed top-up</div>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:28px;font-size:12px;color:var(--text-mid);line-height:1.6;">
+      <strong style="color:var(--text);">Total personal-time budget:</strong> ~10–11 hours/week. Audit and ETL work happens in work hours only. The previous SQL / Java drills / Jonas course / Buchalka course tracks are <em>gone</em> — the same skills are now built directly in workbench code, which is stronger interview signal than course completion.
+    </div>
+
+    <div class="section-title">Phase Shifts</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--phase1);border-radius:6px;padding:14px;display:flex;gap:16px;align-items:center;">
+        <span class="phase-badge p1" style="flex-shrink:0">WK 1–4</span>
+        <span style="color:var(--text-mid);font-size:13px;">Wks 1–5 complete: v8 engine · monorepo · full Spring backend slice · retriever abstraction · embedding baseline. <strong>Wk 6 current: comparison report · real semantic model · UI scaffold · controller tests.</strong> Applications: submit now if not done.</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--phase2);border-radius:6px;padding:14px;display:flex;gap:16px;align-items:center;">
+        <span class="phase-badge p2" style="flex-shrink:0">WK 5–8</span>
+        <span style="color:var(--text-mid);font-size:13px;">Wk 5: real Java→Python vertical slice. Wk 6: hybrid retrieval comparison (MLE evidence). Wk 7: full UI HITL loop. Wk 8: README + 5-min demo recording.</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--phase3);border-radius:6px;padding:14px;display:flex;gap:16px;align-items:center;">
+        <span class="phase-badge p3" style="flex-shrink:0">WK 9–13</span>
+        <span style="color:var(--text-mid);font-size:13px;">CI green, Docker Compose, runbook. Mock screens weekly. Apply broadly. Q2 lane: deeper MLE (multi-hop, RAGAS) vs deeper SWE (auth, audit log, AWS deploy).</span>
+      </div>
+    </div>
+
+    <div class="stop-rules">
+      <h3>⚠ Hard Stop Rules</h3>
+      <div class="stop-rule"><span class="stop-rule-trigger">No domain expansion</span><span class="stop-rule-text">SOP corpus is frozen at v8. No new SOPs, no new concern types unless a failing test forces it. The MLE evidence comes from the eval set, not from corpus size.</span></div>
+      <div class="stop-rule"><span class="stop-rule-trigger">Spring before embeddings</span><span class="stop-rule-text">Phase 1 Spring shell + Phase 2 real vertical slice ship <em>before</em> hybrid retrieval. The SWE story collapses if the API is still mocked when applications go in.</span></div>
+      <div class="stop-rule"><span class="stop-rule-trigger">No Spring rewrite of the engine</span><span class="stop-rule-text">Spring owns the API boundary. Python owns the ML. Do not duplicate retrieval, chunking, or eval in Java — that destroys both signals.</span></div>
+      <div class="stop-rule"><span class="stop-rule-trigger">Subprocess forever</span><span class="stop-rule-text">Subprocess is the first adapter. The <code>RagEngineClient</code> interface must allow an <code>HttpRagEngineClient</code> swap without touching controllers or services. If the interface leaks subprocess concerns, refactor before adding endpoints.</span></div>
+      <div class="stop-rule"><span class="stop-rule-trigger">No Postgres / Terraform yet</span><span class="stop-rule-text">Postgres only after API/UI vertical slice is real. Terraform stays as <code>infra/README.md</code> notes until an interview asks for it. These are real time sinks with low pre-screen yield.</span></div>
+      <div class="stop-rule"><span class="stop-rule-trigger">Interview scheduled</span><span class="stop-rule-text">All build work pauses. Mock screens + demo polish + ADR review only. The workbench as-of-that-day is what gets shown.</span></div>
+      <div class="stop-rule"><span class="stop-rule-trigger">LLM generates implementation</span><span class="stop-rule-text">Portfolio integrity rule. LLM = error explanation, architecture critique, code review feedback. Not code generation.</span></div>
+    </div>
+  </div>
+
+  <!-- TRACKS TAB -->
+  <div id="tab-tracks" class="tab-panel">
+    <div class="section-title">Target · Chewy Internal Transition</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;">
+      <div style="background:var(--mle-bg);border:1px solid var(--mle-dim);border-left:3px solid var(--mle);border-radius:8px;padding:18px 20px;">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--mle);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:8px;">Primary track · ML Engineering</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">MLE — Chewy Internal</div>
+        <div style="font-size:12px;color:var(--text-mid);line-height:1.6;">RAG pipeline end-to-end: corpus ingestion, retrieval (keyword + embedding + hybrid), evaluation harness with labeled questions, Recall@k and MRR, structured LLM extraction, refusal contract, deterministic routing, human-in-the-loop review surface, 27+ failure log entries. Python owns all AI/domain behavior. Full system reproducible via Docker Compose.</div>
+      </div>
+      <div style="background:var(--swe-bg);border:1px solid var(--swe-dim);border-left:3px solid var(--swe);border-radius:8px;padding:18px 20px;">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--swe);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:8px;">Secondary track · Software Engineering</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">SWE Full-Stack — Chewy Internal</div>
+        <div style="font-size:12px;color:var(--text-mid);line-height:1.6;">Python + React + Java in one monorepo. Spring Boot API boundary with typed interface, subprocess adapter, structured error contract, Swagger. React HITL review UI with discriminated async state, operator controls, evidence cards, clipboard export. GitHub Actions CI, Docker Compose, RUNBOOK. Pharmacy QA → internal workflow is the same archetype.</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:24px;font-size:12px;color:var(--text-mid);line-height:1.6;">
+      <strong style="color:var(--text);">Advocate:</strong> Kenny Wallace (ORBIT collaboration — HR data consolidation, LLM reconciliation). The portfolio demonstrates the same instincts that made ORBIT work: mapping messy multi-system data, surfacing evidence for human review, building for non-technical operators. MLE is the preferred landing; SWE full-stack is the more likely path given headcount.
+    </div>
+
+    <div class="section-title">Workbench Modules — Where Evidence Comes From</div>
+    <div class="track-cards">
+
+      <div class="track-card">
+        <div class="track-card-header">
+          <div class="track-icon" style="background:var(--python-bg)">🐍</div>
+          <div>
+            <div class="track-card-name">rag-engine-python/</div>
+            <div class="track-card-subtitle">Python RAG engine · primary MLE signal</div>
+          </div>
+        </div>
+        <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label">WK 1–3</span><span class="track-phase-text">v8 frozen: schemas, gold labels, SOPs, ingestion, keyword retrieval, eval, checklist, final assessment, CLI, refusal, LLM extraction, failure log. ✓</span></div>
+          <div class="track-phase"><span class="track-phase-label">WK 4</span><span class="track-phase-text">Commit <code>docs: freeze v8</code>. Move into monorepo. Design <code>app/api_runner.py</code> stdin/stdout JSON contract.</span></div>
+          <div class="track-phase"><span class="track-phase-label">WK 5</span><span class="track-phase-text">Implement <code>app/api_runner.py</code>. Stage 14: citation precision — checklist items carry <code>supporting_chunk_ids</code>.</span></div>
+          <div class="track-phase"><span class="track-phase-label">WK 6</span><span class="track-phase-text">Stage 15: <code>KeywordRetriever</code> / <code>EmbeddingRetriever</code> / <code>HybridRetriever</code>. <code>retrieval_comparison.md</code>.</span></div>
+          <div class="track-phase"><span class="track-phase-label">POST-LEAVE</span><span class="track-phase-text">One new eval question/week. HybridRetriever (keyword + semantic RRF) when comparison report justifies it. Multi-hop and RAGAS if and when a screen confirms the bar.</span></div>
+        </div>
+      </div>
+
+      <div class="track-card">
+        <div class="track-card-header">
+          <div class="track-icon" style="background:var(--spring-bg)">☕</div>
+          <div>
+            <div class="track-card-name">services/review-api/</div>
+            <div class="track-card-subtitle">Spring Boot API boundary · SWE full-stack signal · ✅ DONE</div>
+          </div>
+        </div>
+        <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text">Spring Boot 4.0 / Java 25 shell · <code>/health</code> · Swagger UI · <code>GlobalExceptionHandler</code> · DTO validation · <code>RagEngineClient</code> interface · <code>PythonProcessRagEngineClient</code> subprocess adapter · Jackson 3 · working-dir fix.</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text"><code>POST /api/checklist</code> · <code>POST /api/retrieve</code> · <code>POST /api/final-assessment</code> all backed by real Python bridge. <code>PYTHONIOENCODING=utf-8</code> + <code>PYTHONUTF8=1</code> encoding boundary hardened.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 1</span><span class="track-phase-text"><code>RetrieveControllerTest</code> + <code>FinalAssessmentControllerTest</code> with MockMvc + mocked <code>RagEngineClient</code>. One local workflow smoke test Java→Python.</span></div>
+          <div class="track-phase"><span class="track-phase-label">POST-LEAVE</span><span class="track-phase-text">Request logging + correlation IDs across all endpoints. Actuator health/metrics. One small improvement per active sprint week.</span></div>
+        </div>
+      </div>
+
+      <div class="track-card">
+        <div class="track-card-header">
+          <div class="track-icon" style="background:var(--ui-bg)">⚛️</div>
+          <div>
+            <div class="track-card-name">apps/review-ui/</div>
+            <div class="track-card-subtitle">React / TS review surface · Phase 5 ✅ COMPLETE</div>
+          </div>
+        </div>
+        <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text"><code>reviewApi.ts</code> typed client · <code>types.ts</code> DTOs + discriminated <code>AsyncState&lt;T&gt;</code> · <code>ApiError</code> shape. Vite proxy → Spring Boot wired.</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text"><code>ConcernInputForm</code> (5k counter, disabled-while-loading) · <code>ChecklistPanel</code> (metric cards, evidence cards, takeaway, limitations) · <code>EvidencePanel</code>/<code>EvidenceCard</code> (source/score/snippet/selection).</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text"><code>ReviewSummaryForm</code> (two-column, accessible, prefill-and-edit) · <code>FinalAssessmentPanel</code> (handling-path banner, summary metrics, refusal state, clipboard copy).</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text"><code>demoCases.ts</code> typed synthetic cases · <code>DemoToolbar</code> (selector/load/reset) · <code>assessmentSummary.ts</code> clipboard export · 4-step progress indicator · demo sidebar · responsive tablet + mobile.</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text">Clipboard test hardening (userEvent before spy, async await) · Python UTF-8 fix (PYTHONIOENCODING + PYTHONUTF8=1) · <code>browser_demo_script.md</code> · full browser workflow verified.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 1</span><span class="track-phase-text">README update with Phase 5 screenshots + architecture framing. Phase 5 gate complete. Coded as Day 1 of leave sprint.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 1–2</span><span class="track-phase-text">Phase 6: CI pipeline for UI build job (npm ci + npm run build + typecheck). Docker image or nginx static serve option.</span></div>
+        </div>
+      </div>
+
+      <div class="track-card">
+        <div class="track-card-header">
+          <div class="track-icon" style="background:var(--infra-bg)">🧰</div>
+          <div>
+            <div class="track-card-name">CI · Docker · Runbook</div>
+            <div class="track-card-subtitle">Production-engineering surface · SWE signal · Phase 6 — Leave Wk 1–2</div>
+          </div>
+        </div>
+        <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--done);">DONE</span><span class="track-phase-text">Root Gradle monorepo · ADRs 0001–0003 (subprocess adapter + HTTP swap path). Spring healthcheck endpoint live.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 1</span><span class="track-phase-text">GitHub Actions: 3-job CI (pytest + <code>./gradlew test</code> + <code>npm run build</code>). All three jobs must pass on push. Green badge on main.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 1</span><span class="track-phase-text"><code>Dockerfile.review-api</code> (multi-stage, pin JDK 25) · <code>Dockerfile.rag-engine</code> (Python slim, pin version, set PYTHONIOENCODING). <code>.dockerignore</code> for both. Both images must build locally.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 1</span><span class="track-phase-text"><code>infra/docker-compose.yml</code> — all 3 services on shared network · healthchecks · <code>.env.example</code>. Correlation ID flows Spring → Python subprocess log.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 2</span><span class="track-phase-text"><code>RUNBOOK.md</code> — start/stop commands, health check commands, correlation ID log tracing, known failure modes + recovery. Phase 6 gate: docker compose up → full demo reproducible.</span></div>
+          <div class="track-phase"><span class="track-phase-label">LV WK 3+</span><span class="track-phase-text">Postgres audit log + <code>review_case</code>/<code>eval_run</code> tables (Phase 7). Flyway migration if using Postgres. Terraform stays as <code>infra/README.md</code> notes only.</span></div>
+        </div>
+      </div>
+
+      <div class="track-card">
+        <div class="track-card-header">
+          <div class="track-icon" style="background:var(--audit-bg)">📋</div>
+          <div>
+            <div class="track-card-name">Chewy ETL Pipeline</div>
+            <div class="track-card-subtitle">Production data work · existing portfolio bullet</div>
+          </div>
+        </div>
+        <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label">EXISTING</span><span class="track-phase-text">2,200+ line Python ETL · Smartsheet + Excel + Snowflake reconciliation · multi-format output (CSV / XLSX / Tableau Hyper) · 75% formula setup time reduction · 80% overtime reduction · Director-level visibility. Work-hours only. Covers the production data + root cause story without additional personal-time build work.</span></div>
+        </div>
+      </div>
+
+      <div class="track-card">
+        <div class="track-card-header">
+          <div class="track-icon" style="background:var(--mle-bg);color:var(--mle);">🎤</div>
+          <div>
+            <div class="track-card-name">Interview Prep</div>
+            <div class="track-card-subtitle">Coding drills · file defense · mock screens</div>
+          </div>
+        </div>
+        <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label">DAILY</span><span class="track-phase-text">30m coding drill (Tier A→D) + 20m file defense + 15m Q&A bank — every day of the leave sprint without exception.</span></div>
+          <div class="track-phase"><span class="track-phase-label">DAY 11</span><span class="track-phase-text">Mock #0 — 5-min demo cold, no notes. Record what breaks. Fix before Mock #1.</span></div>
+          <div class="track-phase"><span class="track-phase-label">DAY 21</span><span class="track-phase-text">Mock #1 — full DSA + project deep-dive. Written feedback committed to <code>docs/mock_interview_notes.md</code>.</span></div>
+          <div class="track-phase"><span class="track-phase-label">DAY 26</span><span class="track-phase-text">Mock #2 — full loop: DSA + system design + project + behavioral. Postmortem → fix weak spots same day.</span></div>
+          <div class="track-phase"><span class="track-phase-label">DAY 29</span><span class="track-phase-text">Decision gate. If no loop scheduled: escalate through Kenny, begin parallel external search. Nothing undecided.</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- REFERENCES TAB -->
+  <div id="tab-courses" class="tab-panel">
+    <div class="section-title">Coding Problem Bank — Tiers A–D</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:12px;color:var(--text-mid);line-height:1.6;">
+      <strong style="color:var(--text);">Daily discipline during leave sprint:</strong> Pick the next unsolved problem from the relevant tier. Implement in <strong>Java</strong> for SWE screens; Python is fine for MLE/DS drills. Repeat problems until you can solve them without hints and explain the pattern + edge cases aloud in under 90 seconds. Do not skip tiers — Tier A problems appear as filter screens at all levels.
+    </div>
+
+    <div style="margin-bottom:6px;"><span class="tier-badge a">A</span> <strong style="color:var(--text);">Tier A — Foundation · 30 minutes · Java preferred</strong></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:22px;">
+      <table class="coding-bank-table">
+        <thead><tr><th>Problem</th><th>Pattern / Key Idea</th><th>Done when you can...</th></tr></thead>
+        <tbody>
+          <tr><td>Two Sum + Contains Duplicate</td><td>HashMap for value→index lookup; HashSet for seen elements</td><td>Explain O(n²) vs O(n) tradeoff; state when HashMap wins over brute force; handle negative numbers and duplicates in Two Sum</td></tr>
+          <tr><td>Valid Anagram + Valid Parentheses</td><td>int[26] char-count array (fixed alphabet); Stack/ArrayDeque for matching</td><td>Explain when int[26] beats HashMap (fixed alphabet); handle Unicode edge case; use ArrayDeque, not Stack; state why Stack is legacy</td></tr>
+          <tr><td>Best Time to Buy and Sell Stock + Binary Search</td><td>Single-pass min tracking; loop invariant binary search</td><td>No off-by-one at left≤right vs left&lt;right; handle empty array; state the loop invariant for binary search before writing it</td></tr>
+          <tr><td>Reverse String (in-place) + Running Sum</td><td>Two-pointer swap; prefix sum accumulation</td><td>Write without helper functions; explain O(1) space; show how prefix sums enable O(1) range queries later</td></tr>
+          <tr><td>Merge Two Sorted Lists + FizzBuzz</td><td>Dummy head + two pointers; modulo precedence</td><td>Step through ordering and boundary cases for merge; FizzBuzz: check 15 before 3 and 5; both should be solved in under 3 minutes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-bottom:6px;"><span class="tier-badge b">B</span> <strong style="color:var(--text);">Tier B — SWE II Patterns · 30–45 minutes · Java · High ROI for Level II screens</strong></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:22px;">
+      <table class="coding-bank-table">
+        <thead><tr><th>Problem</th><th>Pattern / Key Idea</th><th>Why high ROI + what to say</th></tr></thead>
+        <tbody>
+          <tr><td>Longest Substring Without Repeating Characters</td><td>Sliding window; HashMap of char → last-seen index</td><td>Jump left to lastSeen+1, not left+1 — explain why; window shrink vs pointer jump; O(n) time. Common SWE II screen question.</td></tr>
+          <tr><td>Group Anagrams</td><td>Sorted string as canonical key → HashMap&lt;String, List&lt;String&gt;&gt;</td><td>Explain canonical key approach; variation: char-count array as key for O(n·k) instead of O(n·k log k)</td></tr>
+          <tr><td>Top K Frequent Elements</td><td>Min-heap of size k, or bucket sort when values bounded</td><td>O(n log k) heap vs O(n log n) sort; mention that top-k maps directly to RAG retrieval ranking — this is interview gold</td></tr>
+          <tr><td>K Closest Points to Origin</td><td>Min-heap by distance, or quickselect for O(n) average</td><td>Heap gives O(n log k); quickselect gives O(n) average. Say which you'd use in production and why.</td></tr>
+          <tr><td>Merge Intervals</td><td>Sort by start time, then sweep and merge</td><td>Sorting first enables single-pass O(n) merge; explain merge condition: current start ≤ previous end</td></tr>
+          <tr><td>Meeting Rooms II</td><td>Min-heap of end times; heap size = rooms needed</td><td>Sorted starts + min-heap of ends; explain why earliest-ending room might be reused; O(n log n)</td></tr>
+          <tr><td>Number of Islands</td><td>Grid DFS; mark visited in-place</td><td>Marking '0' in-place avoids visited array; how BFS would differ; time O(m·n); edge: all water</td></tr>
+          <tr><td>Rotting Oranges</td><td>Multi-source BFS (all rotten oranges in queue at time 0)</td><td>Why multi-source BFS gives minimum time; how to detect unreachable fresh oranges; BFS time layers</td></tr>
+          <tr><td>Course Schedule (cycle detection)</td><td>Topological sort via Kahn's (in-degree) or DFS 3-state coloring</td><td>Cycle = no valid ordering; explain both approaches; relate to dependency graphs and data pipelines</td></tr>
+          <tr><td>Clone Graph</td><td>BFS + HashMap old_node → new_node for object identity</td><td>Why you need the map (cycles + identity); BFS ensures all neighbors processed; this tests object identity, not just traversal</td></tr>
+          <tr><td>LRU Cache</td><td>Doubly-linked list + HashMap for O(1) get/put</td><td>Sentinel head/tail avoid null checks; map for O(1) lookup; list for O(1) eviction. Explain the two-structure design before coding.</td></tr>
+          <tr><td>Decode String</td><td>Stack — on ']', pop until '[', repeat string, push back</td><td>Stack naturally handles nested encodings; time O(n·k) where k is max repetition; practice with 2[a3[b]]</td></tr>
+          <tr><td>Search in Rotated Sorted Array</td><td>Modified binary search; identify which half is sorted</td><td>One half is always sorted; determine if target is in the sorted half; O(log n). Say the invariant before writing.</td></tr>
+          <tr><td>Subarray Sum Equals K</td><td>Prefix sum + HashMap; prefixSum[i] - k = prefixSum[j] → subarray [j+1..i] sums to k</td><td>Initialize map with {0: 1} to handle subarrays from index 0; O(n) time space; this pattern is subtle — practice until it's automatic</td></tr>
+          <tr><td>Product of Array Except Self</td><td>Two-pass prefix product + suffix product; no division; O(n) time O(1) extra space</td><td>Why the no-division constraint forces two passes; relate to situations where division is unsafe (zeros)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-bottom:6px;"><span class="tier-badge c">C</span> <strong style="color:var(--text);">Tier C — Level III Systems · 45–60 minutes · Design + Implementation · Shows senior instinct</strong></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:22px;">
+      <table class="coding-bank-table">
+        <thead><tr><th>Problem</th><th>Core Idea</th><th>Done when you can explain...</th></tr></thead>
+        <tbody>
+          <tr><td>LRU Cache with tests</td><td>Doubly-linked list + HashMap; eviction at tail; O(1) get/put</td><td>Edge cases: capacity 1, single element, put existing key. Write one test per edge case. Explain why a linked list node needs prev + next.</td></tr>
+          <tr><td>Rate Limiter (sliding window)</td><td>Deque of timestamps; evict old timestamps on each request</td><td>Fairness tradeoffs; memory bounded by limit; why token bucket differs; distributed caveats (single-node assumption)</td></tr>
+          <tr><td>Cursor Pagination</td><td>Stable key (created_at or id) as opaque cursor; vs offset pagination</td><td>Why offset skips/duplicates on concurrent inserts; how to encode cursor opaquely (base64); time complexity vs offset</td></tr>
+          <tr><td>Idempotency Key Store</td><td>key → response cache with TTL; conflict detection (same key, different payload)</td><td>Why retries without idempotency duplicate side effects; key expiry; what to return on a conflicting payload</td></tr>
+          <tr><td>Subprocess wrapper with timeout</td><td>ProcessBuilder + timeout + stdout/stderr separation + encoding</td><td>The exact failure modes: timeout, nonzero exit, invalid stdout, encoding corruption. This is your <code>PythonProcessRagEngineClient</code> — you already built it.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-bottom:6px;"><span class="tier-badge d">D</span> <strong style="color:var(--text);">Tier D — MLE / DS / DE · Python preferred · Metrics and data pipeline patterns</strong></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:28px;">
+      <table class="coding-bank-table">
+        <thead><tr><th>Problem</th><th>Pattern</th><th>Done when you can...</th></tr></thead>
+        <tbody>
+          <tr><td>Precision + Recall + F1 + Confusion Matrix from scratch</td><td>TP/FP/TN/FN from (predicted, actual) pairs; P=TP/(TP+FP); R=TP/(TP+FN); F1=2PR/(P+R)</td><td>Derive all four from first principles; pick the right metric for the use case (high recall when false negatives are costly — your escalation system)</td></tr>
+          <tr><td>Recall@k + MRR from scratch</td><td>hit_rate@k = per-question binary; MRR = average 1/rank of first hit</td><td>Distinguish Recall@k from hit_rate@k; multiple expected sources don't give additive MRR credit; implement both in Python</td></tr>
+          <tr><td>Cosine similarity top-k retrieval</td><td>Embed all docs; compute dot-product similarity; min-heap of size k</td><td>Why normalization makes dot product equal cosine similarity; time O(n·d + n·log k); relate to your EmbeddingRetriever</td></tr>
+          <tr><td>Group/time-based split (leakage prevention)</td><td>No source group in both train and test; time-based: no future data in train</td><td>Why random split leaks document knowledge; how group-aware split prevents it; mention this proactively in any MLE interview</td></tr>
+          <tr><td>Latest event per task + left join (SQL)</td><td>ROW_NUMBER() OVER (PARTITION BY task_id ORDER BY created_at DESC); LEFT JOIN to include unreviewd rows</td><td>When GROUP BY + MAX fails (need all columns); why LEFT JOIN vs INNER JOIN; run both against your eval_run table</td></tr>
+          <tr><td>Dedupe by hash + data quality checks</td><td>Hash content → seen set; assert row count and null checks on required fields</td><td>Why idempotent ingest prevents silent data bloat; what field-level null check catches; relate to your ingestion.py</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">20-File Defense Map — Know Every File Cold</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:12px;color:var(--text-mid);line-height:1.6;">
+      For each file: (1) why it exists, (2) what it owns, (3) what it deliberately does not own, (4) one terminology term, (5) one interview line. Practice at interview speed — 45–90 seconds per file. The file map is the conversion layer that turns code into talk tracks.
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:22px;">
+      <table class="coding-bank-table">
+        <thead><tr><th>File</th><th>Owns / Why it exists</th><th>Terminology</th><th>Interview line</th></tr></thead>
+        <tbody>
+          <tr><td><code>demoCases.ts</code></td><td>Reusable typed synthetic demo data; prefilled reviewer findings. Keeps demo data outside components.</td><td>Separation of concerns · fixtures · synthetic-data boundary</td><td>"Demo data lives outside components so UI logic stays testable and the demo is repeatable without typing."</td></tr>
+          <tr><td><code>DemoToolbar.tsx</code></td><td>Operator controls: case selector, load, start-over. Not product core — demo tooling.</td><td>Component composition · operator tooling · fixture injection</td><td>"Not product core — demo tooling that reduces live-demo risk."</td></tr>
+          <tr><td><code>reviewApi.ts</code></td><td>Transport boundary to Spring; typed <code>AsyncState</code> returns; error mapping; no React state.</td><td>API client · DTO · discriminated union · unknown vs any</td><td>"Fetch logic should not scatter across presentational components — this boundary prevents that."</td></tr>
+          <tr><td><code>types.ts</code></td><td>Shared DTO and UI types; <code>AsyncState&lt;T&gt;</code> discriminated union; <code>ApiError</code>.</td><td>Discriminated union · exhaustive switch · impossible states · generics</td><td>"Types make state explicit at compile time; runtime validation still matters at the network boundary."</td></tr>
+          <tr><td><code>ConcernInputForm.tsx</code></td><td>Controlled concern textarea with 5k counter, validation, disabled-while-loading submit.</td><td>Controlled component · single source of truth · form validation · accessibility</td><td>"Controlled inputs support predictable submission."</td></tr>
+          <tr><td><code>ChecklistPanel.tsx</code></td><td>Renders checklist items, metric cards, evidence cards, takeaway, missing info, limitations.</td><td>Presentational component · empty/loading/error states · conditional rendering</td><td>"Makes retrieved output reviewable rather than chatbot-like."</td></tr>
+          <tr><td><code>EvidencePanel / EvidenceCard</code></td><td>Citation display: source ID, title, section, score, matched terms, snippet, selection state.</td><td>RAG grounding · evidence-aware UI · trust boundary · citation</td><td>"Evidence cards are the UI expression of RAG grounding."</td></tr>
+          <tr><td><code>ReviewSummaryForm.tsx</code></td><td>Two-column form capturing reviewer-confirmed findings; prefill-and-edit from demo cases.</td><td>Human-in-the-loop · reviewer confirmation · controlled form</td><td>"The model proposes; the reviewer owns confirmed facts — this form is the boundary."</td></tr>
+          <tr><td><code>FinalAssessmentPanel.tsx</code></td><td>Displays classification, handling path, risk lane, escalation triggers, limitations, clipboard copy.</td><td>Side effect · async feedback · accessible status · refusal state</td><td>"Separates final structured output from evidence; keeps limitations visible."</td></tr>
+          <tr><td><code>assessmentSummary.ts</code></td><td>Pure function: deterministic plain-text serialization of the final assessment for clipboard.</td><td>Pure function · deterministic serialization · side-effect isolation</td><td>"Export logic is isolated so the panel owns UI feedback but not formatting."</td></tr>
+          <tr><td>Spring Controller classes</td><td>HTTP routes, request binding, validation trigger, response status codes. No domain logic.</td><td>@RestController · @Valid · DTO binding · status code semantics</td><td>"Controllers translate HTTP into use cases — no business logic lives here."</td></tr>
+          <tr><td>Spring DTO classes</td><td>Request/response contracts; decouple API shape from internal domain objects.</td><td>DTO · serialization · schema evolution · API contract</td><td>"DTOs stop internal shapes leaking into the public API."</td></tr>
+          <tr><td>Spring Service layer</td><td>Orchestrates use cases; calls RagEngineClient; maps between DTOs and RAG results.</td><td>Orchestration · testability · dependency injection · use case layer</td><td>"The service owns workflow orchestration, not the controller."</td></tr>
+          <tr><td><code>RagEngineClient</code> (interface)</td><td>Stable Java abstraction for the Python engine. Hides subprocess details.</td><td>Polymorphism · dependency inversion · interface · contract</td><td>"Controllers depend on the contract, not subprocess details — swapping to HTTP later doesn't change the controller."</td></tr>
+          <tr><td><code>PythonProcessRagEngineClient</code></td><td>Subprocess launch, JSON stdin/stdout, exit-code handling, timeout, error envelope parsing, UTF-8.</td><td>Adapter pattern · process boundary · error envelope · timeout handling</td><td>"All Java-to-Python integration risk is isolated here."</td></tr>
+          <tr><td><code>GlobalExceptionHandler</code></td><td>@RestControllerAdvice mapping all exceptions to structured ApiErrorResponse with requestId.</td><td>Cross-cutting concern · exception mapping · stable error contract · correlation ID</td><td>"Clients need stable error shapes, not stack traces."</td></tr>
+          <tr><td><code>api_runner.py</code></td><td>Process bridge: reads one JSON from stdin, routes to domain functions, writes one JSON to stdout.</td><td>Process boundary · protocol discipline · adapter · subprocess</td><td>"Lets Spring wrap the tested engine without rewriting it."</td></tr>
+          <tr><td><code>retrieval.py</code></td><td>Retriever protocol, KeywordRetriever, EmbeddingRetriever; SearchResult contract; Recall@k eval.</td><td>Strategy pattern · protocol · cosine similarity · top-k · retrieval metrics</td><td>"Retrieval quality drives answer quality more than prompt polish."</td></tr>
+          <tr><td><code>refusal.py</code></td><td>Three boundary types: external drug ref, internal record access, clinical/legal conclusion.</td><td>Guardrail · boundary detection · fail-safe · controlled vocabulary</td><td>"The correct answer can be 'I do not have enough evidence.'"</td></tr>
+          <tr><td><code>final_assessment.py</code></td><td>Deterministic routing from ReviewSummary to DerivedAssessment; severe triggers only from structured field.</td><td>Deterministic routing · structured extraction · safety-critical decision · fail-safe defaults</td><td>"Final assessment depends on reviewer-confirmed facts, not inference from prose."</td></tr>
+          <tr><td><code>ingestion.py</code></td><td>SOP loading, frontmatter parsing, chunking with stable chunk_ids, chunks.jsonl output.</td><td>ETL · idempotent ingest · deterministic chunking · stable identifiers · data quality</td><td>"Ingestion is where silent quality loss begins."</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Workbench References — Lookup, Not Curriculum</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:24px;font-size:13px;color:var(--text-mid);line-height:1.6;">
+      The plan no longer runs through video courses (Buchalka / Jonas / Mode Analytics / Total TypeScript). Java, React, TypeScript, and SQL skills are now built directly inside the workbench — Spring controllers, typed React components, OpenAPI contracts, retrieval evaluation queries. The references below are <strong>lookup material when stuck</strong>, not curriculum.
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:24px;">
+      <table class="course-table">
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Reference</th>
+            <th>What to use it for</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="color:var(--python)">🐍 Engine</span></td>
+            <td><span class="course-name">Pydantic v2 docs</span> — pydantic.dev</td>
+            <td>Field validators, custom types, model_serializer for the API runner JSON contracts.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--python)">🐍 Engine</span></td>
+            <td><span class="course-name">sentence-transformers docs</span></td>
+            <td>Embedding model selection for stage 15. Start with <code>all-MiniLM-L6-v2</code>, justify in ADR.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--python)">🐍 Engine</span></td>
+            <td><span class="course-name">ChromaDB docs</span> · or skip</td>
+            <td>Only if in-memory store can't carry the eval set. The plan defers Chroma until needed.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--spring)">☕ Spring</span></td>
+            <td><span class="course-name">Spring Initializr</span> — start.spring.io</td>
+            <td>Generate the <code>review-api</code> scaffold. Java 21, Web, Validation, Actuator.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--spring)">☕ Spring</span></td>
+            <td><span class="course-name">springdoc-openapi docs</span></td>
+            <td>Swagger UI integration. Annotations for tagged endpoints + response schemas.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--spring)">☕ Spring</span></td>
+            <td><span class="course-name">Spring Boot reference</span> — docs.spring.io</td>
+            <td>Bean Validation, <code>@RestControllerAdvice</code>, <code>MockMvc</code>, <code>ProcessBuilder</code> patterns. Lookup-only.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--spring)">☕ Spring</span></td>
+            <td><span class="course-name">Baeldung</span> — baeldung.com</td>
+            <td>Recipe-level patterns: layered architecture, exception handling, integration testing. Skim, don't read.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--ui)">⚛️ UI</span></td>
+            <td><span class="course-name">React docs</span> — react.dev</td>
+            <td>Modern reference. Hooks, effects, forms. The "you might not need an effect" page is essential.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--ui)">⚛️ UI</span></td>
+            <td><span class="course-name">TypeScript handbook</span> — typescriptlang.org</td>
+            <td>Generics, utility types, narrowing — read the sections you hit, not the whole thing.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--ui)">⚛️ UI</span></td>
+            <td><span class="course-name">Vite guide</span> — vite.dev</td>
+            <td>Dev server, env vars, build config. The plan starts here, not with Next.js.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--ui)">⚛️ UI</span></td>
+            <td><span class="course-name">Total TypeScript Pro Essentials</span></td>
+            <td>You already own this. Use the discriminated unions + generics chapters when typing API responses.</td>
+            <td><span class="course-paid">Owned</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--infra)">🧰 Infra</span></td>
+            <td><span class="course-name">GitHub Actions docs</span></td>
+            <td>Matrix jobs, caching, badges. The Phase 5 work lives here.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--infra)">🧰 Infra</span></td>
+            <td><span class="course-name">Docker docs</span> — docs.docker.com</td>
+            <td>Multi-stage builds for the Spring image. Compose for the API + engine + UI bring-up.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--mle)">⊙ MLE</span></td>
+            <td><span class="course-name">RAGAS docs</span> — explodinggradients.io/ragas</td>
+            <td>Reference only. The plan does NOT adopt RAGAS until Q2 — your hand-built eval is more defensible in a screen.</td>
+            <td><span class="course-free">FREE</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Applications Tracker — Q1 Pipeline</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <table class="course-table">
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Company</th>
+            <th>Posting / Req</th>
+            <th>Target deadline</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="color:var(--mle);font-weight:500;">MLE II — Legal</span></td>
+            <td>Internal / target</td>
+            <td>—</td>
+            <td>Jul 8 (Day 22)</td>
+            <td><span class="course-paid" style="color:#a78bfa;">Scheduled Day 22 — intentional · Phase 6 complete first</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--mle);font-weight:500;">MLE — Chewy internal</span></td>
+            <td>Chewy internal · primary target</td>
+            <td>Active req when found</td>
+            <td>Next active req</td>
+            <td><span class="course-paid" style="color:#a78bfa;">MLE preferred · Kenny Wallace advocate · portfolio ready</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--swe);font-weight:500;">SWE full-stack — Chewy internal</span></td>
+            <td>Chewy internal · secondary target</td>
+            <td>Active req when found</td>
+            <td>Next active req</td>
+            <td><span class="course-paid" style="color:#a78bfa;">SWE secondary · same portfolio, different pitch angle · Kenny advocate</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--swe);font-weight:500;">SWE II — open</span></td>
+            <td>Any matching posting</td>
+            <td>—</td>
+            <td>Rolling, Phase 3</td>
+            <td><span class="course-free">Reuse cover-letter template, tune to JD</span></td>
+          </tr>
+          <tr>
+            <td><span style="color:var(--mle);font-weight:500;">MLE II — open</span></td>
+            <td>Any matching posting</td>
+            <td>—</td>
+            <td>Rolling, Phase 3</td>
+            <td><span class="course-free">Lead with v8 baseline + retrieval comparison doc</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- QUESTION BANK TAB -->
+  <div id="tab-rubric" class="tab-panel">
+    <!-- built by buildRubric() -->
+  </div>
+
+    <div id="tab-qbank" class="tab-panel">
+    <!-- built by buildQuestionBank() -->
+  </div>
+
+  <!-- CALENDAR TAB — pre-rendered for reliability -->
+  <div id="tab-calendar" class="tab-panel">
+    <div class="cal-legend">
+      <div class="cal-legend-item"><div class="cal-legend-swatch l-sprint"></div>Sprint day — click for details</div>
+      <div class="cal-legend-item"><div class="cal-legend-swatch l-done"></div>Code + File + Q&amp;A done</div>
+      <div class="cal-legend-item"><div class="cal-legend-swatch l-today"></div>Today</div>
+      <div class="cal-legend-item" style="margin-left:auto;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:var(--text-dim);">
+        <span style="display:flex;gap:3px;">
+          <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #a78bfa;display:inline-block;"></span>
+          <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #2dd4bf;display:inline-block;"></span>
+          <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid #fbbf24;display:inline-block;"></span>
+        </span>
+        Code · File · Q&amp;A
+      </div>
+    </div>
+    <div class="cal-wrap">
+<div class="cal-month">
+<div class="cal-month-name">June 2026</div>
+<div class="cal-week-header">
+  <div class="cal-dow">Su</div>
+  <div class="cal-dow">Mo</div>
+  <div class="cal-dow">Tu</div>
+  <div class="cal-dow">We</div>
+  <div class="cal-dow">Th</div>
+  <div class="cal-dow">Fr</div>
+  <div class="cal-dow">Sa</div>
+</div>
+<div class="cal-days">
+<div class="cal-day cal-empty"></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">1</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">2</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">3</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">4</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">5</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">6</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">7</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">8</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">9</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">10</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">11</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">12</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">13</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">14</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">15</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">16</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="1" id="cal-cell-1" tabindex="0" role="button" title="Sprint Day 1 — click for details" aria-label="Day 1 of sprint, June 2026 17"><div class="cal-cell-top"><span class="cal-sprint-num">D1</span><span class="cal-n">17</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-a">A</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="2" id="cal-cell-2" tabindex="0" role="button" title="Sprint Day 2 — click for details" aria-label="Day 2 of sprint, June 2026 18"><div class="cal-cell-top"><span class="cal-sprint-num">D2</span><span class="cal-n">18</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-a">A</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="3" id="cal-cell-3" tabindex="0" role="button" title="Sprint Day 3 — click for details" aria-label="Day 3 of sprint, June 2026 19"><div class="cal-cell-top"><span class="cal-sprint-num">D3</span><span class="cal-n">19</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-a">A</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="4" id="cal-cell-4" tabindex="0" role="button" title="Sprint Day 4 — click for details" aria-label="Day 4 of sprint, June 2026 20"><div class="cal-cell-top"><span class="cal-sprint-num">D4</span><span class="cal-n">20</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-a">A</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="5" id="cal-cell-5" tabindex="0" role="button" title="Sprint Day 5 — click for details" aria-label="Day 5 of sprint, June 2026 21"><div class="cal-cell-top"><span class="cal-sprint-num">D5</span><span class="cal-n">21</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-a">A</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="6" id="cal-cell-6" tabindex="0" role="button" title="Sprint Day 6 — click for details" aria-label="Day 6 of sprint, June 2026 22"><div class="cal-cell-top"><span class="cal-sprint-num">D6</span><span class="cal-n">22</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="7" id="cal-cell-7" tabindex="0" role="button" title="Sprint Day 7 — click for details" aria-label="Day 7 of sprint, June 2026 23"><div class="cal-cell-top"><span class="cal-sprint-num">D7</span><span class="cal-n">23</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="8" id="cal-cell-8" tabindex="0" role="button" title="Sprint Day 8 — click for details" aria-label="Day 8 of sprint, June 2026 24"><div class="cal-cell-top"><span class="cal-sprint-num">D8</span><span class="cal-n">24</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="9" id="cal-cell-9" tabindex="0" role="button" title="Sprint Day 9 — click for details" aria-label="Day 9 of sprint, June 2026 25"><div class="cal-cell-top"><span class="cal-sprint-num">D9</span><span class="cal-n">25</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="10" id="cal-cell-10" tabindex="0" role="button" title="Sprint Day 10 — click for details" aria-label="Day 10 of sprint, June 2026 26"><div class="cal-cell-top"><span class="cal-sprint-num">D10</span><span class="cal-n">26</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="11" id="cal-cell-11" tabindex="0" role="button" title="Sprint Day 11 — click for details" aria-label="Day 11 of sprint, June 2026 27"><div class="cal-cell-top"><span class="cal-sprint-num">D11</span><span class="cal-n">27</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="12" id="cal-cell-12" tabindex="0" role="button" title="Sprint Day 12 — click for details" aria-label="Day 12 of sprint, June 2026 28"><div class="cal-cell-top"><span class="cal-sprint-num">D12</span><span class="cal-n">28</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="13" id="cal-cell-13" tabindex="0" role="button" title="Sprint Day 13 — click for details" aria-label="Day 13 of sprint, June 2026 29"><div class="cal-cell-top"><span class="cal-sprint-num">D13</span><span class="cal-n">29</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="14" id="cal-cell-14" tabindex="0" role="button" title="Sprint Day 14 — click for details" aria-label="Day 14 of sprint, June 2026 30"><div class="cal-cell-top"><span class="cal-sprint-num">D14</span><span class="cal-n">30</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+</div>
+</div>
+<div class="cal-month">
+<div class="cal-month-name">July 2026</div>
+<div class="cal-week-header">
+  <div class="cal-dow">Su</div>
+  <div class="cal-dow">Mo</div>
+  <div class="cal-dow">Tu</div>
+  <div class="cal-dow">We</div>
+  <div class="cal-dow">Th</div>
+  <div class="cal-dow">Fr</div>
+  <div class="cal-dow">Sa</div>
+</div>
+<div class="cal-days">
+<div class="cal-day cal-empty"></div>
+<div class="cal-day cal-empty"></div>
+<div class="cal-day cal-empty"></div>
+<div class="cal-day cal-sprint" data-sd-num="15" id="cal-cell-15" tabindex="0" role="button" title="Sprint Day 15 — click for details" aria-label="Day 15 of sprint, July 2026 1"><div class="cal-cell-top"><span class="cal-sprint-num">D15</span><span class="cal-n">1</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-d">D</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="16" id="cal-cell-16" tabindex="0" role="button" title="Sprint Day 16 — click for details" aria-label="Day 16 of sprint, July 2026 2"><div class="cal-cell-top"><span class="cal-sprint-num">D16</span><span class="cal-n">2</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-d">D</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="17" id="cal-cell-17" tabindex="0" role="button" title="Sprint Day 17 — click for details" aria-label="Day 17 of sprint, July 2026 3"><div class="cal-cell-top"><span class="cal-sprint-num">D17</span><span class="cal-n">3</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-d">D</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="18" id="cal-cell-18" tabindex="0" role="button" title="Sprint Day 18 — click for details" aria-label="Day 18 of sprint, July 2026 4"><div class="cal-cell-top"><span class="cal-sprint-num">D18</span><span class="cal-n">4</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-d">D</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="19" id="cal-cell-19" tabindex="0" role="button" title="Sprint Day 19 — click for details" aria-label="Day 19 of sprint, July 2026 5"><div class="cal-cell-top"><span class="cal-sprint-num">D19</span><span class="cal-n">5</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="20" id="cal-cell-20" tabindex="0" role="button" title="Sprint Day 20 — click for details" aria-label="Day 20 of sprint, July 2026 6"><div class="cal-cell-top"><span class="cal-sprint-num">D20</span><span class="cal-n">6</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="21" id="cal-cell-21" tabindex="0" role="button" title="Sprint Day 21 — click for details" aria-label="Day 21 of sprint, July 2026 7"><div class="cal-cell-top"><span class="cal-sprint-num">D21</span><span class="cal-n">7</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="22" id="cal-cell-22" tabindex="0" role="button" title="Sprint Day 22 — click for details" aria-label="Day 22 of sprint, July 2026 8"><div class="cal-cell-top"><span class="cal-sprint-num">D22</span><span class="cal-n">8</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="23" id="cal-cell-23" tabindex="0" role="button" title="Sprint Day 23 — click for details" aria-label="Day 23 of sprint, July 2026 9"><div class="cal-cell-top"><span class="cal-sprint-num">D23</span><span class="cal-n">9</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="24" id="cal-cell-24" tabindex="0" role="button" title="Sprint Day 24 — click for details" aria-label="Day 24 of sprint, July 2026 10"><div class="cal-cell-top"><span class="cal-sprint-num">D24</span><span class="cal-n">10</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-b">B</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="25" id="cal-cell-25" tabindex="0" role="button" title="Sprint Day 25 — click for details" aria-label="Day 25 of sprint, July 2026 11"><div class="cal-cell-top"><span class="cal-sprint-num">D25</span><span class="cal-n">11</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-d">D</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="26" id="cal-cell-26" tabindex="0" role="button" title="Sprint Day 26 — click for details" aria-label="Day 26 of sprint, July 2026 12"><div class="cal-cell-top"><span class="cal-sprint-num">D26</span><span class="cal-n">12</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span></div><span class="cal-tier-sm t-c">C</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="27" id="cal-cell-27" tabindex="0" role="button" title="Sprint Day 27 — click for details" aria-label="Day 27 of sprint, July 2026 13"><div class="cal-cell-top"><span class="cal-sprint-num">D27</span><span class="cal-n">13</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-c">C</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="28" id="cal-cell-28" tabindex="0" role="button" title="Sprint Day 28 — click for details" aria-label="Day 28 of sprint, July 2026 14"><div class="cal-cell-top"><span class="cal-sprint-num">D28</span><span class="cal-n">14</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span></div><span class="cal-tier-sm t-c">C</span></div></div>
+<div class="cal-day cal-sprint" data-sd-num="29" id="cal-cell-29" tabindex="0" role="button" title="Sprint Day 29 — click for details" aria-label="Day 29 of sprint, July 2026 15"><div class="cal-cell-top"><span class="cal-sprint-num">D29</span><span class="cal-n">15</span></div><div class="cal-cell-bottom"><div class="cal-dots"><span class="cal-dot d-code" title="Coding"></span><span class="cal-dot d-file" title="File defense"></span><span class="cal-dot d-qa" title="Q&A"></span></div><span class="cal-tier-sm t-a">A</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">16</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">17</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">18</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">19</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">20</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">21</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">22</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">23</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">24</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">25</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">26</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">27</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">28</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">29</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">30</span></div></div>
+<div class="cal-day"><div class="cal-cell-top"><span></span><span class="cal-n">31</span></div></div>
+</div>
+</div>
+    </div>
+    <div id="cal-detail"></div>
+  </div>
+
+</div>
+
+  <script src="unified_schedule.js"></script>
+</body>
+</html>
