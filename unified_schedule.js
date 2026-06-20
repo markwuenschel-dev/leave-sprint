@@ -3159,7 +3159,7 @@ function buildRubric() {
     /* Promotion evidence */
     const promoWrap = rEl('div', 'r-promo-section');
     promoWrap.appendChild(rEl('div', 'r-section-label', 'Promotion Evidence Progress'));
-    promoWrap.appendChild(rEl('p', 'r-promo-note', 'Counts qualifying attempts only: final score \u226570, assistance and difficulty constraints met.'));
+    promoWrap.appendChild(rEl('p', 'r-promo-note', 'Each row needs a minimum number of <strong>passing attempts</strong> in that task type. Passing = final score ≥70 · assistance constraint met · difficulty constraint met where shown. Reasons shown below each bar explain why attempts didn’t qualify.'));
     ['L1','L2','L3'].forEach(lvl => {
       const counts = rCountPromoEvidence(entries, lvl);
       const allMet = counts.every(c => c.met);
@@ -3171,12 +3171,20 @@ function buildRubric() {
         bf.style.width = Math.min(1, c.count/c.min)*100+'%';
         bf.style.background = c.met ? 'var(--done)' : 'var(--rag)';
         bw.appendChild(bf);
-        const countLabel = c.total === 0
-          ? '0/' + c.min + ' (no attempts)'
-          : c.count + '/' + c.min + (c.reasons.length ? ' (' + c.reasons.join(', ') + ')' : '');
-        row.appendChild(rEl('div', 'r-promo-row-label', c.label));
-        row.appendChild(rEl('div', 'r-promo-row-count'+(c.met?' r-promo-count-met':''), countLabel));
-        row.appendChild(bw); block.appendChild(row);
+        const qualifyText = c.met
+          ? c.count + '/' + c.min + ' ✓'
+          : c.count + '/' + c.min + ' needed';
+        const reasonText = c.total === 0
+          ? 'no attempts yet'
+          : c.reasons.length ? c.reasons.join(' · ') : '';
+        const rowWrap = rEl('div', 'r-promo-row-wrap');
+        const rowMain = rEl('div', 'r-promo-row');
+        rowMain.appendChild(rEl('div', 'r-promo-row-label', c.label));
+        rowMain.appendChild(rEl('span', 'r-promo-row-count'+(c.met?' r-promo-count-met':''), qualifyText));
+        rowMain.appendChild(bw);
+        rowWrap.appendChild(rowMain);
+        if (reasonText) rowWrap.appendChild(rEl('div', 'r-promo-reason', reasonText));
+        block.appendChild(rowWrap);
       });
       promoWrap.appendChild(block);
     });
