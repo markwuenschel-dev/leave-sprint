@@ -2254,3 +2254,12 @@ details[open] > .rsec-title::before { transform: rotate(90deg); }
   .r-ref-nav-link { padding: 3px 7px; }
   .r-ref-content { padding: 14px 16px; }
 }
+
+.r-ref-export-btn {
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  background: transparent; border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 10px; cursor: pointer; margin: 12px 14px 0;
+  transition: color 0.15s, border-color 0.15s; text-align: left;
+  width: calc(100% - 28px);
+}
+.r-ref-export-btn:hover { color: var(--text); border-color: var(--text-dim); }

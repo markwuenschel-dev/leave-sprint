@@ -2752,6 +2752,171 @@ function rRollingAvg(entries, taskType) {
   return f.length ? +(f.reduce((s, e) => s + e.finalScore, 0) / f.length).toFixed(1) : null;
 }
 
+/* ── REFERENCE MARKDOWN EXPORT ───────────────────────── */
+function rExportRefMarkdown() {
+  const lines = [];
+  const h1 = s => lines.push(`# ${s}`, '');
+  const h2 = s => lines.push(`## ${s}`, '');
+  const h3 = s => lines.push(`### ${s}`, '');
+  const p  = s => lines.push(s, '');
+  const li = items => { items.forEach(i => lines.push(`- ${i}`)); lines.push(''); };
+  const tbl = (headers, rows) => {
+    lines.push('| ' + headers.join(' | ') + ' |');
+    lines.push('| ' + headers.map(() => '---').join(' | ') + ' |');
+    rows.forEach(r => lines.push('| ' + r.map(c => String(c).replace(/\|/g, '\\|')) + ' |'));
+    lines.push('');
+  };
+  const pre = s => { lines.push('```'); lines.push(s); lines.push('```', ''); };
+
+  lines.push('# Technical Competency Scoring System v1.5', '');
+  lines.push('*Level I / II / III · Difficulty-Calibrated · Domain- and Role-Aware*', '');
+
+  h1('§1.1 Mandatory Grader Output Contract');
+  p('This section is controlling. Any evaluation that reports only one total score is **invalid**, even if it later labels Level I/II/III as demonstrated or not demonstrated.');
+  h2('Required output fields (in order)');
+  li([
+    'Problem level: Level I / II / III',
+    'Difficulty: 1–5',
+    'Level I answer score: 0–100 with verdict',
+    'Level II answer score: 0–100 with verdict',
+    'Level III answer score: 0–100 with verdict',
+    'Answer level: highest level whose score passes',
+    'Qualifying demonstrated level: answer level capped by problem level, difficulty, and autonomy requirements'
+  ]);
+  h2('Required output template');
+  pre(`Problem level: Level __\nDifficulty: __/5\n\nLevel I answer score:   __/100 — Pass / Borderline / Fail\nLevel II answer score:  __/100 — Pass / Borderline / Fail\nLevel III answer score: __/100 — Pass / Borderline / Fail\n\nAnswer level: Level __\nQualifying demonstrated level: Level __\nPrimary domain: __\nPrimary role: __\nAssistance: __\nCaps/penalties: __\nMain reason the next level was not reached: __`);
+  p('**Validation rule:** If any of the three numerical answer scores is missing, the assessment must be regenerated before it is recorded in the progress tracker.');
+
+  h1('§3 Level Definitions');
+  tbl(['Level', 'Standard', 'Typical Scope'], RD.levels.map(l => [l.label + ' — ' + l.subtitle, l.standard, l.scope]));
+
+  h1('§3.1–3.3 Three-Score Answer Model');
+  p('Every question receives one problem level and one difficulty rating. Every answer receives **three separate criterion-referenced scores**: Level I, Level II, and Level III. The prior single-score output is retired.');
+  h2('Scoring lenses');
+  tbl(['Level score', 'Scoring lens'], RD.scoringLenses.map(l => [l.level, l.lens]));
+  h2('Key rules');
+  li([
+    'The same evidence is evaluated three times against progressively stricter standards.',
+    'Higher-level scores must not exceed lower-level scores: Level III ≤ Level II ≤ Level I.',
+    'Answer level = highest level score ≥70 that also passes mandatory gates and autonomy requirements.',
+    'Qualifying demonstrated level = the lower of answer level and problem level.',
+    'A Level I problem cannot establish Level II or Level III readiness.',
+    'Do not average the three scores. They answer different questions.'
+  ]);
+
+  h1('§4 Mandatory Gates');
+  tbl(['Gate', 'Requirement'], RD.gates.map(g => [g.gate, g.req]));
+  p('Failure in correctness, relevance, or integrity normally produces an overall failing result regardless of other strengths.');
+
+  h1('§5 Task Classification');
+  tbl(['Primary task type', 'Examples'], [
+    ['Coding', 'LeetCode, implementation exercises, algorithms, data structures.'],
+    ['Debugging', 'Broken code, failing tests, semantic defects, production-style failures.'],
+    ['Technical knowledge', 'Java, Spring, React, TypeScript, Python, SQL, AWS, RAG, ML, SDLC.'],
+    ['System design', 'Services, APIs, data models, architecture, scaling, reliability.'],
+    ['Production engineering', 'Testing, CI, Docker, logging, migrations, observability, security.'],
+    ['Project walkthrough', 'Architecture explanation, ownership, tradeoffs, limitations, failure stories.'],
+    ['Behavioral technical', 'Ownership, incidents, disagreement, leadership, cross-functional delivery.']
+  ]);
+
+  h1('§6 Formal Difficulty System');
+  p('Difficulty measures the **task**, not the candidate\'s struggle. Assign before the attempt whenever possible.');
+  tbl(['D', 'Label', 'Definition', 'Typical level'], RD.difficulty.map(d => [d.d, d.label, d.desc, d.level]));
+  h2('Calibration rules');
+  li([
+    'Do not raise difficulty because the candidate struggled.',
+    'Do not lower difficulty because the candidate solved it quickly.',
+    'Task category alone does not determine difficulty.',
+    'A cache bug is not automatically Difficulty 5.',
+    'Difficulty affects what the score proves; it does not provide bonus points or excuse weak work.'
+  ]);
+
+  h2('§6.1 Difficulty Attribute Matrix');
+  tbl(['Dimension', 'Score 0', 'Score 1', 'Score 2'], RD.difficultyAttributes.map(a => [a.dim, a.v0, a.v1, a.v2]));
+  tbl(['Attribute total', 'Difficulty'], RD.difficultyThresholds.map(t => [t.range, t.d]));
+
+  h1('§7 Universal Competency Score (60% of final)');
+  tbl(['Competency', 'Weight'], [...RD.universal.map(u => [u.name, u.weight + ' pts']), ['**Total**', '**100**']]);
+  RD.universal.forEach(u => {
+    h2(u.name + ` (${u.weight} pts)`);
+    tbl(['Score', 'Standard'], u.bands.map(b => [b.range, b.std]));
+  });
+
+  h1('§8 Task-Specific Rubrics (40% of final)');
+  RD.taskRubrics.forEach(tr => {
+    h2('§8.x ' + tr.label);
+    if (tr.note) p('> ' + tr.note);
+    tbl(['Category', 'Weight'], [...tr.categories.map(c => [c.name, c.weight + ' pts']), ['**Total**', '**100**']]);
+  });
+
+  h1('§9 Domain & Role Evidence Model');
+  h2('Technical Domain Taxonomy');
+  RD.domainGroups.forEach(g => { h3(g.group); li(g.domains); });
+  h2('Role Competency Taxonomy');
+  tbl(['Role', 'Primary competency weights'], RD.roles.map(r => [r.label, r.weights]));
+  h2('Contribution Weights');
+  tbl(['Evidence mapping', 'Default contribution'], RD.domainContributionWeights.map(c => [c.role, c.pct]));
+  h2('Domain Subcompetencies');
+  RD.domainSubcompetencies.forEach(d => { h3(d.domain); p(d.subs); });
+
+  h1('§10 Retrospective Scoring Protocol');
+  tbl(['Evidence class', 'Definition', 'Trend weight'], RD.evidenceClasses.map(e => [e.label, e.desc, e.weight.toFixed(2)]));
+  li([
+    'Mark difficulty as retrospectively estimated.',
+    'Record autonomy as verified, partially verified, or unverified.',
+    'Do not infer favorable missing evidence.',
+    'Do not score project summaries as if they were observed performances.',
+    'Use retrospective results to establish a baseline, not to claim perfect historical comparability.',
+    'Prospective assessments become the primary evidence as the dataset grows.'
+  ]);
+
+  h1('§11 Multi-Bug Debugging Assessments');
+  p('Recommended seeded exercise mix: 1× D3, 2× D4, 1× D5');
+  h2('Per-Bug Completion Standard');
+  tbl(['Evidence achieved', 'Max credit'], RD.bugCompletionStandards.map(b => [b.evidence, b.maxCredit]));
+  h2('Difficulty Multipliers');
+  tbl(['Difficulty', 'Multiplier'], RD.difficultyMultipliers.map(m => [m.d, m.mult]));
+  p('Exercise Score = Σ(Bug Score × Difficulty Multiplier) ÷ Σ(Difficulty Multipliers)');
+
+  h1('§12 Assistance & Autonomy');
+  tbl(['Level', 'Assistance', 'Autonomy implication'], RD.assistance.map(a => [a.lvl, a.desc, a.autonomy]));
+
+  h1('§13 Caps & Penalties');
+  h2('Caps');
+  tbl(['Condition', 'Max score'], RD.caps.map(c => [c.condition, c.max]));
+  p('Applied after raw score. The lowest applicable cap wins.');
+  h2('Penalties');
+  tbl(['Deficiency', 'Typical penalty'], RD.penalties.map(p2 => [p2.deficiency, p2.penalty]));
+
+  h1('§14 Demonstrated-Level Rules');
+  tbl(['Level', 'Minimum qualifying pattern'], RD.levelRules.map(r => [r.level, r.pattern]));
+  h2('All of the following must hold');
+  li([
+    'The matching level score must be at least 70.',
+    'Correctness gate must pass.',
+    'No critical competency may be below 60.',
+    'Required difficulty evidence must exist.',
+    'Required autonomy level must be met.',
+    'Applicable caps must not reduce the score below 70.'
+  ]);
+
+  h1('§15 Score Interpretation');
+  tbl(['Score', 'Verdict'], RD.scoreBands.map(b => [b.range, b.verdict]));
+
+  h1('§19 Grading Principles');
+  li(RD.gradingPrinciples);
+
+  h1('§20 Standard Assessment Record');
+  pre(`Assessment ID:\nDate:\nRubric version: 1.5\nProspective or retrospective:\nEvidence class:\nEvidence confidence:\n\nQuestion/task:\nPrimary task type:\nProblem level: Level I / II / III\nDifficulty: 1–5\nDifficulty attribute score:\nDifficulty rationale:\nDifficulty assignment: Precommitted / Retrospectively estimated\n\nTechnology/framework:\nPrimary technical domain:\nSecondary technical domains:\nPrimary role:\nSecondary roles:\n\nAssistance level:\nAutonomy confidence:\n\nLevel I answer score:   /100\nLevel I verdict:        Pass / Borderline / Fail\nLevel II answer score:  /100\nLevel II verdict:       Pass / Borderline / Fail\nLevel III answer score: /100\nLevel III verdict:      Pass / Borderline / Fail\n\nAnswer level:\nQualifying demonstrated level:\nQualifying evidence note:\n\nMandatory gates:\n- Correctness:\n- Relevance:\n- Independent explanation:\n- Evidence:\n- Integrity:\n- Completion:\n\nCaps:\nPenalties:\nConfirmed strengths:\nConfirmed weaknesses:\nWould this survive interview probing:\nEvaluator confidence:\nNext improvement target:`);
+
+  const md = lines.join('\n');
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `rubric-v1.5-${new Date().toISOString().slice(0, 10)}.md`;
+  a.click();
+}
+
 /* ══════════════════════════════════════════════════════
    BUILD
 ══════════════════════════════════════════════════════ */
@@ -3359,6 +3524,11 @@ function buildRubric() {
       a.addEventListener('click', e => { e.preventDefault(); const t=document.getElementById(id); if(t){t.open=true;t.scrollIntoView({behavior:'smooth',block:'start'});} });
       nav.appendChild(a);
     });
+    /* Export button at bottom of nav */
+    const exportMdBtn = rEl('button', 'r-ref-export-btn', '\u2193 Export as Markdown');
+    exportMdBtn.addEventListener('click', rExportRefMarkdown);
+    nav.appendChild(exportMdBtn);
+
     layout.appendChild(nav);
     const content = rEl('div', 'r-ref-content');
 
