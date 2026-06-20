@@ -2998,6 +2998,31 @@ function buildRubric() {
     });
     el.appendChild(statsGrid);
 
+    /* Next recommended action */
+    const recWrap = document.createElement('div');
+    buildNextRecommended(recWrap);
+    el.appendChild(recWrap);
+
+    /* Burndown chart */
+    const burnSec = rEl('div', 'r-burndown-section');
+    burnSec.appendChild(rEl('div', 'r-section-label', 'L1 + L2 Evidence Burndown'));
+    const burnLegend = rEl('div', 'r-burndown-legend');
+    [['L1 (9 slots)', 'rgba(16,185,129,0.9)', null],
+     ['L2 (9 slots)', 'rgba(99,102,241,0.9)', null],
+     ['Ideal pace',   'rgba(100,120,140,0.5)', '4,3']].forEach(([lbl, col, dash]) => {
+      const item = rEl('div', 'r-burndown-leg-item');
+      const line = rEl('span', 'r-burndown-leg-line');
+      line.style.background = col;
+      if (dash) line.style.background = 'none';
+      if (dash) { line.style.border = 'none'; line.style.borderTop = '2px dashed ' + col; }
+      item.appendChild(line);
+      item.appendChild(rEl('span', '', lbl));
+      burnLegend.appendChild(item);
+    });
+    burnSec.appendChild(burnLegend);
+    burnSec.appendChild(rBurndownSVG());
+    el.appendChild(burnSec);
+
     /* Three-level score summary */
     if (total > 0) {
       const withL = entries.filter(e => e.levelScores?.L1 !== null);
@@ -3263,6 +3288,7 @@ function buildRubric() {
       const sk = parsed.length - fresh.length;
       pasteMsg.textContent = '\u2713 Imported ' + fresh.length + ' entr' + (fresh.length===1?'y':'ies') + (sk ? ' (' + sk + ' duplicate' + (sk>1?'s':'')+' skipped)' : '') + '.';
       pasteMsg.className = 'r-save-msg r-save-ok';
+      if (typeof updateHeaderStats === 'function') updateHeaderStats();
       setTimeout(() => { pasteMsg.textContent=''; }, 5000);
     }
 
@@ -3709,11 +3735,22 @@ Main reason the next level was not reached: __`));
       ]));
     });
 
-    addAcc('ref-diffattr', '\u00a76.1 \u2014 Difficulty Attribute Matrix', body => {
-      body.appendChild(rTbl(['Dimension','Score 0','Score 1','Score 2'],
-        RD.difficultyAttributes.map(a=>[a.dim,a.v0,a.v1,a.v2])));
+    addAcc('ref-diffattr', '\u00a76.1 \u2014 Difficulty Attribute Matrix (interactive)', body => {
+      const intro = document.createElement('p');
+      intro.className = 'r-note';
+      intro.innerHTML = 'Select one option per dimension. Score accumulates as you go. All 8 needed for a final D-rating.';
+      body.appendChild(intro);
+
+      const calcWrap = document.createElement('div');
+      calcWrap.className = 'diff-calc-wrap';
+      buildDiffCalculator(calcWrap, (d, total) => {
+        // flash result
+      });
+      body.appendChild(calcWrap);
+
+      body.appendChild(rEl('div', 'r-sub-title', 'Score thresholds'));
       body.appendChild(rTbl(['Attribute total','Difficulty'],
-        RD.difficultyThresholds.map(t=>[t.range,t.d])));
+        RD.difficultyThresholds.map(t=>[t.range,'D'+t.d])));
     });
 
     addAcc('ref-univ', '\u00a77 \u2014 Universal Competency Score (60% of final)', body => {
@@ -3840,4 +3877,570 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', buildRubric);
 } else {
   buildRubric();
+}
+
+/* ══════════════════════════════════════════════════════
+   HEADER STATS + STICKY HEIGHT + BURNDOWN
+══════════════════════════════════════════════════════ */
+
+/* Set CSS variable for sticky nav height so ref sidebar offsets correctly */
+function updateStickyHeight() {
+  const stickyEl = document.querySelector('.sticky-top');
+  if (stickyEl) {
+    document.documentElement.style.setProperty('--sticky-h', stickyEl.offsetHeight + 'px');
+  }
+}
+
+/* Fill the #hdr-stats sprint bar from rubric log */
+function updateHeaderStats() {
+  const el = document.getElementById('hdr-stats');
+  if (!el) return;
+
+  const entries = (() => {
+    try { return JSON.parse(localStorage.getItem('rubric-log-v1') || '[]'); } catch { return []; }
+  })();
+
+  const SPRINT_START = new Date(2026, 5, 17);
+  const today = new Date();
+  const sprintDay = Math.max(1, Math.min(29, Math.round((today - SPRINT_START) / 86400000) + 1));
+  const daysLeft  = Math.max(0, 29 - sprintDay + 1);
+  const todayStr  = today.toISOString().slice(0, 10);
+
+  const total     = entries.length;
+  const todayCount = entries.filter(e => e.date === todayStr).length;
+  const passes    = entries.filter(e => e.finalScore >= 70).length;
+  const passRate  = total ? Math.round(passes / total * 100) : null;
+  const lastFive  = entries.slice(-5);
+  const rollingAvg = lastFive.length
+    ? +(lastFive.reduce((s, e) => s + e.finalScore, 0) / lastFive.length).toFixed(1) : null;
+  const lastLevel = [...entries].reverse().find(e => e.demonstratedLevel)?.demonstratedLevel || null;
+
+  /* Burndown pace calculation */
+  const L1_TOTAL = 9, L2_TOTAL = 9;
+  const l1Qualifying = (type, minScore) => entries.filter(e =>
+    e.taskType === type && e.finalScore >= 70
+  ).length;
+  const l1Slots = [
+    Math.max(0, 3 - entries.filter(e => e.taskType==='coding'    && e.finalScore>=70).length),
+    Math.max(0, 2 - entries.filter(e => e.taskType==='debugging'  && e.finalScore>=70).length),
+    Math.max(0, 3 - entries.filter(e => e.taskType==='knowledge'  && e.finalScore>=70).length),
+    Math.max(0, 1 - entries.filter(e => e.taskType==='walkthrough'&& e.finalScore>=70).length)
+  ].reduce((a,b)=>a+b,0);
+  const l2Slots = [
+    Math.max(0, 3 - entries.filter(e => e.taskType==='coding'    && e.finalScore>=70 && e.assistanceLevel<=2).length),
+    Math.max(0, 3 - entries.filter(e => e.taskType==='debugging'  && e.finalScore>=70 && e.assistanceLevel<=2).length),
+    Math.max(0, 2 - entries.filter(e => e.taskType==='sysdesign'  && e.finalScore>=70).length),
+    Math.max(0, 1 - entries.filter(e => e.taskType==='walkthrough'&& e.finalScore>=70).length)
+  ].reduce((a,b)=>a+b,0);
+  const slotsLeft   = l1Slots + l2Slots;
+  const paceNeeded  = daysLeft > 0 ? (slotsLeft / daysLeft).toFixed(1) : '—';
+
+  el.innerHTML = '';
+
+  const stats = [
+    { lbl: 'Sprint Day',  val: `${sprintDay}/29`, cls: '' },
+    { lbl: 'Today',       val: todayCount > 0 ? todayCount : 'none', cls: todayCount > 0 ? 'hdr-pass' : '' },
+    { lbl: 'All-time',    val: total > 0 ? total : '—', cls: '' },
+    { lbl: 'Pass rate',   val: passRate !== null ? passRate + '%' : '—',
+      cls: passRate >= 70 ? 'hdr-pass' : passRate >= 50 ? 'hdr-warn' : passRate !== null ? 'hdr-fail' : '' },
+    { lbl: 'Avg (5)',     val: rollingAvg !== null ? rollingAvg : '—',
+      cls: rollingAvg >= 70 ? 'hdr-pass' : rollingAvg >= 60 ? 'hdr-warn' : rollingAvg !== null ? 'hdr-fail' : '' },
+    { lbl: 'L1+L2 pace', val: slotsLeft > 0 ? `${slotsLeft} slots · ${paceNeeded}/day` : '✓ met', cls: slotsLeft === 0 ? 'hdr-pass' : '' },
+    ...(lastLevel ? [{ lbl: 'Last level', val: lastLevel, cls: '' }] : [])
+  ];
+
+  stats.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'hdr-stat';
+    div.innerHTML = s.lbl + '<span class="hdr-stat-val ' + s.cls + '">' + s.val + '</span>';
+    el.appendChild(div);
+  });
+
+  updateStickyHeight();
+}
+
+/* Burndown: daily remaining evidence slots for L1 and L2 */
+function rBurndownData() {
+  const entries = (() => {
+    try { return JSON.parse(localStorage.getItem('rubric-log-v1') || '[]'); } catch { return []; }
+  })();
+  const SPRINT_START = new Date(2026, 5, 17);
+  const DAYS = 29;
+  const today = new Date();
+  const currentDay = Math.max(0, Math.min(DAYS, Math.round((today - SPRINT_START) / 86400000)));
+
+  const L1_REQS = [
+    { type: 'coding', min: 3 }, { type: 'debugging', min: 2 },
+    { type: 'knowledge', min: 3 }, { type: 'walkthrough', min: 1 }
+  ];
+  const L2_REQS = [
+    { type: 'coding', min: 3, maxAssist: 2 }, { type: 'debugging', min: 3, maxAssist: 2 },
+    { type: 'sysdesign', min: 2 }, { type: 'walkthrough', min: 1 }
+  ];
+  const L1_TOTAL = L1_REQS.reduce((s, r) => s + r.min, 0);
+  const L2_TOTAL = L2_REQS.reduce((s, r) => s + r.min, 0);
+
+  function slotsRemaining(reqs, ents) {
+    return reqs.reduce((s, req) => {
+      const q = ents.filter(e =>
+        e.taskType === req.type && e.finalScore >= 70 &&
+        (req.maxAssist === undefined || (e.assistanceLevel ?? 0) <= req.maxAssist)
+      ).length;
+      return s + Math.max(0, req.min - q);
+    }, 0);
+  }
+
+  const l1Points = [], l2Points = [];
+  for (let d = 0; d <= DAYS; d++) {
+    const cutoffDate = new Date(SPRINT_START.getTime() + d * 86400000);
+    const cutoffStr  = cutoffDate.toISOString().slice(0, 10);
+    const dayEntries = entries.filter(e => e.date <= cutoffStr);
+    l1Points.push(slotsRemaining(L1_REQS, dayEntries));
+    l2Points.push(slotsRemaining(L2_REQS, dayEntries));
+  }
+
+  return { l1Points, l2Points, L1_TOTAL, L2_TOTAL, currentDay, DAYS };
+}
+
+/* Draw SVG burndown chart */
+function rBurndownSVG() {
+  const { l1Points, l2Points, L1_TOTAL, L2_TOTAL, currentDay, DAYS } = rBurndownData();
+  const W = 520, H = 120, PL = 32, PR = 12, PT = 14, PB = 28;
+  const IW = W - PL - PR, IH = H - PT - PB;
+  const maxY = L1_TOTAL + L2_TOTAL; // 18 total
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', '100%'); svg.setAttribute('height', H);
+  svg.style.maxWidth = W + 'px'; svg.style.display = 'block';
+
+  const px = d => PL + (d / DAYS) * IW;
+  const py = v => PT + IH - (v / maxY) * IH;
+
+  function polyline(points, color, dash) {
+    const pl = document.createElementNS(NS, 'polyline');
+    pl.setAttribute('points', points.map(([x, y]) => `${x},${y}`).join(' '));
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', color);
+    pl.setAttribute('stroke-width', '1.5');
+    pl.setAttribute('stroke-linejoin', 'round');
+    pl.setAttribute('stroke-linecap', 'round');
+    if (dash) pl.setAttribute('stroke-dasharray', dash);
+    return pl;
+  }
+
+  /* Grid lines */
+  [0, 0.25, 0.5, 0.75, 1].forEach(f => {
+    const y = py(maxY * f);
+    const l = document.createElementNS(NS, 'line');
+    l.setAttribute('x1', PL); l.setAttribute('x2', W - PR);
+    l.setAttribute('y1', y);  l.setAttribute('y2', y);
+    l.setAttribute('stroke', 'rgba(100,120,140,0.12)'); l.setAttribute('stroke-width', '0.7');
+    svg.appendChild(l);
+    if (f > 0 && f < 1) {
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', PL - 4); t.setAttribute('y', y + 3.5);
+      t.setAttribute('text-anchor', 'end'); t.setAttribute('font-size', '8');
+      t.setAttribute('fill', 'rgba(100,120,140,0.5)'); t.setAttribute('font-family', 'monospace');
+      t.textContent = Math.round(maxY * f);
+      svg.appendChild(t);
+    }
+  });
+
+  /* Ideal burn lines */
+  svg.appendChild(polyline(
+    [[px(0), py(L1_TOTAL)], [px(DAYS), py(0)]],
+    'rgba(16,185,129,0.25)', '4,3'
+  ));
+  svg.appendChild(polyline(
+    [[px(0), py(L2_TOTAL)], [px(DAYS), py(0)]],
+    'rgba(99,102,241,0.25)', '4,3'
+  ));
+
+  /* Actual lines — only up to currentDay */
+  const l1Actual = l1Points.slice(0, currentDay + 1).map((v, d) => [px(d), py(v)]);
+  const l2Actual = l2Points.slice(0, currentDay + 1).map((v, d) => [px(d), py(v)]);
+  if (l1Actual.length > 1) svg.appendChild(polyline(l1Actual, 'rgba(16,185,129,0.9)', null));
+  if (l2Actual.length > 1) svg.appendChild(polyline(l2Actual, 'rgba(99,102,241,0.9)', null));
+
+  /* Today marker */
+  if (currentDay >= 0 && currentDay <= DAYS) {
+    const tx = px(currentDay);
+    const tl = document.createElementNS(NS, 'line');
+    tl.setAttribute('x1', tx); tl.setAttribute('x2', tx);
+    tl.setAttribute('y1', PT); tl.setAttribute('y2', PT + IH);
+    tl.setAttribute('stroke', 'rgba(245,158,11,0.5)'); tl.setAttribute('stroke-width', '1');
+    tl.setAttribute('stroke-dasharray', '3,2');
+    svg.appendChild(tl);
+  }
+
+  /* End dots */
+  [[l1Actual, 'rgba(16,185,129,0.9)'], [l2Actual, 'rgba(99,102,241,0.9)']].forEach(([pts, col]) => {
+    if (!pts.length) return;
+    const last = pts[pts.length - 1];
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', last[0]); c.setAttribute('cy', last[1]); c.setAttribute('r', '3');
+    c.setAttribute('fill', col);
+    svg.appendChild(c);
+  });
+
+  /* X axis labels */
+  [1, 7, 14, 21, 29].forEach(d => {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', px(d)); t.setAttribute('y', H - 6);
+    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '8');
+    t.setAttribute('fill', 'rgba(100,120,140,0.6)'); t.setAttribute('font-family', 'monospace');
+    t.textContent = 'D' + d;
+    svg.appendChild(t);
+  });
+
+  /* Y axis label */
+  const yl = document.createElementNS(NS, 'text');
+  yl.setAttribute('x', 8); yl.setAttribute('y', PT + IH / 2);
+  yl.setAttribute('text-anchor', 'middle'); yl.setAttribute('font-size', '8');
+  yl.setAttribute('fill', 'rgba(100,120,140,0.5)'); yl.setAttribute('font-family', 'monospace');
+  yl.setAttribute('transform', `rotate(-90, 8, ${PT + IH / 2})`);
+  yl.textContent = 'slots left';
+  svg.appendChild(yl);
+
+  return svg;
+}
+
+/* ── INIT ─────────────────────────────────────────────── */
+function initGlobalUI() {
+  updateHeaderStats();
+  updateStickyHeight();
+  window.addEventListener('resize', updateStickyHeight);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGlobalUI);
+} else {
+  initGlobalUI();
+}
+
+/* ══════════════════════════════════════════════════════
+   FEATURE: Q BANK → RUBRIC BRIDGE
+   When a question is marked Mastered, show a score
+   prompt and auto-create a rubric log entry.
+══════════════════════════════════════════════════════ */
+const QB_TRACK_MAP = {
+  swe:   { taskType: 'coding',    domain: 'Java',               role: 'SWE' },
+  mle:   { taskType: 'knowledge', domain: 'Machine Learning',   role: 'MLE' },
+  ds:    { taskType: 'knowledge', domain: 'Statistical Analysis',role: 'DS'  },
+  de:    { taskType: 'knowledge', domain: 'Data Engineering',    role: 'DE'  },
+  react: { taskType: 'coding',    domain: 'TypeScript',          role: 'SWE' },
+  sql:   { taskType: 'knowledge', domain: 'SQL',                 role: 'DE'  },
+  sdlc:  { taskType: 'knowledge', domain: 'Docker/CI/CD',        role: 'SWE' }
+};
+
+function qbShowMasteredPrompt(questionText, trackKey) {
+  if (document.getElementById('qb-log-prompt')) return;
+
+  const map  = QB_TRACK_MAP[trackKey] || { taskType: 'knowledge', domain: '', role: '' };
+  const short = questionText.length > 80 ? questionText.slice(0, 77) + '...' : questionText;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'qb-log-prompt';
+  overlay.className = 'qb-prompt-overlay';
+  overlay.innerHTML = `
+    <div class="qb-prompt-box">
+      <div class="qb-prompt-title">⚖️ Log to Rubric?</div>
+      <div class="qb-prompt-q">${short}</div>
+      <div class="qb-prompt-meta">${map.taskType} · ${map.domain} · ${map.role}</div>
+      <div class="qb-prompt-row">
+        <label class="qb-prompt-label">Your score for this answer (0–100)</label>
+        <input id="qb-prompt-score" class="qb-prompt-input" type="number" min="0" max="100" placeholder="e.g. 78">
+      </div>
+      <div class="qb-prompt-row">
+        <label class="qb-prompt-label">Assistance level</label>
+        <select id="qb-prompt-assist" class="qb-prompt-input">
+          <option value="0">A0 — None</option>
+          <option value="1">A1 — Clarification only</option>
+          <option value="2">A2 — Directional hint</option>
+          <option value="3">A3 — Subsystem identified</option>
+        </select>
+      </div>
+      <div class="qb-prompt-actions">
+        <button id="qb-prompt-save" class="qb-prompt-btn qb-prompt-save">✓ Save to Log</button>
+        <button id="qb-prompt-skip" class="qb-prompt-btn qb-prompt-skip">Skip</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  document.getElementById('qb-prompt-score').focus();
+
+  function dismiss() { overlay.remove(); }
+
+  document.getElementById('qb-prompt-skip').addEventListener('click', dismiss);
+  overlay.addEventListener('click', e => { if (e.target === overlay) dismiss(); });
+
+  document.getElementById('qb-prompt-save').addEventListener('click', () => {
+    const scoreEl = document.getElementById('qb-prompt-score');
+    const score   = parseFloat(scoreEl.value);
+    if (isNaN(score) || score < 0 || score > 100) {
+      scoreEl.style.borderColor = 'var(--audit)';
+      scoreEl.focus();
+      return;
+    }
+    const assist = parseInt(document.getElementById('qb-prompt-assist').value) || 0;
+    const entry  = rNormaliseEntry({
+      date:            new Date().toISOString().slice(0, 10),
+      task:            short,
+      taskType:        map.taskType,
+      domain:          map.domain,
+      primaryDomain:   map.domain,
+      primaryRole:     map.role,
+      difficulty:      2,
+      assistanceLevel: assist,
+      universalScore:  0,
+      taskSpecificScore: 0,
+      finalScore:      score,
+      rawScore:        score,
+      quickLog:        true,
+      evidenceClass:   'prospective'
+    });
+    const entries = rLog();
+    entries.push(entry);
+    rSave(entries);
+    if (typeof updateHeaderStats === 'function') updateHeaderStats();
+
+    const toast = document.createElement('div');
+    toast.className = 'qb-toast';
+    toast.textContent = score >= 70 ? '✓ Logged — pass' : '✓ Logged — below 70';
+    toast.style.background = score >= 70 ? 'var(--done)' : 'var(--audit)';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2800);
+    dismiss();
+  });
+
+  document.getElementById('qb-prompt-score').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('qb-prompt-save').click();
+    if (e.key === 'Escape') dismiss();
+  });
+}
+
+/* Patch markStatus to intercept Mastered clicks */
+(function patchQBMastered() {
+  const orig = window.qbSetSt;
+  // We patch via the event — hook into the mastered btn after each card render
+  const _origRenderQBCard = window.renderQBCard;
+
+  // MutationObserver approach: watch for the mastered button to appear
+  // and intercept its click before the default handler
+  const observer = new MutationObserver(() => {
+    const btn = document.getElementById('qb-mastered-btn');
+    if (btn && !btn.dataset.logPatched) {
+      btn.dataset.logPatched = '1';
+      btn.addEventListener('click', () => {
+        // Only prompt if we're ADDING mastered (not toggling off)
+        const q = QBANK_L1[qbTrack]?.questions[qbIdx];
+        const currentStatus = qbGetSt(q?.id);
+        if (q && currentStatus !== 'mastered') {
+          // Show prompt after a tiny delay so markStatus runs first
+          setTimeout(() => qbShowMasteredPrompt(q.q, qbTrack), 50);
+        }
+      }, true); // capture phase — fires before the existing listener
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const qbEl = document.getElementById('tab-qbank');
+      if (qbEl) observer.observe(qbEl, { childList: true, subtree: true });
+    });
+  } else {
+    const qbEl = document.getElementById('tab-qbank');
+    if (qbEl) observer.observe(qbEl, { childList: true, subtree: true });
+  }
+})();
+
+
+/* ══════════════════════════════════════════════════════
+   FEATURE: DIFFICULTY ATTRIBUTE CALCULATOR
+   §6.1 eight-dimension matrix → D1–D5
+══════════════════════════════════════════════════════ */
+const DIFF_DIMS = [
+  { id: 'scope',     label: 'Scope',               v: ['One function', 'Multiple files', 'Multiple layers / services'] },
+  { id: 'observe',   label: 'Observability',        v: ['Immediate failure', 'Clearly wrong output', 'Plausible successful output'] },
+  { id: 'repro',     label: 'Reproduction',         v: ['Direct', 'Special input', 'Sequence / state dependent'] },
+  { id: 'testq',     label: 'Test quality',         v: ['Accurate failing test', 'Missing / incomplete test', 'Misleading green test'] },
+  { id: 'rcdist',    label: 'Root-cause distance',  v: ['Same line / function', 'Different component', 'Far from symptom'] },
+  { id: 'contract',  label: 'Contract complexity',  v: ['Local behavior', 'One interface', 'Multiple contracts / invariants'] },
+  { id: 'fixcoord',  label: 'Fix coordination',     v: ['Local edit', 'Code plus tests', 'Multi-layer / state-safe change'] },
+  { id: 'falselead', label: 'False-lead density',   v: ['Low', 'Moderate', 'Several plausible causes'] }
+];
+const DIFF_THRESHOLDS = [[0,2,1],[3,5,2],[6,8,3],[9,12,4],[13,16,5]];
+function diffScore(vals) { return vals.reduce((s,v)=>s+(v||0),0); }
+function diffLevel(total) { return (DIFF_THRESHOLDS.find(([lo,hi])=>total>=lo&&total<=hi)||[0,0,1])[2]; }
+
+function buildDiffCalculator(container, onResult) {
+  // onResult(d, total) called when user has all 8 values
+  const vals = Array(8).fill(null);
+  const resultDiv = document.createElement('div');
+  resultDiv.className = 'diff-calc-result diff-calc-hidden';
+
+  DIFF_DIMS.forEach((dim, i) => {
+    const row = document.createElement('div');
+    row.className = 'diff-calc-row';
+    const lbl = document.createElement('div');
+    lbl.className = 'diff-calc-label';
+    lbl.textContent = dim.label;
+    row.appendChild(lbl);
+    const opts = document.createElement('div');
+    opts.className = 'diff-calc-opts';
+    dim.v.forEach((vtxt, score) => {
+      const btn = document.createElement('button');
+      btn.className = 'diff-calc-opt';
+      btn.dataset.score = score;
+      btn.innerHTML = `<span class="diff-calc-score">${score}</span><span class="diff-calc-vtxt">${vtxt}</span>`;
+      btn.addEventListener('click', () => {
+        opts.querySelectorAll('.diff-calc-opt').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        vals[i] = score;
+        const filled = vals.filter(v => v !== null).length;
+        const total  = diffScore(vals);
+        const d      = diffLevel(total);
+        resultDiv.innerHTML = `
+          <span class="diff-calc-total">Score: ${filled < 8 ? total + ' / ' + (filled * 2) + ' so far' : total + '/16'}</span>
+          <span class="diff-calc-d ${filled === 8 ? 'diff-calc-final' : ''}">→ D${d}</span>
+          ${filled === 8 ? '<span class="diff-calc-done">All 8 dimensions scored</span>' : ''}
+        `;
+        resultDiv.classList.remove('diff-calc-hidden');
+        if (filled === 8 && onResult) onResult(d, total);
+      });
+      opts.appendChild(btn);
+    });
+    row.appendChild(opts);
+    container.appendChild(row);
+  });
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'diff-calc-reset';
+  resetBtn.textContent = 'Reset';
+  resetBtn.addEventListener('click', () => {
+    vals.fill(null);
+    container.querySelectorAll('.diff-calc-opt').forEach(b => b.classList.remove('active'));
+    resultDiv.classList.add('diff-calc-hidden');
+  });
+  container.appendChild(resultDiv);
+  container.appendChild(resetBtn);
+}
+
+
+/* ══════════════════════════════════════════════════════
+   FEATURE: NEXT-RECOMMENDED WIDGET
+   Single highest-leverage action based on evidence gaps
+   and days remaining in sprint.
+══════════════════════════════════════════════════════ */
+function rNextRecommended() {
+  const entries    = rLog();
+  const SPRINT_START = new Date(2026, 5, 17);
+  const today      = new Date();
+  const sprintDay  = Math.max(1, Math.min(29, Math.round((today - SPRINT_START) / 86400000) + 1));
+  const daysLeft   = Math.max(1, 29 - sprintDay + 1);
+
+  const TASK_LABELS = {
+    coding: 'coding', debugging: 'debugging', knowledge: 'technical knowledge',
+    sysdesign: 'system design', prodeng: 'production engineering',
+    walkthrough: 'project walkthrough', behavioral: 'behavioral technical'
+  };
+
+  // Build a priority list across all requirements
+  const candidates = [];
+  ['L1','L2','L3'].forEach(lvl => {
+    RD.promotionEvidence[lvl].forEach(req => {
+      const q = entries.filter(e =>
+        e.taskType === req.type && e.finalScore >= 70 &&
+        (req.maxAssist === undefined || (e.assistanceLevel??0) <= req.maxAssist) &&
+        (req.minDiff   === undefined || (e.difficulty??0)    >= req.minDiff)
+      ).length;
+      const remaining = Math.max(0, req.min - q);
+      if (remaining === 0) return; // already met
+      const paceNeeded = remaining / daysLeft;
+      const totalForType = entries.filter(e => e.taskType === req.type).length;
+      const failedForType = entries.filter(e => e.taskType === req.type && e.finalScore < 70).length;
+      candidates.push({
+        lvl, req, remaining, paceNeeded, totalForType, failedForType
+      });
+    });
+  });
+
+  if (!candidates.length) {
+    return { done: true, text: 'All promotion evidence requirements met. 🎉', detail: null };
+  }
+
+  // Sort: highest paceNeeded (most urgent), break ties by lowest level first
+  const lvlPrio = { L1: 0, L2: 1, L3: 2 };
+  candidates.sort((a, b) =>
+    b.paceNeeded - a.paceNeeded || lvlPrio[a.lvl] - lvlPrio[b.lvl]
+  );
+
+  const top = candidates[0];
+  const req = top.req;
+  const taskLabel = TASK_LABELS[req.type] || req.type;
+
+  // Build a specific action sentence
+  const constraints = [];
+  if (req.maxAssist !== undefined) constraints.push(`A≤${req.maxAssist}`);
+  if (req.minDiff   !== undefined) constraints.push(`D≥${req.minDiff}`);
+  const constraintStr = constraints.length ? ` (${constraints.join(', ')})` : '';
+
+  let action, reason;
+  if (top.failedForType > 0 && top.totalForType > 0) {
+    // Have attempts but they didn't pass
+    action = `Score ≥70 on ${top.remaining} more ${taskLabel} attempt${top.remaining > 1 ? 's' : ''}${constraintStr}`;
+    reason = `You have ${top.failedForType} ${taskLabel} attempt${top.failedForType > 1 ? 's' : ''} below 70.`;
+  } else if (top.totalForType === 0) {
+    // No attempts at all
+    action = `Log ${top.remaining} ${taskLabel} attempt${top.remaining > 1 ? 's' : ''}${constraintStr} scoring ≥70`;
+    reason = `No ${taskLabel} attempts logged yet.`;
+  } else {
+    action = `Log ${top.remaining} more passing ${taskLabel} attempt${top.remaining > 1 ? 's' : ''}${constraintStr}`;
+    reason = `${top.totalForType - top.failedForType} qualifying so far, need ${req.min}.`;
+  }
+
+  const pace = top.paceNeeded < 1
+    ? `${(1 / top.paceNeeded).toFixed(1)} days per attempt`
+    : `${top.paceNeeded.toFixed(2)} attempts/day`;
+
+  return {
+    done: false,
+    level: top.lvl,
+    action,
+    reason,
+    pace,
+    daysLeft,
+    remaining: top.remaining,
+    allCount:  candidates.length
+  };
+}
+
+function buildNextRecommended(el) {
+  const rec = rNextRecommended();
+  const wrap = document.createElement('div');
+  wrap.className = 'r-next-rec';
+
+  if (rec.done) {
+    wrap.innerHTML = `<div class="r-next-rec-done">🎉 All promotion evidence requirements met.</div>`;
+    el.appendChild(wrap);
+    return;
+  }
+
+  const lvlColors = { L1: 'var(--done)', L2: 'rgba(99,102,241,0.9)', L3: 'var(--rag)' };
+  const lvlColor  = lvlColors[rec.level] || 'var(--text)';
+
+  wrap.innerHTML = `
+    <div class="r-next-rec-header">
+      <span class="r-next-rec-badge" style="background:${lvlColor}22;color:${lvlColor};border-color:${lvlColor}">
+        ${rec.level}
+      </span>
+      <span class="r-next-rec-label">Next recommended action</span>
+      ${rec.allCount > 1 ? `<span class="r-next-rec-count">${rec.allCount} gaps total</span>` : ''}
+    </div>
+    <div class="r-next-rec-action">${rec.action}</div>
+    <div class="r-next-rec-meta">${rec.reason} · ${rec.pace} · ${rec.daysLeft} days remaining</div>
+  `;
+  el.appendChild(wrap);
 }
