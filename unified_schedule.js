@@ -2739,12 +2739,20 @@ function rSpider(pcts, size, opts) {
 /* ── PROMOTION EVIDENCE ──────────────────────────────── */
 function rCountPromoEvidence(entries, lvl) {
   return (RD.promotionEvidence[lvl] || []).map(req => {
-    const q = entries.filter(e =>
-      e.taskType === req.type && e.finalScore >= 70 &&
+    const all = entries.filter(e => e.taskType === req.type);
+    const q   = all.filter(e =>
+      e.finalScore >= 70 &&
       (req.maxAssist === undefined || e.assistanceLevel <= req.maxAssist) &&
       (req.minDiff   === undefined || e.difficulty    >= req.minDiff)
     );
-    return { ...req, count: q.length, met: q.length >= req.min };
+    const reasons = [];
+    const below70    = all.filter(e => e.finalScore < 70).length;
+    const highAssist = req.maxAssist !== undefined ? all.filter(e => e.finalScore >= 70 && e.assistanceLevel > req.maxAssist).length : 0;
+    const lowDiff    = req.minDiff   !== undefined ? all.filter(e => e.finalScore >= 70 && e.difficulty < req.minDiff).length : 0;
+    if (below70)    reasons.push(below70 + ' below 70');
+    if (highAssist) reasons.push(highAssist + ' A>' + req.maxAssist);
+    if (lowDiff)    reasons.push(lowDiff + ' D<' + req.minDiff);
+    return { ...req, count: q.length, total: all.length, met: q.length >= req.min, reasons };
   });
 }
 function rRollingAvg(entries, taskType) {
@@ -3163,8 +3171,11 @@ function buildRubric() {
         bf.style.width = Math.min(1, c.count/c.min)*100+'%';
         bf.style.background = c.met ? 'var(--done)' : 'var(--rag)';
         bw.appendChild(bf);
+        const countLabel = c.total === 0
+          ? '0/' + c.min + ' (no attempts)'
+          : c.count + '/' + c.min + (c.reasons.length ? ' (' + c.reasons.join(', ') + ')' : '');
         row.appendChild(rEl('div', 'r-promo-row-label', c.label));
-        row.appendChild(rEl('div', 'r-promo-row-count'+(c.met?' r-promo-count-met':''), `${c.count}/${c.min}`));
+        row.appendChild(rEl('div', 'r-promo-row-count'+(c.met?' r-promo-count-met':''), countLabel));
         row.appendChild(bw); block.appendChild(row);
       });
       promoWrap.appendChild(block);
@@ -3223,11 +3234,29 @@ function buildRubric() {
     textarea.placeholder = 'Paste a single entry { } or an array [ { }, { } ] and hit Import.';
     pastePanel.appendChild(textarea);
     const pasteActions = rEl('div', 'r-form-actions');
-    const importBtn = rEl('button', 'r-btn', '\u2191 Import');
-    const clearBtn2 = rEl('button', 'r-btn r-btn-ghost', 'Clear');
-    const pasteMsg  = rEl('div', 'r-save-msg');
-    pasteActions.appendChild(importBtn); pasteActions.appendChild(clearBtn2); pasteActions.appendChild(pasteMsg);
+    const importBtn   = rEl('button', 'r-btn', '\u2191 Import');
+    const browseBtn   = rEl('button', 'r-btn r-btn-ghost', '\ud83d\udcc1 Browse File');
+    const browseFile  = rEl('input', 'r-hidden-file');
+    browseFile.type = 'file'; browseFile.accept = '.json';
+    const clearBtn2   = rEl('button', 'r-btn r-btn-ghost', 'Clear');
+    const pasteMsg    = rEl('div', 'r-save-msg');
+    pasteActions.appendChild(importBtn);
+    pasteActions.appendChild(browseBtn);
+    pasteActions.appendChild(browseFile);
+    pasteActions.appendChild(clearBtn2);
+    pasteActions.appendChild(pasteMsg);
     pastePanel.appendChild(pasteActions); el.appendChild(pastePanel);
+
+    function doImport(parsed) {
+      const existing = rLog(), existIds = new Set(existing.map(e => e.id));
+      const normed = parsed.map(rNormaliseEntry);
+      const fresh = normed.filter(e => !existIds.has(e.id));
+      rSave([...existing, ...fresh].sort((a,b)=>a.date.localeCompare(b.date)));
+      const sk = parsed.length - fresh.length;
+      pasteMsg.textContent = '\u2713 Imported ' + fresh.length + ' entr' + (fresh.length===1?'y':'ies') + (sk ? ' (' + sk + ' duplicate' + (sk>1?'s':'')+' skipped)' : '') + '.';
+      pasteMsg.className = 'r-save-msg r-save-ok';
+      setTimeout(() => { pasteMsg.textContent=''; }, 5000);
+    }
 
     importBtn.addEventListener('click', () => {
       const raw = textarea.value.trim();
@@ -3236,19 +3265,30 @@ function buildRubric() {
         let parsed = JSON.parse(raw);
         if (!Array.isArray(parsed)) parsed = [parsed];
         if (!parsed.length || typeof parsed[0] !== 'object') throw new Error('Expected an object or array of objects');
-        const existing = rLog(), existIds = new Set(existing.map(e => e.id));
-        const normed = parsed.map(rNormaliseEntry);
-        const fresh = normed.filter(e => !existIds.has(e.id));
-        rSave([...existing, ...fresh].sort((a,b)=>a.date.localeCompare(b.date)));
-        const sk = parsed.length - fresh.length;
-        pasteMsg.textContent = `\u2713 Imported ${fresh.length} entr${fresh.length===1?'y':'ies'}${sk ? ` (${sk} duplicate${sk>1?'s':''} skipped)` : ''}.`;
-        pasteMsg.className = 'r-save-msg r-save-ok';
+        doImport(parsed);
         textarea.value = '';
-        setTimeout(() => { pasteMsg.textContent=''; }, 5000);
       } catch(e) {
         pasteMsg.textContent = '\u26a0 ' + e.message;
         pasteMsg.className = 'r-save-msg r-save-err';
       }
+    });
+    browseBtn.addEventListener('click', () => browseFile.click());
+    browseFile.addEventListener('change', () => {
+      const file = browseFile.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          let parsed = JSON.parse(ev.target.result);
+          if (!Array.isArray(parsed)) parsed = [parsed];
+          if (!parsed.length || typeof parsed[0] !== 'object') throw new Error('Expected an object or array of objects');
+          doImport(parsed);
+          browseFile.value = '';
+        } catch(e) {
+          pasteMsg.textContent = '\u26a0 ' + e.message;
+          pasteMsg.className = 'r-save-msg r-save-err';
+        }
+      };
+      reader.readAsText(file);
     });
     clearBtn2.addEventListener('click', () => { textarea.value=''; pasteMsg.textContent=''; });
 
