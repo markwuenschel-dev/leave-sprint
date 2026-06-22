@@ -2121,7 +2121,7 @@ if(document.readyState==='loading') {
    RUBRIC — Technical Competency Scoring System v1.5
 ══════════════════════════════════════════════════════ */
 
-const RUBRIC_VERSION = '1.5';
+const RUBRIC_VERSION = '1.9';
 const RUBRIC_LOG_KEY = 'rubric-log-v1';
 
 /* ── REFERENCE DATA ─────────────────────────────────── */
@@ -2325,6 +2325,19 @@ const RD = {
         { name: 'Production limitations and next steps',   weight: 15 }
       ],
       note: 'Candidate must distinguish what they personally implemented vs. generated/inherited/adapted. Inflated ownership claims \u2192 severe penalty.'
+    },
+    {
+      id: 'behavioral', label: 'Behavioral Technical',
+      categories: [
+        { name: 'Situation, stakes, and technical context',           weight: 10 },
+        { name: 'Personal ownership and scope',                       weight: 20 },
+        { name: 'Actions, decisions, and technical judgment',         weight: 20 },
+        { name: 'Technical mechanism and problem-solving depth',      weight: 15 },
+        { name: 'Collaboration, disagreement, and stakeholder work',  weight: 15 },
+        { name: 'Results, evidence, and measurable impact',           weight: 10 },
+        { name: 'Reflection, learning, and recurrence prevention',    weight: 10 }
+      ],
+      note: 'Scored on whether the candidate establishes what happened, separates personal ownership, explains technical and interpersonal decisions, supports results with evidence, and shows learning. Not scored as presentation polish or generic likability.'
     }
   ],
 
@@ -2607,7 +2620,31 @@ function rNormaliseEntry(raw) {
     gates: raw.gates || {}, weaknessTags: raw.weaknessTags || [],
     strengths: raw.strengths || '', weaknesses: raw.weaknesses || '',
     nextTarget: raw.nextTarget || '',
-    quickLog: raw.quickLog || false
+    quickLog: raw.quickLog || false,
+
+    /* §17 Diagnostic Progress Model — v1.9 */
+    knowledgeGapTags:    raw.knowledgeGapTags    || [],
+    gapTypes:            raw.gapTypes            || [],
+    expectedElements:    raw.expectedElements    || [],
+    presentElements:     raw.presentElements     || [],
+    missingElements:     raw.missingElements     || [],
+    elementSource:       raw.elementSource       || '',
+    probeReadiness:      raw.probeReadiness      || null,
+    evidenceSource:      Array.isArray(raw.evidenceSource) ? raw.evidenceSource : (raw.evidenceSource ? [raw.evidenceSource] : []),
+    retention:           raw.retention           || null,
+    llmIndependence:     raw.llmIndependence     || null,
+    roleRequirementCoverage: raw.roleRequirementCoverage || null,
+    artifactReadiness:   raw.artifactReadiness   || null,
+    staleness:           raw.staleness           || null,
+    gapClosureStatus:    raw.gapClosureStatus    || null,
+    priority:            raw.priority            || null,
+    gapImpact:           raw.gapImpact           || null,
+    assessmentMode:      raw.assessmentMode      || null,
+    calibration:         raw.calibration         || null,
+    retestPlan:          raw.retestPlan          || null,
+    roleReadinessRollup: raw.roleReadinessRollup || null,
+    proofStrength:       raw.proofStrength       || null,
+    antiInflationChecks: raw.antiInflationChecks || null
   };
 }
 
@@ -3181,6 +3218,153 @@ function buildRubric() {
       ws.appendChild(tr); el.appendChild(ws);
     }
 
+    /* Diagnostics summary — v1.9 */
+    (function buildDiagnostics() {
+      const dEntries = entries.filter(e =>
+        e.probeReadiness || e.llmIndependence || (e.gapTypes && e.gapTypes.length) ||
+        (e.knowledgeGapTags && e.knowledgeGapTags.length) || e.calibration ||
+        (e.staleness && e.staleness.refreshNeeded) || (e.gapImpact && e.gapImpact.isBlocking)
+      );
+      if (!dEntries.length) return;
+
+      const diagSec = rEl('div', 'r-diag-section');
+      diagSec.appendChild(rEl('div', 'r-section-label', 'Diagnostics — v1.9'));
+
+      const diagGrid = rEl('div', 'r-diag-grid');
+
+      /* Probe Readiness */
+      const withProbe = entries.filter(e => e.probeReadiness);
+      if (withProbe.length) {
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Probe Readiness'));
+        [['First answer', 'firstAnswer'], ['One follow-up', 'oneFollowUp'], ['Deep follow-up', 'deepFollowUp']].forEach(([lbl, key]) => {
+          const vals = withProbe.map(e => e.probeReadiness[key]).filter(Boolean);
+          if (!vals.length) return;
+          const pass = vals.filter(v => v === 'Pass').length;
+          const unc  = vals.filter(v => v === 'Uncertain').length;
+          const fail = vals.filter(v => v === 'Fail').length;
+          const row = rEl('div', 'r-diag-probe-row');
+          row.appendChild(rEl('span', 'r-diag-probe-lbl', lbl));
+          const bar = rEl('div', 'r-diag-probe-bar');
+          if (pass) { const s = rEl('div', 'r-diag-probe-seg probe-pass'); s.style.width = (pass/vals.length*100)+'%'; s.title = pass+' Pass'; bar.appendChild(s); }
+          if (unc)  { const s = rEl('div', 'r-diag-probe-seg probe-unc');  s.style.width = (unc/vals.length*100)+'%';  s.title = unc+' Uncertain'; bar.appendChild(s); }
+          if (fail) { const s = rEl('div', 'r-diag-probe-seg probe-fail'); s.style.width = (fail/vals.length*100)+'%'; s.title = fail+' Fail'; bar.appendChild(s); }
+          row.appendChild(bar);
+          row.appendChild(rEl('span', 'r-diag-probe-pct', Math.round(pass/vals.length*100)+'%'));
+          card.appendChild(row);
+        });
+        diagGrid.appendChild(card);
+      }
+
+      /* LLM Independence */
+      const withLLM = entries.filter(e => e.llmIndependence);
+      if (withLLM.length) {
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'LLM Independence'));
+        const llmUsed = withLLM.filter(e => e.llmIndependence.llmUsed).length;
+        const pct = Math.round(llmUsed / withLLM.length * 100);
+        const stat = rEl('div', 'r-diag-llm-stat');
+        stat.innerHTML = `LLM used: <span class="${pct > 60 ? 'diag-warn' : 'diag-ok'}">${llmUsed}/${withLLM.length} (${pct}%)</span>`;
+        card.appendChild(stat);
+        const withFive = withLLM.filter(e => e.llmIndependence.fivePassStatus);
+        if (withFive.length) {
+          const passes = ['buildPass','rewritePass','testPass','explainPass','documentPass'];
+          const labels = ['Build','Rewrite','Test','Explain','Document'];
+          passes.forEach((p, i) => {
+            const cnt = withFive.filter(e => e.llmIndependence.fivePassStatus[p]).length;
+            const row = rEl('div', 'r-diag-five-row');
+            row.appendChild(rEl('span', 'r-diag-five-lbl', labels[i]));
+            const bw = rEl('div', 'r-diag-five-bar-wrap');
+            const bf = rEl('div', 'r-diag-five-bar'); bf.style.width = (cnt/withFive.length*100)+'%';
+            bf.style.background = cnt/withFive.length >= 0.6 ? 'var(--done)' : 'var(--audit)';
+            bw.appendChild(bf);
+            row.appendChild(bw);
+            row.appendChild(rEl('span', 'r-diag-five-cnt', cnt+'/'+withFive.length));
+            card.appendChild(row);
+          });
+        }
+        diagGrid.appendChild(card);
+      }
+
+      /* Gap Type Distribution */
+      const allGapTypes = entries.flatMap(e => e.gapTypes || []);
+      if (allGapTypes.length) {
+        const freq = {};
+        allGapTypes.forEach(t => { freq[t] = (freq[t]||0)+1; });
+        const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Gap Types'));
+        sorted.slice(0, 6).forEach(([type, count]) => {
+          const row = rEl('div', 'r-diag-gap-row');
+          const label = type.replace(' gap','');
+          row.appendChild(rEl('span', 'r-diag-gap-lbl', label));
+          const bw = rEl('div', 'r-diag-gap-bar-wrap');
+          const bf = rEl('div', 'r-diag-gap-bar');
+          bf.style.width = (count / sorted[0][1] * 100) + '%';
+          bw.appendChild(bf); row.appendChild(bw);
+          row.appendChild(rEl('span', 'r-diag-gap-cnt', count));
+          card.appendChild(row);
+        });
+        diagGrid.appendChild(card);
+      }
+
+      /* Calibration */
+      const withCal = entries.filter(e => e.calibration);
+      if (withCal.length) {
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Calibration'));
+        const evalFreq = {};
+        withCal.forEach(e => { const t = e.calibration.evaluatorType || 'unknown'; evalFreq[t] = (evalFreq[t]||0)+1; });
+        const humanReviewed = withCal.filter(e => e.calibration.humanReviewed).length;
+        const realSig = withCal.filter(e => e.calibration.realInterviewSignal).length;
+        Object.entries(evalFreq).sort((a,b)=>b[1]-a[1]).forEach(([type, count]) => {
+          const row = rEl('div', 'r-diag-cal-row');
+          row.appendChild(rEl('span', 'r-diag-cal-type', type));
+          row.appendChild(rEl('span', 'r-diag-cal-cnt', count));
+          card.appendChild(row);
+        });
+        if (humanReviewed || realSig) {
+          const note = rEl('div', 'r-diag-cal-note');
+          if (humanReviewed) note.innerHTML += `<span class="diag-ok">${humanReviewed} human-reviewed</span> `;
+          if (realSig) note.innerHTML += `<span class="diag-ok">${realSig} real interview signal</span>`;
+          card.appendChild(note);
+        }
+        diagGrid.appendChild(card);
+      }
+
+      /* Staleness / Blocking */
+      const stale = entries.filter(e => e.staleness && e.staleness.refreshNeeded);
+      const blocking = entries.filter(e => e.gapImpact && e.gapImpact.isBlocking);
+      if (stale.length || blocking.length) {
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Alerts'));
+        if (blocking.length) {
+          const bl = rEl('div', 'r-diag-alert r-diag-alert-block');
+          bl.textContent = '⚠ ' + blocking.length + ' blocking gap' + (blocking.length > 1 ? 's' : '');
+          card.appendChild(bl);
+          blocking.slice(0, 3).forEach(e => {
+            const item = rEl('div', 'r-diag-alert-item');
+            item.textContent = e.task.slice(0, 50) + (e.task.length > 50 ? '…' : '') + (e.gapImpact.blocksLevel ? ' → ' + e.gapImpact.blocksLevel : '');
+            card.appendChild(item);
+          });
+        }
+        if (stale.length) {
+          const sl = rEl('div', 'r-diag-alert r-diag-alert-stale');
+          sl.textContent = '⏰ ' + stale.length + ' need' + (stale.length === 1 ? 's' : '') + ' refresh';
+          card.appendChild(sl);
+          stale.slice(0, 3).forEach(e => {
+            const item = rEl('div', 'r-diag-alert-item');
+            item.textContent = e.task.slice(0, 50) + (e.task.length > 50 ? '…' : '') + (e.staleness.daysSincePractice ? ' (' + e.staleness.daysSincePractice + ' days)' : '');
+            card.appendChild(item);
+          });
+        }
+        diagGrid.appendChild(card);
+      }
+
+      diagSec.appendChild(diagGrid);
+      el.appendChild(diagSec);
+    })();
+
     /* Promotion evidence */
     const promoWrap = rEl('div', 'r-promo-section');
     promoWrap.appendChild(rEl('div', 'r-section-label', 'Promotion Evidence Progress'));
@@ -3233,29 +3417,39 @@ function buildRubric() {
     const schemaToggle = rEl('button', 'r-schema-toggle', '\u25b6 Show JSON schema');
     const schemaBlock  = rEl('div', 'r-schema-block r-hidden');
     const SCHEMA_EXAMPLE = {
-      date: "2026-06-19", task: "...", taskType: "coding",
-      domain: "Java / Data Structures",
-      problemLevel: "L2", difficulty: 3,
-      difficultyAssignment: "Precommitted",
-      targetLevel: "L2", assistanceLevel: 0,
-      autonomyConfidence: "Verified",
-      evidenceClass: "prospective",
+      date: "2026-06-19", task: "Implement LRU Cache", taskType: "coding",
+      domain: "Java / Data Structures", difficulty: 3,
+      targetLevel: "L2", assistanceLevel: 0, evidenceClass: "prospective",
       primaryDomain: "Java", secondaryDomains: ["Algorithms/DSA"],
       primaryRole: "SWE", secondaryRoles: [],
       universalSubScores: { correctness: 21, reasoning: 15, judgment: 11, validation: 12, communication: 13, completeness: 8 },
-      universalScore: 80, taskSpecificScore: 76,
-      cap: null, penalties: 0,
+      universalScore: 80, taskSpecificScore: 76, cap: null, penalties: 0,
       levelScores: { L1: 90, L2: 78, L3: 55 },
-      answerLevel: "Level II",
-      demonstratedLevel: "Strong Level I",
-      qualifyingEvidenceNote: "...",
-      mainReasonNextLevelNotReached: "...",
-      surviveProbing: "Yes",
-      confidence: "Medium",
+      demonstratedLevel: "Strong Level I", confidence: "Medium",
       weaknessTags: ["Shallow reasoning","Thin tradeoffs"],
-      gates: { Correctness: "Pass", Relevance: "Pass", "Independent explanation": "Partial", Evidence: "Pass", "Safety and integrity": "Pass", Completion: "Pass" },
-      strengths: "...", weaknesses: "...", nextTarget: "..."
-    };
+      knowledgeGapTags: ["LinkedHashMap insertion order", "O(1) amortized complexity proof"],
+      gapTypes: ["Mechanism gap", "Verification gap"],
+      expectedElements: ["Defines LinkedHashMap usage", "States O(1) access"],
+      presentElements: ["Defines LinkedHashMap usage"],
+      missingElements: ["States O(1) access"],
+      elementSource: "Rubric-derived",
+      probeReadiness: { firstAnswer: "Pass", oneFollowUp: "Uncertain", deepFollowUp: "Fail", likelyFailurePoint: "Cannot explain why LinkedHashMap maintains insertion order" },
+      evidenceSource: ["live coding", "verbal answer"],
+      llmIndependence: { llmUsed: false, llmUseType: ["none"], implementationGeneratedByLLM: false, testsGeneratedByLLM: false, answerDraftedByLLM: false, reproducedWithoutLLM: true, explainedWithoutLLM: true, fivePassStatus: { buildPass: true, rewritePass: false, testPass: true, explainPass: true, documentPass: false } },
+      assessmentMode: { mode: "live coding", timeLimitMinutes: 25, notesAllowed: false, followUpsAsked: 1, pressureLevel: "Medium" },
+      calibration: { evaluatorType: "AI grader", humanReviewed: false, realInterviewSignal: false, calibrationConfidence: "Medium" },
+      gapClosureStatus: { status: "open", openedDate: "2026-06-19", closedDate: null, closureEvidence: "", retestRequired: true },
+      priority: { severity: "Medium", urgency: "High", roleImpact: "High", nextActionType: "retest", recommendedAction: "Retest LRU Cache verbally with one follow-up about time complexity proof in 5 days." },
+      gapImpact: { isBlocking: false, blocksRoles: [], blocksLevel: "None", reason: "" },
+      retestPlan: { retestDate: "2026-06-24", retestPrompt: "Explain why LinkedHashMap maintains insertion order for LRU eviction.", successCriteria: ["Names doubly-linked list structure", "Explains O(1) access+removal", "States eviction rule"] },
+      proofStrength: { score: 0.55, basis: ["code exists", "tests pass"], missingProof: ["human mock interview", "retest after 7 days"] },
+      staleness: { lastPracticed: "2026-06-19", daysSincePractice: 0, stalenessRisk: "Low", refreshNeeded: false },
+      antiInflationChecks: { overclaimRisk: "Low", productionClaimSafe: false, ownershipClaimSafe: true, llmDependencyRisk: "Low", notes: "" },
+      strengths: "Correct implementation. Identified the right data structures unprompted.",
+      weaknesses: "Complexity analysis surface-level. Cannot explain LinkedHashMap internals.",
+      nextTarget: "Practice explaining invariants explicitly before writing code.",
+      gates: { Correctness: "Pass", Relevance: "Pass", "Independent explanation": "Partial", Evidence: "Pass", "Safety and integrity": "Pass", Completion: "Pass" }
+    }
     schemaBlock.appendChild(rEl('pre', 'r-template', JSON.stringify(SCHEMA_EXAMPLE, null, 2)));
     schemaToggle.addEventListener('click', () => {
       const open = !schemaBlock.classList.contains('r-hidden');
@@ -3557,6 +3751,122 @@ function buildRubric() {
           });
           gr.appendChild(gl); detail.appendChild(gr);
         }
+        /* v1.9 diagnostic fields */
+        if (e.probeReadiness) {
+          const pr = rEl('div','r-hist-detail-row');
+          pr.appendChild(rEl('span','r-hist-detail-lbl','Probe readiness'));
+          const prv = rEl('div','r-hist-probe-row');
+          [['First answer','firstAnswer'],['One follow-up','oneFollowUp'],['Deep','deepFollowUp']].forEach(([lbl,key])=>{
+            if (!e.probeReadiness[key]) return;
+            const v = e.probeReadiness[key];
+            const cls = v==='Pass'?'probe-pass':v==='Fail'?'probe-fail':'probe-unc';
+            prv.appendChild(rEl('span','r-probe-badge '+cls, lbl+': '+v));
+          });
+          if (e.probeReadiness.likelyFailurePoint) {
+            prv.appendChild(rEl('span','r-probe-fail-pt', '→ ' + e.probeReadiness.likelyFailurePoint));
+          }
+          pr.appendChild(prv); detail.appendChild(pr);
+        }
+        if (e.knowledgeGapTags && e.knowledgeGapTags.length) {
+          const kg = rEl('div','r-hist-detail-row');
+          kg.appendChild(rEl('span','r-hist-detail-lbl','Knowledge gaps'));
+          const tg = rEl('div','r-hist-tags');
+          e.knowledgeGapTags.forEach(t => tg.appendChild(rEl('span','r-weak-tag r-weak-tag-sm r-kgtag',t)));
+          kg.appendChild(tg); detail.appendChild(kg);
+        }
+        if (e.gapTypes && e.gapTypes.length) {
+          const gt = rEl('div','r-hist-detail-row');
+          gt.appendChild(rEl('span','r-hist-detail-lbl','Gap types'));
+          const tg = rEl('div','r-hist-tags');
+          e.gapTypes.forEach(t => tg.appendChild(rEl('span','r-weak-tag r-weak-tag-sm',t)));
+          gt.appendChild(tg); detail.appendChild(gt);
+        }
+        if (e.llmIndependence) {
+          const li = rEl('div','r-hist-detail-row');
+          li.appendChild(rEl('span','r-hist-detail-lbl','LLM independence'));
+          const lis = rEl('div','r-hist-llm');
+          const used = e.llmIndependence.llmUsed ? 'LLM used' : 'LLM-free';
+          lis.appendChild(rEl('span', e.llmIndependence.llmUsed?'r-llm-used':'r-llm-free', used));
+          if (e.llmIndependence.reproducedWithoutLLM !== undefined)
+            lis.appendChild(rEl('span', e.llmIndependence.reproducedWithoutLLM?'r-llm-free':'r-llm-used',
+              e.llmIndependence.reproducedWithoutLLM ? '\u2713 reproduced' : '\u2717 not reproduced'));
+          if (e.llmIndependence.fivePassStatus) {
+            const fps = e.llmIndependence.fivePassStatus;
+            const p = ['buildPass','rewritePass','testPass','explainPass','documentPass'];
+            const lbs = ['B','Re','T','Ex','D'];
+            const frow = rEl('div','r-llm-five');
+            p.forEach((k,i) => {
+              const s = rEl('span','r-llm-five-item '+(fps[k]?'five-pass':'five-fail'), lbs[i]);
+              s.title = ['Build','Rewrite','Test','Explain','Document'][i] + ': ' + (fps[k]?'Pass':'Fail');
+              frow.appendChild(s);
+            });
+            lis.appendChild(frow);
+          }
+          li.appendChild(lis); detail.appendChild(li);
+        }
+        if (e.assessmentMode) {
+          const am = rEl('div','r-hist-detail-row');
+          am.appendChild(rEl('span','r-hist-detail-lbl','Assessment mode'));
+          const amv = [
+            e.assessmentMode.mode,
+            e.assessmentMode.timeLimitMinutes ? e.assessmentMode.timeLimitMinutes+'min' : null,
+            e.assessmentMode.notesAllowed ? 'notes allowed' : null,
+            e.assessmentMode.followUpsAsked ? e.assessmentMode.followUpsAsked+' follow-ups' : null,
+            e.assessmentMode.pressureLevel ? e.assessmentMode.pressureLevel+' pressure' : null
+          ].filter(Boolean).join(' \u00b7 ');
+          am.appendChild(rEl('p','r-hist-text',amv)); detail.appendChild(am);
+        }
+        if (e.calibration) {
+          const cal = rEl('div','r-hist-detail-row');
+          cal.appendChild(rEl('span','r-hist-detail-lbl','Calibration'));
+          const calv = [
+            e.calibration.evaluatorType,
+            e.calibration.humanReviewed ? '\u2713 human reviewed' : null,
+            e.calibration.realInterviewSignal ? '\u2713 real interview signal' : null,
+            e.calibration.calibrationConfidence ? e.calibration.calibrationConfidence+' confidence' : null
+          ].filter(Boolean).join(' \u00b7 ');
+          cal.appendChild(rEl('p','r-hist-text',calv)); detail.appendChild(cal);
+        }
+        if (e.gapImpact && e.gapImpact.isBlocking) {
+          const gi = rEl('div','r-hist-detail-row');
+          gi.appendChild(rEl('span','r-hist-detail-lbl','\u26a0 Blocking gap'));
+          const giv = [
+            e.gapImpact.blocksLevel ? 'Blocks '+e.gapImpact.blocksLevel : '',
+            e.gapImpact.blocksRoles && e.gapImpact.blocksRoles.length ? e.gapImpact.blocksRoles.join(', ') : '',
+            e.gapImpact.reason || ''
+          ].filter(Boolean).join(' \u00b7 ');
+          gi.appendChild(rEl('p','r-hist-text r-hist-text-warn',giv)); detail.appendChild(gi);
+        }
+        if (e.priority && e.priority.recommendedAction) {
+          const pri = rEl('div','r-hist-detail-row');
+          pri.appendChild(rEl('span','r-hist-detail-lbl','Priority action'));
+          const badge = rEl('span','r-priority-badge pri-'+( e.priority.severity||'').toLowerCase(), e.priority.severity||'');
+          const act = rEl('p','r-hist-text');
+          act.appendChild(badge);
+          act.appendChild(document.createTextNode(' ' + e.priority.recommendedAction));
+          pri.appendChild(act); detail.appendChild(pri);
+        }
+        if (e.retestPlan && e.retestPlan.retestDate) {
+          const rp = rEl('div','r-hist-detail-row');
+          rp.appendChild(rEl('span','r-hist-detail-lbl','Retest plan'));
+          rp.appendChild(rEl('p','r-hist-text', '\u23f0 ' + e.retestPlan.retestDate + (e.retestPlan.retestPrompt ? ' \u2014 ' + e.retestPlan.retestPrompt : '')));
+          detail.appendChild(rp);
+        }
+        if (e.proofStrength && e.proofStrength.score !== undefined) {
+          const ps = rEl('div','r-hist-detail-row');
+          ps.appendChild(rEl('span','r-hist-detail-lbl','Proof strength'));
+          const pct = Math.round(e.proofStrength.score * 100);
+          const bw = rEl('div','r-hist-proof-bar-wrap');
+          const bf = rEl('div','r-hist-proof-bar');
+          bf.style.width = pct + '%';
+          bf.style.background = pct >= 75 ? 'var(--done)' : pct >= 50 ? 'var(--doing)' : 'var(--audit)';
+          bw.appendChild(bf);
+          const prow = rEl('div','r-hist-proof-row');
+          prow.appendChild(bw);
+          prow.appendChild(rEl('span','r-hist-proof-val', pct+'%'));
+          ps.appendChild(prow); detail.appendChild(ps);
+        }
+
         expandBtn.addEventListener('click',()=>{
           const open=!detail.classList.contains('r-hist-collapsed');
           detail.classList.toggle('r-hist-collapsed',open);
@@ -3592,7 +3902,8 @@ function buildRubric() {
       ['ref-levelrules','\u00a714 Level Rules'],
       ['ref-bands',     '\u00a715 Score Bands'],
       ['ref-promo',     'Promotion Standard'],
-      ['ref-grading',   '\u00a719 Grading Principles']
+      ['ref-diag',     '\u00a717 Diagnostic Model'],
+      ['ref-grading',   '\u00a720 Grading Principles']
     ].forEach(([id, label]) => {
       const a = rEl('a', 'r-ref-nav-link', label); a.href = '#' + id;
       a.addEventListener('click', e => { e.preventDefault(); const t=document.getElementById(id); if(t){t.open=true;t.scrollIntoView({behavior:'smooth',block:'start'});} });
@@ -3863,7 +4174,51 @@ Main reason the next level was not reached: __`));
       body.appendChild(rEl('p','r-note','Meeting the count alone does not guarantee the level. Quality and breadth of evidence must also meet the bar.'));
     });
 
-    addAcc('ref-grading', '\u00a719 \u2014 Grading Principles', body => {
+    addAcc('ref-diag', '\u00a717 \u2014 Diagnostic Progress Model (v1.9)', body => {
+      body.appendChild(rEl('p','r-note','New in v1.9. These fields explain what scores mean over time. They do not replace the three-score model. Populate every field the evidence supports; omit only when evidence is genuinely unavailable.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.2 Gap Type Classification'));
+      body.appendChild(rTbl(['Gap type','Meaning','Typical fix'],[
+        ['Conceptual gap','Does not know the concept.','Study and rebuild from fundamentals.'],
+        ['Mechanism gap','Knows the label but not how it works.','Explain internals, lifecycle, invariants, or data flow.'],
+        ['Application gap','Cannot map concept to real project or scenario.','Apply to repo, architecture, or artifact.'],
+        ['Tradeoff gap','Cannot explain alternatives, limitations, or why-not.','Compare options and identify constraints.'],
+        ['Recall gap','Likely knows material but could not retrieve it.','Spaced repetition and verbal reps.'],
+        ['Verification gap','Makes claims without tests or observable evidence.','Add proof, tests, measurements, or citations.'],
+        ['Autonomy gap','Needed too much assistance.','Rebuild unaided and retest.'],
+        ['Communication gap','Understood more than communicated.','Practice concise mechanism-level explanation.'],
+        ['Scope gap','Solved local issue but missed system impact.','Add dependency-chain and failure-mode analysis.'],
+        ['Evidence quality gap','Record too incomplete to score confidently.','Re-run as prospective controlled assessment.']
+      ]));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.4 Probe Readiness'));
+      body.appendChild(rEl('p',null,'firstAnswer \u00b7 oneFollowUp \u00b7 deepFollowUp (Pass / Uncertain / Fail) \u00b7 likelyFailurePoint.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.7 LLM Independence'));
+      body.appendChild(rEl('p',null,'llmUsed \u00b7 llmUseType \u00b7 implementationGeneratedByLLM \u00b7 testsGeneratedByLLM \u00b7 answerDraftedByLLM \u00b7 reproducedWithoutLLM \u00b7 explainedWithoutLLM \u00b7 fivePassStatus: build, rewrite, test, explain, document.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.8 Role Requirement Coverage'));
+      body.appendChild(rEl('p',null,'targetRole \u00b7 requirementsHit \u00b7 requirementsMissing \u00b7 requirementsPartial \u00b7 coverageScore (0.00\u20131.00).'));
+      body.appendChild(rEl('p','r-note','Archetypes: Chewy SWE II \u2014 HR Systems, SWE II \u2014 Backend, MLE II \u2014 Legal, DS II \u2014 Customer Care, DE / Analytics Engineering Bridge, Platform / DevOps.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.9 Artifact Readiness'));
+      body.appendChild(rEl('p',null,'readinessStage: idea \u2192 in-progress \u2192 works locally \u2192 tested \u2192 documented \u2192 demo-ready \u2192 portfolio-ready \u2192 interview-defensible \u2192 production-shaped \u2192 production-deployed.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.10 Staleness'));
+      body.appendChild(rTbl(['Days since practice','Default risk'],[['0\u201314','Low'],['15\u201345','Medium'],['46+','High']]));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.12 Priority'));
+      body.appendChild(rEl('p',null,'severity (Low/Medium/High/Critical) \u00b7 urgency \u00b7 roleImpact \u00b7 nextActionType \u00b7 recommendedAction. High-severity gaps with low role impact should not outrank medium-severity gaps that block the active role.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.14 Assessment Mode'));
+      body.appendChild(rEl('p',null,'mode: written, verbal, live coding, debugging session, project walkthrough, mock interview, real interview. Written untimed answers are weaker readiness evidence than verbal or live-screen evidence.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.15 Calibration'));
+      body.appendChild(rEl('p',null,'evaluatorType: self, AI grader, peer, senior engineer, recruiter, hiring manager, real interviewer.'));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.18 Proof Strength (0.00\u20131.00)'));
+      body.appendChild(rTbl(['Score','Meaning'],[
+        ['0.00\u20130.24','Claim only or weak anecdotal evidence'],
+        ['0.25\u20130.49','Partial evidence, not interview-defensible yet'],
+        ['0.50\u20130.74','Usable evidence with meaningful gaps'],
+        ['0.75\u20130.89','Strong evidence, likely defensible'],
+        ['0.90\u20131.00','Very strong: tested, explained, retained, externally calibrated']
+      ]));
+      body.appendChild(rEl('div','r-sub-title','\u00a717.19 Anti-Inflation'));
+      body.appendChild(rEl('p',null,'productionClaimSafe \u00b7 ownershipClaimSafe \u00b7 overclaimRisk \u00b7 llmDependencyRisk. production-shaped must not be described as production experience. ownershipClaimSafe = false when candidate cannot distinguish personal contribution from team, LLM, tutorial, or inherited work.'));
+    });
+
+    addAcc('ref-grading', '\u00a720 \u2014 Grading Principles', body => {
       body.appendChild(rList(RD.gradingPrinciples));
     });
 

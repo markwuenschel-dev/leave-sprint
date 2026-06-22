@@ -2430,3 +2430,81 @@ details[open] > .rsec-title::before { transform: rotate(90deg); }
 }
 @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
 @keyframes toastOut { to { opacity:0; } }
+
+/* ── v1.9 DIAGNOSTIC PROGRESS ────────────────────────── */
+.r-diag-section { margin-bottom: 24px; }
+.r-diag-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 760px) { .r-diag-grid { grid-template-columns: 1fr 1fr; } }
+.r-diag-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+.r-diag-card-title { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+/* Probe readiness */
+.r-diag-probe-row { display: grid; grid-template-columns: 80px 1fr 28px; gap: 6px; align-items: center; margin-bottom: 4px; }
+.r-diag-probe-lbl { font-family: var(--mono); font-size: 10px; color: var(--text-mid); }
+.r-diag-probe-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--border); }
+.r-diag-probe-seg { height: 100%; }
+.probe-pass { background: var(--done); }
+.probe-unc  { background: var(--doing); }
+.probe-fail { background: var(--audit); }
+.r-diag-probe-pct { font-family: var(--mono); font-size: 10px; color: var(--text); text-align: right; }
+
+/* LLM independence */
+.r-diag-llm-stat { font-family: var(--mono); font-size: 11px; color: var(--text-mid); margin-bottom: 6px; }
+.diag-ok   { color: var(--done); }
+.diag-warn { color: var(--audit); }
+.r-diag-five-row { display: grid; grid-template-columns: 52px 1fr 28px; gap: 6px; align-items: center; margin-bottom: 3px; }
+.r-diag-five-lbl { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+.r-diag-five-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.r-diag-five-bar { height: 100%; border-radius: 2px; }
+.r-diag-five-cnt { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align: right; }
+
+/* Gap types */
+.r-diag-gap-row { display: grid; grid-template-columns: 90px 1fr 20px; gap: 6px; align-items: center; margin-bottom: 3px; }
+.r-diag-gap-lbl { font-family: var(--mono); font-size: 10px; color: var(--text-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-diag-gap-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.r-diag-gap-bar { height: 100%; border-radius: 2px; background: var(--sql); }
+.r-diag-gap-cnt { font-family: var(--mono); font-size: 10px; color: var(--text-dim); text-align: right; }
+
+/* Calibration */
+.r-diag-cal-row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text-mid); margin-bottom: 3px; }
+.r-diag-cal-type { color: var(--text-mid); }
+.r-diag-cal-cnt { color: var(--text); font-weight: 600; }
+.r-diag-cal-note { font-family: var(--mono); font-size: 9px; margin-top: 5px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Alerts */
+.r-diag-alert { font-family: var(--mono); font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+.r-diag-alert-block { color: var(--audit); }
+.r-diag-alert-stale { color: var(--doing); }
+.r-diag-alert-item { font-family: var(--mono); font-size: 10px; color: var(--text-dim); padding-left: 10px; margin-bottom: 2px; }
+
+/* History — v1.9 detail fields */
+.r-hist-probe-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.r-probe-badge { font-family: var(--mono); font-size: 10px; border-radius: 3px; padding: 2px 7px; border: 1px solid; }
+.probe-pass.r-probe-badge { color: var(--done); border-color: var(--done); background: rgba(16,185,129,0.08); }
+.probe-unc.r-probe-badge  { color: var(--doing); border-color: var(--doing); background: rgba(245,158,11,0.08); }
+.probe-fail.r-probe-badge { color: var(--audit); border-color: var(--audit); background: rgba(244,114,182,0.08); }
+.r-probe-fail-pt { font-family: var(--mono); font-size: 10px; color: var(--text-dim); font-style: italic; }
+.r-kgtag { color: var(--sql) !important; border-color: var(--sql) !important; background: rgba(99,102,241,0.08) !important; }
+
+/* LLM fields */
+.r-hist-llm { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.r-llm-used { font-family: var(--mono); font-size: 10px; color: var(--audit); border: 1px solid var(--audit); border-radius: 3px; padding: 1px 6px; }
+.r-llm-free { font-family: var(--mono); font-size: 10px; color: var(--done); border: 1px solid var(--done); border-radius: 3px; padding: 1px 6px; }
+.r-llm-five { display: flex; gap: 3px; }
+.r-llm-five-item { font-family: var(--mono); font-size: 10px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 3px; border: 1px solid; cursor: default; }
+.five-pass { color: var(--done); border-color: var(--done); background: rgba(16,185,129,0.1); }
+.five-fail { color: var(--audit); border-color: var(--audit); background: rgba(244,114,182,0.08); }
+
+/* Blocking / priority */
+.r-hist-text-warn { color: var(--audit) !important; }
+.r-priority-badge { font-family: var(--mono); font-size: 9px; border-radius: 2px; padding: 1px 5px; margin-right: 4px; vertical-align: middle; }
+.pri-critical { background: rgba(244,114,182,0.15); color: var(--audit); border: 1px solid var(--audit); }
+.pri-high     { background: rgba(245,158,11,0.15); color: var(--doing); border: 1px solid var(--doing); }
+.pri-medium   { background: rgba(99,102,241,0.1); color: #a78bfa; border: 1px solid #a78bfa; }
+.pri-low      { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* Proof strength bar */
+.r-hist-proof-row { display: flex; align-items: center; gap: 8px; }
+.r-hist-proof-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.r-hist-proof-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.r-hist-proof-val { font-family: var(--mono); font-size: 11px; color: var(--text); }
