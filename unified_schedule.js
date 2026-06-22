@@ -934,11 +934,16 @@
   /* ── SPRINT HQ CONTAINER ─────────────────────────────── */
   function buildSprintHQ() {
     if (!sprintDay()) return;
-    const tabs = document.querySelector('.tabs'); if (!tabs) return;
     if (document.getElementById('sprint-hq')) return;
     const hq = document.createElement('div');
     hq.id = 'sprint-hq';
-    tabs.parentElement.insertBefore(hq, tabs);
+    /* Insert at the top of the weekly tab so it scrolls with content, not sticky */
+    const weeklyTab = document.getElementById('tab-weekly');
+    if (weeklyTab) weeklyTab.insertBefore(hq, weeklyTab.firstChild);
+    else {
+      const tabs2 = document.querySelector('.sticky-top') || document.querySelector('.tabs');
+      if (tabs2) tabs2.parentElement.insertBefore(hq, tabs2.nextSibling);
+    }
   }
 
   /* ── INIT ────────────────────────────────────────────── */
@@ -1959,6 +1964,13 @@ function renderQBTrackBar() {
     btn.addEventListener('click',()=>{ qbTrack=key;qbIdx=0;qbRev=false;qbDetail=false;qbFuRev=false;qbSavePos();renderQBTrackBar();renderQBCard(); });
     bar.appendChild(btn);
   });
+  /* Export button */
+  const exportBtn = document.createElement('button');
+  exportBtn.className = 'qb-export-btn';
+  exportBtn.textContent = '\u2193 Export MD';
+  exportBtn.title = 'Download all questions as Markdown';
+  exportBtn.addEventListener('click', exportQBankMarkdown);
+  bar.appendChild(exportBtn);
 }
 
 function renderQBProgress() {
@@ -3216,6 +3228,125 @@ function buildRubric() {
         tr.appendChild(rEl('span', 'r-weak-tag'+(count>=3?' r-weak-hot':''), `${tag} <span class="r-weak-count">${count}</span>`));
       });
       ws.appendChild(tr); el.appendChild(ws);
+    }
+
+    /* Knowledge gap cloud */
+    const allKGTags = entries.flatMap(e => e.knowledgeGapTags || []);
+    if (allKGTags.length) {
+      const kgFreq = {};
+      allKGTags.forEach(t => { kgFreq[t] = (kgFreq[t]||0)+1; });
+      const kgSec = rEl('div', 'r-weak-section');
+      kgSec.appendChild(rEl('div', 'r-section-label', 'Knowledge Gap Tags (§17.1)'));
+      const kgRow = rEl('div', 'r-weak-tags');
+      Object.entries(kgFreq).sort((a,b)=>b[1]-a[1]).forEach(([tag, count]) => {
+        const t = rEl('span', 'r-weak-tag r-kgtag', `${tag} <span class="r-weak-count">${count}</span>`);
+        kgRow.appendChild(t);
+      });
+      kgSec.appendChild(kgRow);
+      el.appendChild(kgSec);
+    }
+
+    /* Open gaps + upcoming retests */
+    const openGaps     = entries.filter(e => e.gapClosureStatus && e.gapClosureStatus.status === 'open');
+    const inProgress   = entries.filter(e => e.gapClosureStatus && e.gapClosureStatus.status === 'in progress');
+    const reopened     = entries.filter(e => e.gapClosureStatus && e.gapClosureStatus.status === 'reopened');
+    const todayStr2    = new Date().toISOString().slice(0,10);
+    const upcomingTests = entries
+      .filter(e => e.retestPlan && e.retestPlan.retestDate && e.retestPlan.retestDate >= todayStr2)
+      .sort((a,b) => a.retestPlan.retestDate.localeCompare(b.retestPlan.retestDate));
+
+    if (openGaps.length || inProgress.length || reopened.length || upcomingTests.length) {
+      const gapSec = rEl('div', 'r-gap-closure-section');
+      gapSec.appendChild(rEl('div', 'r-section-label', 'Gap Closure & Retests (§17.11 / §17.16)'));
+      const gcGrid = rEl('div', 'r-gc-grid');
+
+      if (openGaps.length || inProgress.length || reopened.length) {
+        const gcCard = rEl('div', 'r-gc-card');
+        gcCard.appendChild(rEl('div', 'r-diag-card-title', 'Gap Status'));
+        [['open', openGaps, 'r-gc-open'], ['in progress', inProgress, 'r-gc-inprog'], ['reopened', reopened, 'r-gc-reopen']].forEach(([lbl, arr, cls]) => {
+          if (!arr.length) return;
+          const row = rEl('div', 'r-gc-row');
+          const badge = rEl('span', 'r-gc-badge ' + cls, lbl);
+          row.appendChild(badge);
+          row.appendChild(rEl('span', 'r-gc-cnt', arr.length));
+          gcCard.appendChild(row);
+          arr.slice(0,3).forEach(e => {
+            const item = rEl('div', 'r-gc-item', e.task.slice(0,55) + (e.task.length>55?'…':''));
+            gcCard.appendChild(item);
+          });
+        });
+        gcGrid.appendChild(gcCard);
+      }
+
+      if (upcomingTests.length) {
+        const rtCard = rEl('div', 'r-gc-card');
+        rtCard.appendChild(rEl('div', 'r-diag-card-title', 'Upcoming Retests'));
+        upcomingTests.slice(0, 5).forEach(e => {
+          const row = rEl('div', 'r-retest-row');
+          const daysAway = Math.round((new Date(e.retestPlan.retestDate) - new Date(todayStr2)) / 86400000);
+          const urgency = daysAway <= 1 ? 'r-retest-urgent' : daysAway <= 3 ? 'r-retest-soon' : '';
+          row.appendChild(rEl('span', 'r-retest-date ' + urgency, e.retestPlan.retestDate));
+          row.appendChild(rEl('span', 'r-retest-task', e.task.slice(0,45) + (e.task.length>45?'…':'')));
+          rtCard.appendChild(row);
+        });
+        gcGrid.appendChild(rtCard);
+      }
+
+      gapSec.appendChild(gcGrid);
+      el.appendChild(gapSec);
+    }
+
+    /* Role readiness rollups */
+    const withRoles = entries.filter(e => e.roleReadinessRollup && e.roleReadinessRollup.targetRole);
+    if (withRoles.length) {
+      const latestByRole = {};
+      withRoles.forEach(e => {
+        const role = e.roleReadinessRollup.targetRole;
+        if (!latestByRole[role] || e.date > latestByRole[role].date) latestByRole[role] = e;
+      });
+      const roleSec = rEl('div', 'r-role-readiness-section');
+      roleSec.appendChild(rEl('div', 'r-section-label', 'Role Readiness (§17.17)'));
+      const roleGrid = rEl('div', 'r-role-grid');
+      const READINESS_ORDER = ['Not ready','Emerging','Interviewable with risk','Interviewable','Strong fit'];
+      const READINESS_COLOR = { 'Not ready': 'var(--audit)', 'Emerging': 'var(--doing)', 'Interviewable with risk': 'var(--doing)', 'Interviewable': 'var(--done)', 'Strong fit': 'var(--done)' };
+      Object.entries(latestByRole).forEach(([role, e]) => {
+        const r = e.roleReadinessRollup;
+        const pct = Math.round(READINESS_ORDER.indexOf(r.readiness || 'Not ready') / (READINESS_ORDER.length-1) * 100);
+        const card = rEl('div', 'r-role-card');
+        card.appendChild(rEl('div', 'r-role-title', role));
+        const badge = rEl('span', 'r-role-badge', r.readiness || 'Not ready');
+        badge.style.color = READINESS_COLOR[r.readiness] || 'var(--text-dim)';
+        badge.style.borderColor = READINESS_COLOR[r.readiness] || 'var(--border)';
+        card.appendChild(badge);
+        if (r.blockingGaps) card.appendChild(rEl('div', 'r-role-blocking', r.blockingGaps + ' blocking gap' + (r.blockingGaps>1?'s':'')));
+        if (r.recommendedNextMilestone) card.appendChild(rEl('div', 'r-role-next', '→ ' + r.recommendedNextMilestone));
+        roleGrid.appendChild(card);
+      });
+      roleSec.appendChild(roleGrid);
+      el.appendChild(roleSec);
+    }
+
+    /* Evidence source distribution */
+    const allSources = entries.flatMap(e => e.evidenceSource || []);
+    if (allSources.length) {
+      const srcFreq = {};
+      allSources.forEach(s => { srcFreq[s] = (srcFreq[s]||0)+1; });
+      const srcSec = rEl('div', 'r-weak-section');
+      srcSec.appendChild(rEl('div', 'r-section-label', 'Evidence Sources (§17.5)'));
+      const srcGrid = rEl('div', 'r-src-grid');
+      const STRONG_SOURCES = new Set(['live coding','debugging transcript','mock interview','real interview feedback','verbal answer']);
+      Object.entries(srcFreq).sort((a,b)=>b[1]-a[1]).forEach(([src, cnt]) => {
+        const card = rEl('div', 'r-src-card');
+        const dot = rEl('span', 'r-src-dot');
+        dot.style.background = STRONG_SOURCES.has(src) ? 'var(--done)' : 'var(--border)';
+        dot.title = STRONG_SOURCES.has(src) ? 'Strong readiness evidence' : 'Weaker readiness evidence';
+        card.appendChild(dot);
+        card.appendChild(rEl('span', 'r-src-label', src));
+        card.appendChild(rEl('span', 'r-src-cnt', cnt));
+        srcGrid.appendChild(card);
+      });
+      srcSec.appendChild(srcGrid);
+      el.appendChild(srcSec);
     }
 
     /* Diagnostics summary — v1.9 */

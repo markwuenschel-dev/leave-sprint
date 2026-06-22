@@ -2508,3 +2508,48 @@ details[open] > .rsec-title::before { transform: rotate(90deg); }
 .r-hist-proof-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .r-hist-proof-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
 .r-hist-proof-val { font-family: var(--mono); font-size: 11px; color: var(--text); }
+
+/* Q Bank export button */
+.qb-export-btn {
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  background: transparent; border: 1px solid var(--border); border-radius: 4px;
+  padding: 4px 10px; cursor: pointer; margin-left: auto;
+  transition: color 0.15s, border-color 0.15s;
+}
+.qb-export-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+/* Progress tab — knowledge gaps, gap closure, role readiness, evidence source */
+.r-gap-closure-section { margin-bottom: 24px; }
+.r-gc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .r-gc-grid { grid-template-columns: 1fr; } }
+.r-gc-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+.r-gc-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.r-gc-badge { font-family: var(--mono); font-size: 10px; border-radius: 3px; padding: 1px 6px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid; }
+.r-gc-open   { color: var(--audit); border-color: var(--audit); background: rgba(244,114,182,0.08); }
+.r-gc-inprog { color: var(--doing); border-color: var(--doing); background: rgba(245,158,11,0.08); }
+.r-gc-reopen { color: #a78bfa; border-color: #a78bfa; background: rgba(167,139,250,0.08); }
+.r-gc-cnt { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); }
+.r-gc-item { font-family: var(--mono); font-size: 10px; color: var(--text-dim); padding: 2px 0 2px 10px; }
+.r-retest-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.r-retest-date { font-family: var(--mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+.r-retest-date.r-retest-urgent { color: var(--audit); font-weight: 700; }
+.r-retest-date.r-retest-soon   { color: var(--doing); font-weight: 600; }
+.r-retest-task { font-family: var(--mono); font-size: 10px; color: var(--text-mid); }
+
+/* Role readiness */
+.r-role-readiness-section { margin-bottom: 24px; }
+.r-role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 680px) { .r-role-grid { grid-template-columns: 1fr 1fr; } }
+.r-role-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+.r-role-title { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-bottom: 5px; }
+.r-role-badge { font-family: var(--mono); font-size: 11px; font-weight: 600; border: 1px solid; border-radius: 3px; padding: 2px 8px; display: inline-block; margin-bottom: 5px; }
+.r-role-blocking { font-family: var(--mono); font-size: 10px; color: var(--audit); margin-bottom: 4px; }
+.r-role-next { font-family: var(--mono); font-size: 10px; color: var(--text-dim); line-height: 1.5; }
+
+/* Evidence source */
+.r-src-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+@media (max-width: 680px) { .r-src-grid { grid-template-columns: 1fr 1fr; } }
+.r-src-card { display: flex; align-items: center; gap: 7px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; }
+.r-src-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.r-src-label { font-family: var(--mono); font-size: 10px; color: var(--text-mid); flex: 1; }
+.r-src-cnt { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text); }
