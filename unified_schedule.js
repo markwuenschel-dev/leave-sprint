@@ -1955,20 +1955,78 @@ function qbCounts(tk) {
 
 /* ── Q BANK MARKDOWN EXPORT ─────────────────────────── */
 function exportQBankMarkdown() {
+  /* Strip inline HTML tags for clean markdown */
+  function strip(s) {
+    return (s || '').replace(/<[^>]+>/g, '').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&code;/g,'`');
+  }
+
   const lines = [];
   const totalQ = Object.values(QBANK_L1).reduce((s, t) => s + t.questions.length, 0);
-  lines.push('# Level I Question Bank', '');
-  lines.push('*' + totalQ + ' questions across ' + Object.keys(QBANK_L1).length + ' tracks*', '');
+  const withStretch = Object.values(QBANK_L1).flatMap(t => t.questions).filter(q => q.l2q).length;
+
+  lines.push('# Level I Question Bank');
+  lines.push('');
+  lines.push('*' + totalQ + ' questions · ' + Object.keys(QBANK_L1).length + ' tracks · ' + withStretch + ' with Level II/III stretch*');
+  lines.push('');
 
   Object.entries(QBANK_L1).forEach(([, track]) => {
-    lines.push('---', '');
-    lines.push('## ' + track.icon + ' ' + track.label, '');
+    lines.push('---');
+    lines.push('');
+    lines.push('## ' + track.icon + ' ' + track.label);
+    lines.push('');
 
     track.questions.forEach((q, i) => {
-      lines.push('### Q' + (i + 1) + ': ' + q.q, '');
-      if (q.anchor)    lines.push('**Key point:** ' + q.anchor, '');
-      if (q.followup)  lines.push('**Follow-up:** ' + q.followup, '');
-      if (q.trap)      lines.push('**Common trap:** ' + q.trap, '');
+      lines.push('### Q' + (i + 1) + ': ' + strip(q.q));
+      lines.push('');
+
+      lines.push('**Anchor answer**');
+      lines.push('');
+      lines.push(strip(q.anchor));
+      lines.push('');
+
+      lines.push('**Full answer**');
+      lines.push('');
+      lines.push(strip(q.detail));
+      lines.push('');
+
+      if (q.trap) {
+        lines.push('**Common trap**');
+        lines.push('');
+        lines.push(strip(q.trap));
+        lines.push('');
+      }
+
+      lines.push('**Follow-up:** ' + strip(q.followup));
+      lines.push('');
+      lines.push(strip(q.followupAnswer));
+      lines.push('');
+
+      if (q.tie) {
+        lines.push('**Project tie-in**');
+        lines.push('');
+        lines.push(strip(q.tie));
+        lines.push('');
+      }
+
+      if (q.l2q) {
+        lines.push('#### Level II Stretch');
+        lines.push('');
+        lines.push('**Q:** ' + strip(q.l2q));
+        lines.push('');
+        lines.push(strip(q.l2a));
+        lines.push('');
+      }
+
+      if (q.l3q) {
+        lines.push('#### Level III Stretch');
+        lines.push('');
+        lines.push('**Q:** ' + strip(q.l3q));
+        lines.push('');
+        lines.push(strip(q.l3a));
+        lines.push('');
+      }
+
+      lines.push('---');
       lines.push('');
     });
   });
