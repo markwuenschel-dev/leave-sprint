@@ -1953,6 +1953,33 @@ function qbCounts(tk) {
   return { mastered:qs.filter(q=>s[q.id]==='mastered').length, review:qs.filter(q=>s[q.id]==='review').length, total:qs.length };
 }
 
+/* ── Q BANK MARKDOWN EXPORT ─────────────────────────── */
+function exportQBankMarkdown() {
+  const lines = [];
+  const totalQ = Object.values(QBANK_L1).reduce((s, t) => s + t.questions.length, 0);
+  lines.push('# Level I Question Bank', '');
+  lines.push('*' + totalQ + ' questions across ' + Object.keys(QBANK_L1).length + ' tracks*', '');
+
+  Object.entries(QBANK_L1).forEach(([, track]) => {
+    lines.push('---', '');
+    lines.push('## ' + track.icon + ' ' + track.label, '');
+
+    track.questions.forEach((q, i) => {
+      lines.push('### Q' + (i + 1) + ': ' + q.q, '');
+      if (q.anchor)    lines.push('**Key point:** ' + q.anchor, '');
+      if (q.followup)  lines.push('**Follow-up:** ' + q.followup, '');
+      if (q.trap)      lines.push('**Common trap:** ' + q.trap, '');
+      lines.push('');
+    });
+  });
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qbank-level1-' + new Date().toISOString().slice(0, 10) + '.md';
+  a.click();
+}
+
 function renderQBTrackBar() {
   const bar = document.getElementById('qb-track-bar'); if(!bar) return;
   bar.innerHTML='';
