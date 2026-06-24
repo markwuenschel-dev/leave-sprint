@@ -3205,27 +3205,7 @@ function rSpider(pcts, size, opts) {
       svg.appendChild(c);
     });
   }
-  if (showLabels) {
-    RD.universalDims.forEach((d, i) => {
-      const a = angle(i);
-      // Place label just outside the 100% ring, pulled in so it stays inside the SVG
-      const lr = r + (compact ? 10 : 12);
-      const lx2 = cx + lr * Math.cos(a), ly2 = cy + lr * Math.sin(a);
-      const text = document.createElementNS(NS, 'text');
-      text.setAttribute('x', lx2); text.setAttribute('y', ly2);
-      text.setAttribute('text-anchor', Math.abs(Math.cos(a)) < 0.1 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end');
-      text.setAttribute('dominant-baseline', 'middle');
-      text.setAttribute('font-size', compact ? '7' : '8');
-      text.setAttribute('fill', 'var(--text-dim)'); text.setAttribute('font-family', 'var(--mono)');
-      const val = pcts[i];
-      // Show short name + % only — compact enough to stay within SVG bounds
-      const label = compact
-        ? (val !== null && val !== undefined ? val + '%' : d.short)
-        : (d.short + (val !== null && val !== undefined ? ' ' + val + '%' : ''));
-      text.textContent = label;
-      svg.appendChild(text);
-    });
-  }
+  /* Labels intentionally removed — legend provides full names + values */
   return svg;
 }
 
@@ -3455,6 +3435,110 @@ function buildRubric() {
   }
 
   /* ════ PROGRESS ═══════════════════════════════════════ */
+/* ── KNOWLEDGE GAP CLUSTER MAP ───────────────────────────────────────────
+   Atomic knowledgeGapTags rolled up for dashboard display.
+   Raw tags are preserved in entries for search and retest targeting.
+──────────────────────────────────────────────────────────────────────── */
+const KGTAG_CLUSTERS = {
+  'React / TS UI state': [
+    'React state ownership','Nearest common ancestor state placement','Single source of truth for shared UI state',
+    'Local state versus context versus state library','Render-scope and rerender tradeoffs',
+    'Controlled versus uncontrolled input behavior','React value versus defaultValue lifecycle',
+    'useEffect external synchronization boundary','Effect cleanup lifecycle','Effect dependency and stale closure behavior',
+    'useReducer state-transition model','Reducer immutability and side-effect boundary','State machine versus boolean flags',
+    'useMemo versus useCallback distinction','Memoization as performance hint not correctness guarantee',
+    'React profiling before memoization','TypeScript discriminated union state modeling','TypeScript narrowing',
+    'Exhaustive union handling with never','Runtime API validation boundary','Type assertion versus runtime validation',
+    'Frontend-backend contract evolution','API request loading success error states','Duplicate submit prevention',
+    'Optimistic update rollback','Idempotency key and stale version handling','Large form field-level subscription strategy'
+  ],
+  'SQL / data modeling': [
+    'Primary key uniqueness and stability','Composite key design','Surrogate key versus natural key',
+    'Integer key versus UUID tradeoff','Key locality and index behavior','Normalization versus denormalization tradeoffs',
+    'Update insert delete anomalies','Read/write model consistency','Foreign key constraint versus ID column',
+    'Many-to-many join table modeling','Database-enforced versus application-enforced integrity',
+    'Database index read-write tradeoff','Composite index column order','EXPLAIN plan interpretation',
+    'Inner join versus left join row preservation','Left join filter placement','Join duplicate row diagnosis',
+    'GROUP BY output grain','WHERE versus HAVING distinction','Window function versus GROUP BY',
+    'Deterministic latest-row selection','Transaction rollback and atomicity','Optimistic locking version check',
+    'Valid state transitions under concurrency'
+  ],
+  'CI/CD and Docker': [
+    'Continuous integration practice definition','Configured CI gates versus business correctness','CI coverage limitations',
+    'Merge-blocking versus deployment checks','Pull request versus git pull distinction','Polyglot monorepo affected-change detection',
+    'Docker image versus running container','Container runtime isolation boundary','Host kernel sharing',
+    'Docker Compose versus production orchestration','Dockerfile versus docker-compose.yml','Compose service discovery',
+    'Compose build versus run responsibilities','Host port versus container port','Docker internal DNS',
+    'Runtime configuration ownership','Environment variables as runtime configuration','Secure container image construction',
+    'Container health checks and restart diagnosis','Infrastructure as code versus setup script','Infrastructure drift detection',
+    'Environment module and state separation','Secret rotation and revocation','CI secret exposure boundary',
+    'Health check liveness versus readiness','Dependency outage health-check cascade risk','Deployment rollback artifact versus rebuild',
+    'Backward-compatible schema rollout','Canary versus blue-green deployment','Progressive delivery rollback threshold',
+    'Logs metrics traces distinction','Correlation ID versus trace ID','MDC logging context','OpenTelemetry trace/span model',
+    'RAG observability dimensions'
+  ],
+  'Spring API boundaries': [
+    'Spring controller-service-client boundaries','DTO validation versus domain invariants','Java-Python bridge contract',
+    'HTTP error translation','Spring controller-advice registration','Spring API boundary versus framework-owned concept',
+    'Subprocess stdout/stderr capture','Subprocess envelope/environment propagation','React-visible error correlation ID',
+    'OpenAPI contract documentation'
+  ],
+  'ML / RAG evaluation': [
+    'Training versus inference distinction','Model objective versus business objective','Cluster validity versus operational usefulness',
+    'Feature versus label distinction','Prediction-time feature availability','Data leakage through future information',
+    'Train/validation/test split ownership','Temporal leakage','Group leakage','Duplicate-record leakage',
+    'Overfitting versus underfitting pattern','Classification versus regression framing','Precision versus recall tradeoff',
+    'F1 limitation under business-cost asymmetry','Baseline model comparison','Keyword baseline versus embedding retrieval',
+    'Preprocessing pipeline ownership','Cross-validation fold independence','Time-series cross-validation','Model serving contract',
+    'Inference-time missing feature handling','Data drift versus concept drift','RAG versus fine-tuning boundary',
+    'RAG hallucination despite correct corpus','Retrieval intent versus corpus vocabulary mapping','RAG evaluation hit_rate@k versus MRR',
+    'LLM boundary versus deterministic policy','Human-in-the-loop validation boundary','Experiment reproducibility lineage',
+    'Learned parameters versus explicit rules','Deterministic guardrails versus probabilistic predictions','Hard policy constraints',
+    'Rules-based versus learned pattern boundary'
+  ],
+  'Data engineering pipelines': [
+    'Pipeline versus one-off script distinction','Pipeline input/output contract','ETL versus ELT transformation boundary',
+    'Immutable raw layer','Curated layer as analyst-facing contract','Lineage, replay, and backfill',
+    'Batch versus streaming boundary','Micro-batch latency tradeoff','Streaming bounded versus unbounded data',
+    'Event time versus processing time','Watermarks and late-arriving data','Backpressure',
+    'Source-to-target mapping contract','Controlled vocabulary drift','Operational database versus warehouse versus lake',
+    'Fact table grain definition','Dimension table context role','Data-quality dimensions','Blocking versus warning data-quality checks',
+    'Pipeline idempotency','Content-hash deduplication','Incremental load watermark safety','Late-arriving data overlap window',
+    'Orchestration versus transformation logic','Cron versus orchestrator boundary','Partitioning versus indexing',
+    'Schema evolution compatibility','Pipeline failure classification','Preserve-last-good extract staleness',
+    'Backfill partitioning and source-load control','Pipeline production-readiness criteria'
+  ],
+  'Statistics / DS framing': [
+    'Business decision to analytical question translation','Metric denominator and timeframe definition','Baseline and population definition',
+    'Population versus sample distinction','Review-selection bias','Mean median mode distribution choice','Median versus tail-percentile interpretation',
+    'Variance and standard deviation interpretation','Control limits versus specification limits','Correlation versus causation distinction',
+    'Confounder and causal language boundary','Hypothesis test p-value interpretation','Statistical significance versus practical significance',
+    'Confidence interval interpretation','Missingness mechanism classification','Informative missingness','Outlier removal versus rare valid signal',
+    'EDA structural data-quality checks','Visualization choice by analytical question','SQL aggregation grain and denominator',
+    'Join cardinality before aggregation','A/B test randomization and eligibility','Before-after comparison confounding',
+    'Stakeholder result communication'
+  ],
+  'SWE / OOP fundamentals': [
+    'Variable versus value versus type distinction','Static versus dynamic typing','Runtime validation versus static type checking',
+    'Function versus method distinction','Input/output contract','Single responsibility and cohesion',
+    'Class versus object distinction','Data record versus behavior-heavy class','Encapsulation and invariant protection',
+    'Setter versus domain operation boundary','Inheritance versus composition tradeoff','Interface contract versus implementation detail',
+    'Premature abstraction with interfaces','List/set/map/stack/queue operation selection','Hash-based lookup memory tradeoff',
+    'Big-O growth versus runtime benchmark','I/O cost versus algorithmic complexity','Exception translation boundary',
+    'Retryable versus permanent failure distinction','Unit test isolation and determinism','Behavior testing versus implementation-coupled testing',
+    'HTTP request-response lifecycle','HTTP status code semantics','REST resource modeling and statelessness',
+    'Workflow endpoint versus CRUD endpoint','Database transaction atomicity and rollback','External API inside transaction risk',
+    'Git branch and pull request workflow','Systematic debugging loop','Dependency-chain inspection'
+  ],
+  'Java / coding invariants': [
+    'Java String immutability','String.replaceFirst argument and return behavior','Regex semantics in string replacement',
+    'Frequency-count invariant for anagrams','Single-pass min-price invariant','Greedy stock-profit state update',
+    'Ordering constraint for buy before sell','O(1) state tracking','Odd-length two-pointer loop termination',
+    'In-place reversal invariant','In-place prefix sum transformation','Space optimization using input mutation',
+    'Complexity claim for implemented algorithm','Representative edge-case tests for coding'
+  ]
+};
+
   function buildProgress() {
     const el = panels['progress']; el.innerHTML = '';
     const entries = rLog();
@@ -3685,19 +3769,110 @@ function buildRubric() {
       ws.appendChild(tr); el.appendChild(ws);
     }
 
-    /* Knowledge gap cloud */
+    /* Knowledge gap clustered display */
     const allKGTags = entries.flatMap(e => e.knowledgeGapTags || []);
     if (allKGTags.length) {
       const kgFreq = {};
       allKGTags.forEach(t => { kgFreq[t] = (kgFreq[t]||0)+1; });
-      const kgSec = rEl('div', 'r-weak-section');
-      kgSec.appendChild(rEl('div', 'r-section-label', 'Knowledge Gap Tags (§17.1)'));
-      const kgRow = rEl('div', 'r-weak-tags');
-      Object.entries(kgFreq).sort((a,b)=>b[1]-a[1]).forEach(([tag, count]) => {
-        const t = rEl('span', 'r-weak-tag r-kgtag', `${tag} <span class="r-weak-count">${count}</span>`);
-        kgRow.appendChild(t);
+
+      /* Score each cluster */
+      const clusterData = Object.entries(KGTAG_CLUSTERS).map(([name, members]) => {
+        const hits = members.filter(m => kgFreq[m]);
+        const total = hits.reduce((s, m) => s + (kgFreq[m]||0), 0);
+        const sorted = hits.sort((a,b)=>(kgFreq[b]||0)-(kgFreq[a]||0));
+        return { name, total, sorted, allMembers: members };
+      }).filter(c => c.total > 0).sort((a,b) => b.total - a.total);
+
+      /* Unclassified tags */
+      const classifiedSet = new Set(Object.values(KGTAG_CLUSTERS).flat());
+      const unclassified = Object.entries(kgFreq)
+        .filter(([t]) => !classifiedSet.has(t))
+        .sort((a,b) => b[1]-a[1]);
+      if (unclassified.length) {
+        const unc = unclassified.reduce((s,[,c])=>s+c,0);
+        clusterData.push({ name: 'Other', total: unc, sorted: unclassified.map(([t])=>t), allMembers: [] });
+      }
+
+      if (!clusterData.length) return;
+
+      const kgSec = rEl('div', 'r-kg-section');
+      const hdr = rEl('div', 'r-kg-header');
+      hdr.appendChild(rEl('div', 'r-section-label', 'Knowledge Gap Clusters (§17.1)'));
+      const toggle = rEl('button', 'r-kg-toggle', 'Show atomic tags');
+      let atomicVisible = false;
+      hdr.appendChild(toggle);
+      kgSec.appendChild(hdr);
+
+      const maxTotal = clusterData[0]?.total || 1;
+
+      clusterData.forEach(cluster => {
+        const card = rEl('div', 'r-kg-cluster-row');
+        card.dataset.expanded = 'false';
+
+        /* Top row: name + bar + count */
+        const main = rEl('div', 'r-kg-cluster-main');
+        const namEl = rEl('span', 'r-kg-cluster-name', cluster.name);
+        const barWrap = rEl('div', 'r-kg-bar-wrap');
+        const barFill = rEl('div', 'r-kg-bar-fill');
+        barFill.style.width = Math.round(cluster.total / maxTotal * 100) + '%';
+        barWrap.appendChild(barFill);
+        const cntEl = rEl('span', 'r-kg-cluster-cnt', cluster.total);
+        const expBtn = rEl('button', 'r-kg-exp-btn', '▸');
+        main.appendChild(namEl); main.appendChild(barWrap);
+        main.appendChild(cntEl); main.appendChild(expBtn);
+        card.appendChild(main);
+
+        /* Atomic tags (hidden by default) */
+        const atomicWrap = rEl('div', 'r-kg-atomic-wrap');
+        atomicWrap.style.display = 'none';
+        const MAX_SHOWN = 5;
+        const showTags = cluster.sorted.slice(0, MAX_SHOWN);
+        showTags.forEach(tag => {
+          const cnt = kgFreq[tag] || unclassified.find(([t])=>t===tag)?.[1] || 0;
+          const t = rEl('span', 'r-weak-tag r-kgtag r-kgtag-sm',
+            tag + ' <span class="r-weak-count">' + cnt + '</span>');
+          atomicWrap.appendChild(t);
+        });
+        if (cluster.sorted.length > MAX_SHOWN) {
+          const more = rEl('span', 'r-kg-more', '+' + (cluster.sorted.length - MAX_SHOWN) + ' more');
+          more.addEventListener('click', () => {
+            // show remaining
+            cluster.sorted.slice(MAX_SHOWN).forEach(tag => {
+              const cnt = kgFreq[tag] || 0;
+              const t = rEl('span', 'r-weak-tag r-kgtag r-kgtag-sm',
+                tag + ' <span class="r-weak-count">' + cnt + '</span>');
+              atomicWrap.insertBefore(t, more);
+            });
+            more.remove();
+          });
+          atomicWrap.appendChild(more);
+        }
+        card.appendChild(atomicWrap);
+
+        /* Expand/collapse on row click */
+        main.addEventListener('click', () => {
+          const open = card.dataset.expanded === 'true';
+          card.dataset.expanded = open ? 'false' : 'true';
+          atomicWrap.style.display = open ? 'none' : 'flex';
+          expBtn.textContent = open ? '▸' : '▾';
+        });
+
+        kgSec.appendChild(card);
       });
-      kgSec.appendChild(kgRow);
+
+      /* Toggle to show all atomic tags at once */
+      toggle.addEventListener('click', () => {
+        atomicVisible = !atomicVisible;
+        toggle.textContent = atomicVisible ? 'Hide atomic tags' : 'Show atomic tags';
+        kgSec.querySelectorAll('.r-kg-cluster-row').forEach(row => {
+          const wrap = row.querySelector('.r-kg-atomic-wrap');
+          const btn  = row.querySelector('.r-kg-exp-btn');
+          if (wrap) wrap.style.display = atomicVisible ? 'flex' : 'none';
+          if (btn)  btn.textContent   = atomicVisible ? '▾' : '▸';
+          row.dataset.expanded = atomicVisible ? 'true' : 'false';
+        });
+      });
+
       el.appendChild(kgSec);
     }
 
