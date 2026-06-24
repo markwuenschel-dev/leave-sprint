@@ -2118,13 +2118,14 @@
 
 /* Radar */
 .r-radar-section { margin-bottom: 24px; }
-.r-radar-center { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
-.r-spider { display: block; flex-shrink: 0; }
-.r-radar-legend { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 7px; padding-top: 8px; }
-.r-radar-leg-row { display: grid; grid-template-columns: 1fr 80px 40px; gap: 8px; align-items: center; }
+.r-radar-center { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: start; }
+@media (max-width: 540px) { .r-radar-center { grid-template-columns: 1fr; } }
+.r-spider { display: block; overflow: visible; }
+.r-radar-legend { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+.r-radar-leg-row { display: grid; grid-template-columns: 1fr 110px 36px; gap: 8px; align-items: center; }
 .r-radar-leg-label { font-family: var(--mono); font-size: 11px; color: var(--text-mid); }
-.r-radar-leg-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.r-radar-leg-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.r-radar-leg-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.r-radar-leg-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 .r-radar-leg-val { font-family: var(--mono); font-size: 11px; color: var(--text); text-align: right; }
 
 /* Domain / role tracking */

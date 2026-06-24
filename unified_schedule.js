@@ -2945,7 +2945,10 @@ const RD = {
 
 /* ── STORAGE ─────────────────────────────────────────── */
 function rLog()  { try { return JSON.parse(localStorage.getItem(RUBRIC_LOG_KEY) || '[]'); } catch { return []; } }
-function rSave(e) { localStorage.setItem(RUBRIC_LOG_KEY, JSON.stringify(e)); }
+function rSave(e) {
+  localStorage.setItem(RUBRIC_LOG_KEY, JSON.stringify(e));
+  window.dispatchEvent(new CustomEvent('rubric-updated'));
+}
 
 function rComputeRaw(u, t) { return +(u * 0.60 + t * 0.40).toFixed(1); }
 function rComputeFinal(raw, cap, pen) {
@@ -3169,7 +3172,7 @@ function rSpider(pcts, size, opts) {
   svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
   svg.setAttribute('width', size); svg.setAttribute('height', size);
   svg.className = 'r-spider';
-  const cx = size / 2, cy = size / 2, labelPad = showLabels ? 22 : 6, r = (size / 2) - labelPad;
+  const cx = size / 2, cy = size / 2, labelPad = showLabels ? 20 : 6, r = (size / 2) - labelPad;
   const N = 6, angle = i => (Math.PI * 2 * i / N) - Math.PI / 2;
   const pt = (pct, i) => { const a = angle(i), d2 = (pct / 100) * r; return [cx + d2 * Math.cos(a), cy + d2 * Math.sin(a)]; };
   [50, 70, 100].forEach(ring => {
@@ -3204,16 +3207,22 @@ function rSpider(pcts, size, opts) {
   }
   if (showLabels) {
     RD.universalDims.forEach((d, i) => {
-      const a = angle(i), lr = r + labelPad - 4;
+      const a = angle(i);
+      // Place label just outside the 100% ring, pulled in so it stays inside the SVG
+      const lr = r + (compact ? 10 : 12);
       const lx2 = cx + lr * Math.cos(a), ly2 = cy + lr * Math.sin(a);
       const text = document.createElementNS(NS, 'text');
       text.setAttribute('x', lx2); text.setAttribute('y', ly2);
       text.setAttribute('text-anchor', Math.abs(Math.cos(a)) < 0.1 ? 'middle' : Math.cos(a) > 0 ? 'start' : 'end');
       text.setAttribute('dominant-baseline', 'middle');
-      text.setAttribute('font-size', compact ? '8' : '9');
+      text.setAttribute('font-size', compact ? '7' : '8');
       text.setAttribute('fill', 'var(--text-dim)'); text.setAttribute('font-family', 'var(--mono)');
       const val = pcts[i];
-      text.textContent = compact ? d.short : (d.short + (val !== null && val !== undefined ? ` ${val}%` : ''));
+      // Show short name + % only — compact enough to stay within SVG bounds
+      const label = compact
+        ? (val !== null && val !== undefined ? val + '%' : d.short)
+        : (d.short + (val !== null && val !== undefined ? ' ' + val + '%' : ''));
+      text.textContent = label;
       svg.appendChild(text);
     });
   }
@@ -3504,8 +3513,19 @@ function buildRubric() {
       burnLegend.appendChild(item);
     });
     burnSec.appendChild(burnLegend);
+    burnSec.id = 'r-burndown-live';
     burnSec.appendChild(rBurndownSVG());
     el.appendChild(burnSec);
+
+    const _burnRefresh = () => {
+      const sec = document.getElementById('r-burndown-live');
+      if (!sec) return;
+      const old = sec.querySelector('svg'); if (old) old.remove();
+      sec.appendChild(rBurndownSVG());
+      updateHeaderStats();
+    };
+    window.removeEventListener('rubric-updated', _burnRefresh);
+    window.addEventListener('rubric-updated', _burnRefresh);
 
     /* Three-level score summary */
     if (total > 0) {
@@ -5229,9 +5249,9 @@ function rBurndownData() {
 /* Draw SVG burndown chart */
 function rBurndownSVG() {
   const { l1Points, l2Points, L1_TOTAL, L2_TOTAL, currentDay, DAYS } = rBurndownData();
-  const W = 520, H = 120, PL = 32, PR = 12, PT = 14, PB = 28;
+  const W = 540, H = 150, PL = 36, PR = 14, PT = 18, PB = 32;
   const IW = W - PL - PR, IH = H - PT - PB;
-  const maxY = L1_TOTAL + L2_TOTAL; // 18 total
+  const maxY = L1_TOTAL + L2_TOTAL;
 
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
@@ -5242,91 +5262,125 @@ function rBurndownSVG() {
   const px = d => PL + (d / DAYS) * IW;
   const py = v => PT + IH - (v / maxY) * IH;
 
-  function polyline(points, color, dash) {
-    const pl = document.createElementNS(NS, 'polyline');
-    pl.setAttribute('points', points.map(([x, y]) => `${x},${y}`).join(' '));
-    pl.setAttribute('fill', 'none');
-    pl.setAttribute('stroke', color);
-    pl.setAttribute('stroke-width', '1.5');
-    pl.setAttribute('stroke-linejoin', 'round');
-    pl.setAttribute('stroke-linecap', 'round');
-    if (dash) pl.setAttribute('stroke-dasharray', dash);
-    return pl;
+  function el(tag, attrs) {
+    const e = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    return e;
+  }
+  function polyline(points, color, dash, width) {
+    return el('polyline', {
+      points: points.map(([x,y]) => x+','+y).join(' '),
+      fill: 'none', stroke: color,
+      'stroke-width': width || '1.5',
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      ...(dash ? { 'stroke-dasharray': dash } : {})
+    });
+  }
+  function txt(x, y, content, size, fill, anchor, transform) {
+    const t = el('text', {
+      x, y, 'font-size': size || 8,
+      fill: fill || 'rgba(100,120,140,0.6)',
+      'font-family': 'monospace',
+      'text-anchor': anchor || 'middle',
+      ...(transform ? { transform } : {})
+    });
+    t.textContent = content;
+    return t;
   }
 
-  /* Grid lines */
-  [0, 0.25, 0.5, 0.75, 1].forEach(f => {
-    const y = py(maxY * f);
-    const l = document.createElementNS(NS, 'line');
-    l.setAttribute('x1', PL); l.setAttribute('x2', W - PR);
-    l.setAttribute('y1', y);  l.setAttribute('y2', y);
-    l.setAttribute('stroke', 'rgba(100,120,140,0.12)'); l.setAttribute('stroke-width', '0.7');
-    svg.appendChild(l);
-    if (f > 0 && f < 1) {
-      const t = document.createElementNS(NS, 'text');
-      t.setAttribute('x', PL - 4); t.setAttribute('y', y + 3.5);
-      t.setAttribute('text-anchor', 'end'); t.setAttribute('font-size', '8');
-      t.setAttribute('fill', 'rgba(100,120,140,0.5)'); t.setAttribute('font-family', 'monospace');
-      t.textContent = Math.round(maxY * f);
-      svg.appendChild(t);
-    }
+  /* Shaded region under L1 ideal */
+  const shadeL1 = el('polygon', {
+    points: [
+      [px(0), py(L1_TOTAL)], [px(DAYS), py(0)],
+      [px(DAYS), py(0)], [px(0), py(L1_TOTAL)]
+    ].map(([x,y])=>x+','+y).join(' '),
+    fill: 'rgba(16,185,129,0.04)', stroke: 'none'
   });
+  svg.appendChild(shadeL1);
+
+  /* Grid lines with slot labels */
+  for (let v = 0; v <= maxY; v += 3) {
+    const y = py(v);
+    svg.appendChild(el('line', { x1: PL, x2: W-PR, y1: y, y2: y,
+      stroke: 'rgba(100,120,140,' + (v===0||v===maxY?'0.2':'0.08') + ')',
+      'stroke-width': '0.7' }));
+    if (v === 0 || v % 6 === 0) {
+      svg.appendChild(txt(PL - 5, y + 3, v, 8, 'rgba(100,120,140,0.5)', 'end'));
+    }
+  }
+
+  /* Day tick marks */
+  for (let d = 1; d <= DAYS; d++) {
+    svg.appendChild(el('line', { x1: px(d), x2: px(d), y1: PT+IH, y2: PT+IH+3,
+      stroke: 'rgba(100,120,140,0.25)', 'stroke-width': '0.7' }));
+  }
 
   /* Ideal burn lines */
-  svg.appendChild(polyline(
-    [[px(0), py(L1_TOTAL)], [px(DAYS), py(0)]],
-    'rgba(16,185,129,0.25)', '4,3'
-  ));
-  svg.appendChild(polyline(
-    [[px(0), py(L2_TOTAL)], [px(DAYS), py(0)]],
-    'rgba(99,102,241,0.25)', '4,3'
-  ));
+  svg.appendChild(polyline([[px(0),py(L1_TOTAL)],[px(DAYS),py(0)]], 'rgba(16,185,129,0.3)', '5,3'));
+  svg.appendChild(polyline([[px(0),py(L2_TOTAL)],[px(DAYS),py(0)]], 'rgba(99,102,241,0.3)', '5,3'));
 
-  /* Actual lines — only up to currentDay */
-  const l1Actual = l1Points.slice(0, currentDay + 1).map((v, d) => [px(d), py(v)]);
-  const l2Actual = l2Points.slice(0, currentDay + 1).map((v, d) => [px(d), py(v)]);
-  if (l1Actual.length > 1) svg.appendChild(polyline(l1Actual, 'rgba(16,185,129,0.9)', null));
-  if (l2Actual.length > 1) svg.appendChild(polyline(l2Actual, 'rgba(99,102,241,0.9)', null));
+  /* Detect days where slots actually changed (entry was logged) */
+  function changeDays(pts, color) {
+    for (let d = 1; d < pts.slice(0, currentDay+1).length; d++) {
+      if (pts[d] < pts[d-1]) { // slots decreased = qualifying entry logged that day
+        svg.appendChild(el('circle', { cx: px(d), cy: py(pts[d]), r: '3.5',
+          fill: color, opacity: '0.9',
+          stroke: 'var(--surface)', 'stroke-width': '1' }));
+      }
+    }
+  }
+
+  /* Actual lines */
+  const l1Actual = l1Points.slice(0, currentDay+1).map((v,d) => [px(d), py(v)]);
+  const l2Actual = l2Points.slice(0, currentDay+1).map((v,d) => [px(d), py(v)]);
+  if (l1Actual.length > 1) svg.appendChild(polyline(l1Actual, 'rgba(16,185,129,0.9)', null, '2'));
+  if (l2Actual.length > 1) svg.appendChild(polyline(l2Actual, 'rgba(99,102,241,0.9)', null, '2'));
+
+  /* Progress dots (days where qualifying entries were logged) */
+  changeDays(l1Points, 'rgba(16,185,129,0.9)');
+  changeDays(l2Points, 'rgba(99,102,241,0.9)');
+
+  /* Projected completion line based on current velocity */
+  const daysElapsed = Math.max(1, currentDay);
+  const l1Completed = L1_TOTAL - (l1Points[currentDay] || L1_TOTAL);
+  const l2Completed = L2_TOTAL - (l2Points[currentDay] || L2_TOTAL);
+  const combined_remaining = (l1Points[currentDay]||L1_TOTAL) + (l2Points[currentDay]||L2_TOTAL);
+  const combined_completed = (l1Completed + l2Completed);
+  if (combined_completed > 0 && combined_remaining > 0) {
+    const slotsPerDay = combined_completed / daysElapsed;
+    const daysToCompletion = Math.ceil(combined_remaining / slotsPerDay);
+    const projDay = Math.min(currentDay + daysToCompletion, DAYS + 5);
+    if (projDay <= DAYS) {
+      svg.appendChild(polyline(
+        [[px(currentDay), py(combined_remaining)], [px(projDay), py(0)]],
+        'rgba(245,158,11,0.4)', '3,3', '1'
+      ));
+      // Projected finish label
+      if (projDay <= DAYS) {
+        svg.appendChild(txt(px(projDay), PT - 4, 'proj D'+projDay, 7, 'rgba(245,158,11,0.7)', 'middle'));
+      }
+    }
+  }
 
   /* Today marker */
   if (currentDay >= 0 && currentDay <= DAYS) {
-    const tx = px(currentDay);
-    const tl = document.createElementNS(NS, 'line');
-    tl.setAttribute('x1', tx); tl.setAttribute('x2', tx);
-    tl.setAttribute('y1', PT); tl.setAttribute('y2', PT + IH);
-    tl.setAttribute('stroke', 'rgba(245,158,11,0.5)'); tl.setAttribute('stroke-width', '1');
-    tl.setAttribute('stroke-dasharray', '3,2');
-    svg.appendChild(tl);
+    svg.appendChild(el('line', { x1: px(currentDay), x2: px(currentDay), y1: PT, y2: PT+IH,
+      stroke: 'rgba(245,158,11,0.5)', 'stroke-width': '1', 'stroke-dasharray': '3,2' }));
+    // Remaining slot count at today
+    const l1rem = l1Points[currentDay] ?? L1_TOTAL;
+    const l2rem = l2Points[currentDay] ?? L2_TOTAL;
+    const todayLabel = 'L1:' + l1rem + ' L2:' + l2rem;
+    svg.appendChild(txt(px(currentDay), PT - 4, todayLabel, 7.5, 'rgba(245,158,11,0.85)', 'middle'));
   }
 
-  /* End dots */
-  [[l1Actual, 'rgba(16,185,129,0.9)'], [l2Actual, 'rgba(99,102,241,0.9)']].forEach(([pts, col]) => {
-    if (!pts.length) return;
-    const last = pts[pts.length - 1];
-    const c = document.createElementNS(NS, 'circle');
-    c.setAttribute('cx', last[0]); c.setAttribute('cy', last[1]); c.setAttribute('r', '3');
-    c.setAttribute('fill', col);
-    svg.appendChild(c);
-  });
-
   /* X axis labels */
-  [1, 7, 14, 21, 29].forEach(d => {
-    const t = document.createElementNS(NS, 'text');
-    t.setAttribute('x', px(d)); t.setAttribute('y', H - 6);
-    t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-size', '8');
-    t.setAttribute('fill', 'rgba(100,120,140,0.6)'); t.setAttribute('font-family', 'monospace');
-    t.textContent = 'D' + d;
-    svg.appendChild(t);
+  [1, 5, 10, 15, 20, 25, 29].forEach(d => {
+    svg.appendChild(txt(px(d), H - 8, 'D'+d, 7.5, undefined, 'middle'));
   });
 
   /* Y axis label */
-  const yl = document.createElementNS(NS, 'text');
-  yl.setAttribute('x', 8); yl.setAttribute('y', PT + IH / 2);
-  yl.setAttribute('text-anchor', 'middle'); yl.setAttribute('font-size', '8');
-  yl.setAttribute('fill', 'rgba(100,120,140,0.5)'); yl.setAttribute('font-family', 'monospace');
-  yl.setAttribute('transform', `rotate(-90, 8, ${PT + IH / 2})`);
-  yl.textContent = 'slots left';
-  svg.appendChild(yl);
+  svg.appendChild(txt(9, PT + IH/2, 'slots', 7.5, 'rgba(100,120,140,0.5)', 'middle',
+    'rotate(-90, 9, ' + (PT+IH/2) + ')'));
 
   return svg;
 }
