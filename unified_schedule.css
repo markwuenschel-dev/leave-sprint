@@ -71,10 +71,10 @@
     --bg: #f4f6f9;
     --surface: #ffffff;
     --surface2: #edf0f4;
-    --border: #d4d9e2;
-    --text: #1a1e28;
-    --text-dim: #8896aa;
-    --text-mid: #4a5568;
+    --border: #ccd2dc;
+    --text: #111827;
+    --text-dim: #4b5a6e;
+    --text-mid: #374151;
 
     --rag: #2563eb;
     --rag-bg: #dbeafe;
@@ -133,9 +133,9 @@
       --surface: #ffffff;
       --surface2: #edf0f4;
       --border: #d4d9e2;
-      --text: #1a1e28;
-      --text-dim: #8896aa;
-      --text-mid: #4a5568;
+      --text: #111827;
+      --text-dim: #4b5a6e;
+      --text-mid: #374151;
       --rag: #2563eb; --rag-bg: #dbeafe; --rag-dim: #bfdbfe;
       --sql: #059669; --sql-bg: #d1fae5; --sql-dim: #a7f3d0;
       --java: #d97706; --java-bg: #fef3c7; --java-dim: #fde68a;
@@ -2553,3 +2553,98 @@ details[open] > .rsec-title::before { transform: rotate(90deg); }
 .r-src-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .r-src-label { font-family: var(--mono); font-size: 10px; color: var(--text-mid); flex: 1; }
 .r-src-cnt { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text); }
+
+
+/* ── LIGHT MODE READABILITY OVERRIDES ─────────────────
+   Small monospace labels read poorly in light mode.
+   Bump floor sizes and sharpen contrast for key UI chrome.
+──────────────────────────────────────────────────────── */
+[data-theme="light"], @media (prefers-color-scheme: light) {
+  /* nothing here — overrides below use attribute selectors */
+}
+
+/* Font-size floors for light mode */
+[data-theme="light"] .r-section-label,
+[data-theme="system"]:not([data-resolved-theme="dark"]) .r-section-label {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+}
+[data-theme="light"] .r-field-label,
+[data-theme="light"] .r-diag-card-title,
+[data-theme="light"] .r-stat-lbl,
+[data-theme="light"] .r-spark-label,
+[data-theme="light"] .hdr-stat,
+[data-theme="light"] .rt th {
+  font-size: 11px;
+}
+[data-theme="light"] .r-result-lbl,
+[data-theme="light"] .r-radar-leg-label,
+[data-theme="light"] .r-promo-row-label,
+[data-theme="light"] .r-hist-meta,
+[data-theme="light"] .r-ref-nav-link,
+[data-theme="light"] .rsec-title {
+  font-size: 12px;
+}
+/* Q Bank answer text — larger in light mode for extended reading */
+[data-theme="light"] .qb-detail,
+[data-theme="light"] .qb-answer-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+}
+[data-theme="light"] .qb-question-text {
+  font-size: 16px;
+  color: var(--text);
+}
+/* Table cells */
+[data-theme="light"] .rt td {
+  font-size: 13px;
+}
+[data-theme="light"] .r-hist-title {
+  font-size: 14px;
+}
+/* Tabs */
+[data-theme="light"] .tab {
+  font-size: 13px;
+}
+/* Rubric card content */
+[data-theme="light"] .rlist li,
+[data-theme="light"] .r-note {
+  font-size: 13px;
+}
+
+/* ── v1.10 PROGRESS SECTIONS ─────────────────────────── */
+.r-v110-section { margin-bottom: 22px; }
+
+/* Tracker Health */
+.r-th-bar  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.r-th-badge { font-family: var(--mono); font-size: 11px; font-weight: 700; border-radius: 4px; padding: 3px 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.th-good     { background: rgba(16,185,129,0.12); color: var(--done); border: 1px solid var(--done); }
+.th-warning  { background: rgba(245,158,11,0.12);  color: var(--doing); border: 1px solid var(--doing); }
+.th-critical { background: rgba(244,114,182,0.12); color: var(--audit); border: 1px solid var(--audit); }
+.th-unknown  { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+.r-th-item { font-family: var(--mono); font-size: 10px; color: var(--text-dim); padding: 2px 8px; background: var(--surface2); border-radius: 3px; }
+.r-th-ok   { font-family: var(--mono); font-size: 10px; color: var(--done); }
+.r-gap-warn { color: var(--audit) !important; background: rgba(244,114,182,0.08) !important; }
+
+/* Assessment Outcome Distribution */
+.r-outcome-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 600px) { .r-outcome-grid { grid-template-columns: 1fr; } }
+.r-outcome-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+.r-outcome-val  { font-family: var(--mono); font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.r-outcome-lbl  { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+.r-outcome-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.r-outcome-bar { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+/* Gap Recurrence */
+.r-recur-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.r-recur-row:last-child { border-bottom: none; }
+.r-recur-task    { font-family: var(--mono); font-size: 11px; color: var(--text-mid); }
+.r-recur-cnt     { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--doing); white-space: nowrap; }
+.r-recur-warn    { color: var(--audit); }
+.r-recur-pattern { font-family: var(--mono); font-size: 10px; color: var(--text-dim); grid-column: 1 / -1; padding-left: 10px; }
+
+/* Score Lift Actions */
+.r-lift-row { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; }
+.r-lift-dot  { font-size: 10px; color: var(--next); margin-top: 2px; flex-shrink: 0; }
+.r-lift-text { font-family: var(--mono); font-size: 11px; color: var(--text-mid); line-height: 1.5; }

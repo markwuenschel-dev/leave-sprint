@@ -978,624 +978,924 @@ const QBANK_L1 = {
     label: `Software Engineering I`, short: `SWE I`,
     icon: `☕`, color: `spring`,
     questions: [
-      {
-        id:`swe-01`, q:`What is the difference between a variable, a value, and a data type?`,
+            {
+        id:`swe-1`,
+        q:`What is the difference between a variable, a value, and a data type?`,
         anchor:`A variable is a named place that refers to a value, and the data type describes what kind of value it is and what operations are valid.`,
-        compressed:`A value is the actual data, a variable is the name that refers to it, and a type defines the kind of data and valid operations. Types help catch mistakes and make interfaces clearer, but they do not replace runtime validation or business rules.`,
-        detail:`A value is the actual piece of data, such as <code>42</code>, <code>"hello"</code>, or <code>true</code>. A variable is a name used to refer to that value so the program can reuse or update it. A data type describes the category of the value and usually determines what operations are allowed. For example, integers can be added numerically, while strings can be concatenated. In statically typed languages such as Java, the compiler checks many type rules before the program runs. In dynamically typed languages such as Python, the value carries its type at runtime, although type hints can still improve clarity and tooling. Types reduce ambiguity, document intent, and prevent invalid operations, but a type system cannot prove every business rule.`,
-        followup:`Why might <code>age: int</code> still require runtime validation?`,
-        followupAnswer:`Type hints describe intent but don't enforce values. <code>age: int = -500</code> passes type checking and function signatures without complaint. Runtime validation (Pydantic, manual guards, DTO validation) enforces business rules — age must be positive, below a maximum, and actually an integer at the API boundary. Types catch one class of mistake; runtime validation catches another.`,
+        compressed:`A variable is a named place that refers to a value, and the data type describes what kind of value it is and what operations are valid.`,
+        detail:`A value is the actual piece of data, such as 42, "hello", or true. A variable is a name used to refer to that value so the program can reuse or update it. A data type describes the category of the value and usually determines what operations are allowed. For example, integers can be added numerically, while strings can be concatenated. In statically typed languages such as Java, the compiler checks many type rules before the program runs. In dynamically typed languages such as Python, the value carries its type at runtime, although type hints can still improve clarity and tooling. Types reduce ambiguity, document intent, and prevent invalid operations, but a type system cannot prove every business rule.`,
+        followup:`Why might age: int still require runtime validation?`,
+        followupAnswer:`Type hints describe intent but don't enforce values. \`age: int = -500\` passes type checking and function signatures without complaint. Runtime validation (Pydantic, manual guards, DTO validation) enforces business rules — age must be positive, below a maximum, and actually an integer at the API boundary. Types catch one class of mistake; runtime validation catches another.`,
         tie:`Relate this to Python type hints, Pydantic runtime validation, and Java request DTOs in the compounding-quality project.`,
         trap:`Saying a variable is simply “a box in memory” without distinguishing the name, the value, and the type system.`,
+        l2q:`In a layered application, where should type and value validation live, and why not everywhere?`,
+        l2a:`Validate at the boundary, then trust inward. The edge — request deserialization, queue-message parsing, file ingestion — is where untrusted external data becomes a trusted internal object, so that is where Pydantic models and DTO validation belong. Once data has been parsed into a validated domain type, internal layers should rely on the type rather than re-checking the same invariant at every call; scattering the same guard across controller, service, and repository duplicates rules that then drift out of sync. This is the "parse, don't validate" idea: turn raw input into a type that *cannot* hold an invalid value, so the validation happens once and the type carries the guarantee from then on.`,
+        l3q:`How can the type system itself make invalid states unrepresentable, rather than relying on runtime checks?`,
+        l3a:`Model the domain so the compiler rejects illegal combinations before any code runs. Instead of one struct with a \`status: str\` plus several nullable fields where only certain combinations are legal, use a discriminated union / sealed hierarchy where each state is its own variant carrying exactly the fields valid for it — a \`PendingReview\` type literally has no \`resolutionCode\` field, so "approved with no approver" becomes a compile error, not a runtime guard you might forget. This shrinks the state space tests must cover, documents the domain in the types, and shifts a whole class of bug from runtime to compile time. The cost is more types and more upfront modeling, and dynamically-typed Python supports it only partially (Literal types and Pydantic discriminated unions get you part of the way, sealed Java interfaces + records or TypeScript discriminated unions get you further) — so you reserve it for the states whose invariants actually matter, like the disposition lifecycle in the compounding-quality workflow.`,
       },
-      {
-        id:`swe-02`, q:`What is a function or method, and why do programs use them?`,
+            {
+        id:`swe-2`,
+        q:`What is a function or method, and why do programs use them?`,
         anchor:`A function groups reusable behavior behind a name, accepts inputs, and may return an output.`,
-        compressed:`A function packages one behavior behind a clear input/output contract. It improves reuse, testing, and readability. A method is a function attached to an object or class.`,
+        compressed:`A function groups reusable behavior behind a name, accepts inputs, and may return an output.`,
         detail:`A function is a named block of logic that performs one focused task. Its parameters are the inputs supplied by the caller, and its return value is the result it gives back. Methods are functions associated with an object or class. Functions help reduce duplicated code, make behavior testable, and let programmers reason about a program in smaller units. A good function usually has a clear contract: what inputs it accepts, what it returns, what errors it can raise, and whether it changes external state. Very large functions are harder to understand and test, while excessively tiny functions can fragment simple logic. The goal is cohesion: keep code together when it changes for the same reason.`,
         followup:`What are signs that a function is doing too much?`,
         followupAnswer:`Signs: the function name contains 'and', it has multiple return types or abstraction levels, it has more than one reason to change, or you need a paragraph docstring just to describe what it does. A practical test: if you can't write a single-sentence unit test name that describes one specific behavior, the function is probably doing too much.`,
         tie:`Use examples such as separate ingestion, retrieval, evaluation, and final-assessment functions rather than one giant pipeline function.`,
         trap:`Defining a function only as “code you can call” without discussing contract, reuse, or testability.`,
+        l2q:`How do you make a function testable when it depends on the current time, randomness, or external I/O?`,
+        l2a:`Inject the dependency instead of reaching for it inside the function. A function that calls \`datetime.now()\`, seeds its own RNG, or opens a database connection internally is hard to test deterministically; pass a clock, a seeded random source, or a repository interface as a parameter (or constructor dependency) so the test can supply a fake. This separates the *decision* (pure, deterministic, easy to assert on) from the *effect* (talking to the outside world). It's the same discipline that makes \`stat_render.py\` reproducible — the determinism comes from controlling the inputs rather than capturing ambient state.`,
+        l3q:`How does "functional core, imperative shell" scale this idea to whole-system design?`,
+        l3a:`Push all I/O, mutation, and nondeterminism to a thin outer shell and keep the decision logic in a pure inner core that takes data and returns data. The core has no side effects, so it's trivially testable, parallelizable, and reusable; the shell does the unavoidable messy work (reading requests, writing the database, calling services) but contains almost no branching logic to get wrong. The payoff is that the hard-to-test part (the shell) becomes thin and boring, while the part that holds your actual business rules becomes a pile of pure functions you can hammer with property-based tests. The constraint is discipline — it's tempting to let a database call leak into the core "just here" — and it fits the Realmwalkers pipeline well: keep the gate/render decision logic pure and let the FastAPI/Postgres layer be the shell.`,
       },
-      {
-        id:`swe-03`, q:`What is the difference between a class and an object?`,
+            {
+        id:`swe-3`,
+        q:`What is the difference between a class and an object?`,
         anchor:`A class defines a structure and behavior; an object is one concrete instance created from that definition.`,
-        compressed:`A class is the definition of a type; an object is one instance with concrete state. A good class groups data and behavior that belong to one coherent concept.`,
-        detail:`A class describes what data an object can hold and what operations it can perform. An object is a specific runtime instance of that class. For example, a <code>DocumentChunk</code> class might define fields such as <code>documentId</code>, <code>text</code>, and <code>section</code>, while an individual chunk object contains the values for one particular section of one document. Classes help organize related state and behavior, but not every concept needs a class. Simple immutable records or functions may be clearer when there is little behavior. A useful class should represent a coherent concept rather than merely wrapping unrelated fields.`,
+        compressed:`A class defines a structure and behavior; an object is one concrete instance created from that definition.`,
+        detail:`A class describes what data an object can hold and what operations it can perform. An object is a specific runtime instance of that class. For example, a DocumentChunk class might define fields such as documentId, text, and section, while an individual chunk object contains the values for one particular section of one document. Classes help organize related state and behavior, but not every concept needs a class. Simple immutable records or functions may be clearer when there is little behavior. A useful class should represent a coherent concept rather than merely wrapping unrelated fields.`,
         followup:`When would a plain record or data class be better than a behavior-heavy class?`,
-        followupAnswer:`When the data is just transferred between layers without invariants — request DTOs, database rows, intermediate results. A <code>ChecklistResult</code> record that carries fields is clearer than a class with heavy behavior when the only operation is 'read this field.' Behavior-heavy classes earn their cost when invariants need protecting; records earn their cost when clarity matters more.`,
-        tie:`Relate this to <code>ReviewSummary</code>, <code>SearchResult</code>, request DTOs, or document/chunk models.`,
+        followupAnswer:`When the data is just transferred between layers without invariants — request DTOs, database rows, intermediate results. A ChecklistResult record that carries fields is clearer than a class with heavy behavior when the only operation is 'read this field.' Behavior-heavy classes earn their cost when invariants need protecting; records earn their cost when clarity matters more.`,
+        tie:`Relate this to ReviewSummary, SearchResult, request DTOs, or document/chunk models.`,
         trap:`Saying a class is a “blueprint” and stopping there without explaining state, behavior, or when not to use one.`,
+        l2q:`What's the difference between value semantics and identity semantics, and when does it matter?`,
+        l2a:`Ask whether two instances with identical field values should be considered equal. A \`Money(5, "USD")\` should equal another \`Money(5, "USD")\` — it's a value object, equal by content, and ideally immutable. A \`User\` with the same name is *not* the same user — it's an entity, equal by identity (its ID), and its fields can change over its lifetime. This distinction drives how you implement \`equals\`/\`hashCode\` (or \`__eq__\`/\`__hash__\`): get it wrong and value objects fail to dedupe in a set, or two distinct entities collide. In your models, \`SearchResult\` and \`ReviewSummary\` are usually value-like (compare by content), while a persisted review is an entity (compare by ID).`,
+        l3q:`How do you decide the boundaries of a class — what state and behavior belong together?`,
+        l3a:`Group by reason-to-change and by the consistency boundary, not by superficial similarity. The Single Responsibility Principle, read properly, says a class should answer to one actor/concern so it has one reason to change; a class that mixes persistence, business rules, and presentation will be pulled in three directions and churn constantly. The deeper tool is the aggregate idea from domain modeling: identify the set of objects that must stay mutually consistent under a single transaction, make one of them the entry point (the aggregate root), and let *it* own the invariants for everything inside. Watch for the anemic-domain-model smell — classes that are pure data with all the logic living in "service" classes — which is fine for CRUD and DTOs but a problem when real invariants get scattered and duplicated across services instead of being protected in one place.`,
       },
-      {
-        id:`swe-04`, q:`What is encapsulation?`,
+            {
+        id:`swe-4`,
+        q:`What is encapsulation?`,
         anchor:`Encapsulation keeps an object’s internal state controlled and exposes safe operations instead of unrestricted mutation.`,
-        compressed:`Encapsulation protects invariants by controlling how state changes. Private fields alone are not enough; behavior-focused methods should enforce valid transitions.`,
-        detail:`Encapsulation means an object owns the rules for changing its state. Making fields private is one tool, but the deeper goal is to prevent invalid state transitions. A bank account should expose <code>deposit</code> and <code>withdraw</code>, not let callers set the balance to any number. A review task should expose <code>assign</code>, <code>approve</code>, or <code>reject</code>, not independent setters that can create contradictory states. Encapsulation centralizes validation and reduces duplicated rules across controllers, services, and callers. It also makes later changes easier because callers depend on stable behavior rather than internal representation. Too much hiding can make simple data objects awkward, so the amount of encapsulation should match the importance of the invariants.`,
+        compressed:`Encapsulation keeps an object’s internal state controlled and exposes safe operations instead of unrestricted mutation.`,
+        detail:`Encapsulation means an object owns the rules for changing its state. Making fields private is one tool, but the deeper goal is to prevent invalid state transitions. A bank account should expose deposit and withdraw, not let callers set the balance to any number. A review task should expose assign, approve, or reject, not independent setters that can create contradictory states. Encapsulation centralizes validation and reduces duplicated rules across controllers, services, and callers. It also makes later changes easier because callers depend on stable behavior rather than internal representation. Too much hiding can make simple data objects awkward, so the amount of encapsulation should match the importance of the invariants.`,
         followup:`When is a public setter acceptable?`,
         followupAnswer:`When the field is independently mutable with no invariants attached — a display name, a preference toggle, a configuration value. A setter becomes a problem when changing one field must be coordinated with another, when validation depends on state, or when the change triggers side effects. If you'd add logic to the setter anyway, that's a signal the operation needs a real method name.`,
         tie:`Use the separation of formal classification, risk lane, handling path, and resolution options rather than one overloaded mutable disposition field.`,
         trap:`“Encapsulation means private fields with getters and setters.”`,
+        l2q:`What is an invariant, and how does encapsulation protect it?`,
+        l2a:`An invariant is a condition that must hold for an object to be valid at all times — an order's total equals the sum of its line items, a review can't be "approved" without an approver. Encapsulation protects it two ways: by constructing objects in a valid state (a constructor or factory that rejects bad arguments, so no half-built object ever exists) and by funneling every state change through methods that re-check the invariant before committing it. The "tell, don't ask" principle follows from this — callers tell the object to perform an operation (\`account.withdraw(x)\`) rather than reading its fields, deciding externally, and writing them back, because external logic can't be trusted to maintain the invariant the way the object itself can.`,
+        l3q:`How do invariants extend beyond a single object to an aggregate or transaction boundary?`,
+        l3a:`Some invariants span multiple objects and can't be enforced by one object's encapsulation — "a tournament slot can't hold two players" involves the slot, the players, and the bracket together. You enforce those within a consistency boundary: an aggregate root that's the only entry point for changes inside the boundary, mutated within a single transaction so the whole group stays consistent. Across aggregates, immediate consistency is impossible without distributed transactions you'll want to avoid, so you accept eventual consistency and coordinate with domain events and compensating actions instead. The senior move is choosing these boundaries deliberately: invariants that *must* be atomic live inside one transactional aggregate; invariants that can tolerate a brief lag live across aggregates with events and compensation — which is exactly the "persist review state, then publish an audit event" shape in Q13.`,
       },
-      {
-        id:`swe-05`, q:`What is the difference between inheritance and composition?`,
+            {
+        id:`swe-5`,
+        q:`What is the difference between inheritance and composition?`,
         anchor:`Inheritance models an “is-a” relationship; composition builds an object from other objects it “has” or “uses.”`,
-        compressed:`Inheritance is appropriate for a true substitutable “is-a” relationship. Composition is usually better for assembling replaceable behavior because it reduces parent-child coupling.`,
-        detail:`Inheritance lets a subclass reuse and specialize behavior from a parent class. It can work well when the subtype genuinely preserves the parent contract. Composition means an object receives or contains collaborators and delegates work to them. Composition is often safer because behavior can be swapped without inheriting unwanted state or lifecycle assumptions. For example, a <code>ReviewService</code> can use a <code>Retriever</code> interface rather than subclassing a large base workflow class. Inheritance can create tight coupling when subclasses depend on internal parent behavior. Composition can create more small interfaces and wiring, so the design should stay proportional to the problem.`,
+        compressed:`Inheritance models an “is-a” relationship; composition builds an object from other objects it “has” or “uses.”`,
+        detail:`Inheritance lets a subclass reuse and specialize behavior from a parent class. It can work well when the subtype genuinely preserves the parent contract. Composition means an object receives or contains collaborators and delegates work to them. Composition is often safer because behavior can be swapped without inheriting unwanted state or lifecycle assumptions. For example, a ReviewService can use a Retriever interface rather than subclassing a large base workflow class. Inheritance can create tight coupling when subclasses depend on internal parent behavior. Composition can create more small interfaces and wiring, so the design should stay proportional to the problem.`,
         followup:`Why is extending a class only to reuse one helper method often a smell?`,
         followupAnswer:`You inherit the parent's entire contract, lifecycle, fields, and constraints — even the parts you don't want. If you only needed one method, a static utility function, a shared service, or a collaborator gives you that reuse without the coupling. The child class is also harder to understand because readers expect 'is-a' semantics when they see inheritance.`,
         tie:`Connect this to composing keyword, embedding, and hybrid retrieval components behind shared contracts.`,
         trap:`“Composition is always better.”`,
+        l2q:`What is the Liskov Substitution Principle, and how can inheritance violate it?`,
+        l2a:`LSP says any code that works with the parent type must keep working when handed a subtype, without knowing the difference. Inheritance violates it whenever a subclass strengthens what callers must provide or weakens what the parent guaranteed: the classic case is \`Square extends Rectangle\`, where \`setWidth\` is forced to also change the height, breaking every caller that assumed width and height move independently. A \`ReadOnlyList\` that extends \`List\` but throws on \`add()\` is the same failure — it's an "is-a" in name but not in contract. When you find yourself overriding a method to do nothing, throw, or behave incompatibly, that's the signal the relationship is wrong and composition (or a redesigned hierarchy) is the fix.`,
+        l3q:`How do you design for extension without inheritance, and what is the fragile base class problem?`,
+        l3a:`Replace "extend the class" with explicit extension points: strategy objects, decorators, injected collaborators, and plugin/hook interfaces, all wired through composition. This realizes the open-closed principle — you extend behavior by adding new implementations rather than editing or subclassing existing ones — and it's exactly the shape of your Reusable Core, where domain packs extend a fixed mechanism by injection rather than by subclassing a base workflow. The problem you're avoiding is the *fragile base class*: in a deep hierarchy, an innocent change to a parent method can silently break distant subclasses that depended on its internal call sequence, and you often can't tell from the parent which subclasses you've broken. Inheritance-for-extension survives in narrow, well-understood spots (the template-method pattern, where the parent fixes a skeleton and subclasses fill named holes), but as a default for reuse it couples lifecycle and state in ways that composition keeps separate.`,
       },
-      {
-        id:`swe-06`, q:`What is an interface, and why is it useful?`,
+            {
+        id:`swe-6`,
+        q:`What is an interface, and why is it useful?`,
         anchor:`An interface defines what an implementation must do without forcing callers to know how it does it.`,
-        compressed:`An interface is a stable behavioral contract. It lets callers depend on what a component does rather than how it does it, which supports replacement and testing.`,
-        detail:`An interface is a contract made of operations and their expected behavior. Callers program against the interface, while concrete classes provide the implementation. This separates stable policy from replaceable details. A <code>RagEngineClient</code> might define a method for obtaining a checklist, while one implementation invokes a Python subprocess and another later calls an HTTP service. The controller does not need to change when the implementation changes. Interfaces also make testing easier because a fake or mock implementation can be injected. Creating an interface for every class adds unnecessary indirection, so interfaces are most valuable at boundaries where multiple implementations, testing seams, or future replacement are plausible.`,
+        compressed:`An interface defines what an implementation must do without forcing callers to know how it does it.`,
+        detail:`An interface is a contract made of operations and their expected behavior. Callers program against the interface, while concrete classes provide the implementation. This separates stable policy from replaceable details. A RagEngineClient might define a method for obtaining a checklist, while one implementation invokes a Python subprocess and another later calls an HTTP service. The controller does not need to change when the implementation changes. Interfaces also make testing easier because a fake or mock implementation can be injected. Creating an interface for every class adds unnecessary indirection, so interfaces are most valuable at boundaries where multiple implementations, testing seams, or future replacement are plausible.`,
         followup:`When is an interface premature abstraction?`,
         followupAnswer:`When there is only one implementation today with no credible second one, when the interface maps one-to-one onto the class with identical method names, or when it adds indirection without enabling testing or replacement. Interfaces earn their place at process or service boundaries where substitution, multiple implementations, or testing seams are plausible. Inside a single cohesive module, they can add noise.`,
-        tie:`Use the Java <code>RagEngineClient</code> boundary around the Python engine.`,
+        tie:`Use the Java RagEngineClient boundary around the Python engine.`,
         trap:`Explaining only that an interface “contains methods without bodies.”`,
+        l2q:`What's the difference between an interface's signature and its behavioral contract (Design by Contract)?`,
+        l2a:`A signature tells you which methods exist and their types; it says nothing about what must be true before you call them, what's guaranteed after, or what invariants hold throughout. Two implementations can satisfy the same signature while violating the same behavioral contract — one returns an empty list when nothing matches, the other throws; one is thread-safe, the other isn't; one preserves input order, the other doesn't. Design by Contract makes those expectations explicit (preconditions, postconditions, invariants), and it's where LSP bites: a substitutable implementation must honor the contract, not just the types. For your \`RagEngineClient\`, the subprocess and HTTP implementations must agree on timeout semantics, error shape, and result ordering — otherwise the controller "works" against one and breaks against the other despite an identical signature.`,
+        l3q:`How do you design interfaces that stay stable as implementations and requirements evolve, and what is the cost of a leaky abstraction?`,
+        l3a:`Design the interface around what the *consumer* needs, keep it small and role-focused (interface segregation — many narrow interfaces beat one fat one, so clients depend only on what they use), and evolve it additively at process boundaries (add methods, deprecate slowly, never silently change or remove). Accept the Law of Leaky Abstractions: every abstraction eventually exposes some implementation detail (latency, failure modes, ordering), so the real question is how much it leaks and how gracefully — your subprocess→HTTP migration is exactly a case where the interface should have hidden the transport so completely that the consumer never noticed the swap. The hardest and most consequential interface decisions are about what *not* to expose, because every exposed method, field, and behavior becomes a constraint you must preserve forever (see Hyrum's Law in Q12: with enough consumers, even undocumented behavior becomes a depended-on contract).`,
       },
-      {
-        id:`swe-07`, q:`When would you use a list, set, map, stack, or queue?`,
+            {
+        id:`swe-7`,
+        q:`When would you use a list, set, map, stack, or queue?`,
         anchor:`Choose the data structure based on the operations the program needs most often.`,
-        compressed:`Lists preserve order, sets enforce uniqueness, maps provide key lookup, stacks are LIFO, and queues are FIFO. I choose based on the operation pattern and complexity tradeoff.`,
+        compressed:`Choose the data structure based on the operations the program needs most often.`,
         detail:`A list is useful when order and indexed iteration matter and duplicates are allowed. A set is useful for uniqueness and fast membership checks. A map stores key-value pairs and is useful for lookup by identifier. A stack follows last-in, first-out behavior and fits nested structures, undo operations, and delimiter validation. A queue follows first-in, first-out behavior and fits task processing and breadth-first traversal. The correct choice depends on workload, not habit. A map may give average constant-time lookup but uses more memory than a list. A sorted structure may cost more on insertion but support ordered iteration or range queries.`,
         followup:`Which structure would you use to deduplicate document IDs while preserving first-seen order?`,
         followupAnswer:`A LinkedHashSet (Java) or an ordered dict combined with a set (Python) — the set enforces uniqueness while the ordered structure preserves insertion order. An ordinary HashSet loses order; a plain list allows duplicates; a sorted structure imposes alphabetical rather than insertion order.`,
         tie:`Use maps for chunk lookup, sets for deduplication, queues for work processing, and heaps for top-k retrieval.`,
         trap:`Memorizing structure definitions without tying them to operations.`,
+        l2q:`How do you choose when you have competing access patterns — fast point lookup *and* ordered iteration *and* range queries?`,
+        l2a:`No single structure is best at everything, so you either pick the one tuned to the dominant pattern or maintain two structures in sync as an index. A hash map gives O(1) point lookup but no order; a balanced tree (TreeMap, sorted container) gives ordered iteration and range queries at O(log n) but slower point lookup; when you genuinely need both, you keep both and pay the cost of keeping them consistent on every write. The canonical example is an LRU cache, which combines a hash map (O(1) lookup) with a doubly linked list (O(1) move-to-front for recency) — neither structure alone does the job, but together they hit every required operation in constant time. Your top-k retrieval is the same reasoning applied to selection: a heap, not a full sort, because you only need the best k.`,
+        l3q:`How does the right structure change when data exceeds memory, is accessed concurrently, or is persisted?`,
+        l3a:`The in-memory Big-O ranking can invert once you cross those boundaries. Cache locality means a contiguous array often beats a linked list in practice despite identical Big-O, because the linked list's pointer-chasing thrashes the CPU cache; disk-resident data wants B-trees rather than binary trees because the cost model is disk seeks, not comparisons (which is why databases use B-trees); and concurrent access introduces synchronization cost and contention, so a "slower" lock-free or sharded structure can outperform a "faster" one under a lock. At scale you also reach for probabilistic structures that trade exactness for space: Bloom filters for "probably-present / definitely-absent" membership, HyperLogLog for cardinality, count-min sketch for frequency. The senior framing: once you leave a single thread and a single memory tier, the bottleneck moves from algorithmic complexity to the memory hierarchy, I/O, and contention — and your MarketMind content-addressable registry (BLAKE3/SHA-256 keys) is exactly a hash-addressing scheme chosen for verifiable lookup and dedup at scale, not in-memory speed.`,
       },
-      {
-        id:`swe-08`, q:`What does Big-O notation tell you?`,
+            {
+        id:`swe-8`,
+        q:`What does Big-O notation tell you?`,
         anchor:`Big-O describes how an algorithm’s time or memory grows as the input becomes larger.`,
-        compressed:`Big-O describes scaling behavior, not exact speed. It helps compare how time or space changes with input size, while real decisions also consider constants, memory, and I/O.`,
-        detail:`Big-O is a growth-rate model. It does not predict an exact runtime, but it helps compare algorithms as input size increases. A linear scan is <code>O(n)</code> because doubling the input roughly doubles the work. A nested comparison of every pair is often <code>O(n²)</code>. Binary search is <code>O(log n)</code> because each step removes half of the remaining search space. Hash-map lookup is average <code>O(1)</code>, although collisions and implementation details still matter. Engineers should also consider constants, memory use, database/network costs, and typical input sizes. A theoretically better algorithm can be worse for tiny inputs or more difficult to maintain.`,
-        followup:`Why can an <code>O(n)</code> database query still be much slower than an <code>O(n²)</code> loop over ten items in memory?`,
+        compressed:`Big-O describes how an algorithm’s time or memory grows as the input becomes larger.`,
+        detail:`Big-O is a growth-rate model. It does not predict an exact runtime, but it helps compare algorithms as input size increases. A linear scan is O(n) because doubling the input roughly doubles the work. A nested comparison of every pair is often O(n²). Binary search is O(log n) because each step removes half of the remaining search space. Hash-map lookup is average O(1), although collisions and implementation details still matter. Engineers should also consider constants, memory use, database/network costs, and typical input sizes. A theoretically better algorithm can be worse for tiny inputs or more difficult to maintain.`,
+        followup:`Why can an O(n) database query still be much slower than an O(n²) loop over ten items in memory?`,
         followupAnswer:`Big-O describes relative growth rate, not absolute speed. A database query adds network latency, connection overhead, serialization, and disk I/O. n=10 in memory is nearly instant even at O(n²). The same n at a database boundary involves milliseconds per call. Algorithm choice matters at scale; constant factors and I/O costs dominate at small input sizes.`,
         tie:`Compare full sorting with top-k retrieval or repeated linear chunk lookup with a map.`,
         trap:`Treating Big-O as a benchmark measurement or ignoring input scale.`,
+        l2q:`What is amortized complexity, and why can an operation that's occasionally O(n) still be O(1) on average?`,
+        l2a:`Amortized analysis looks at the cost averaged over a sequence of operations rather than the worst single operation. A dynamic array's append is usually O(1), but when it fills it must allocate a bigger buffer and copy everything — an O(n) step; because it *doubles* capacity, those expensive copies happen rarely enough that the cost per append, averaged over many appends, is still O(1). The same logic explains hash-table resizing. This matters because naive worst-case-per-operation thinking would wrongly reject these structures; the guarantee is over the sequence. Keep it distinct from *average-case* complexity, which is a probabilistic statement about typical inputs — amortized is a deterministic guarantee about a run of operations, even adversarial ones.`,
+        l3q:`How do you reason about performance for a whole system rather than a single algorithm, and where does Big-O mislead?`,
+        l3a:`At system scale you stop caring about average-case complexity and start caring about *distributions* and *bottlenecks*. Tail latency dominates user experience — p99 matters more than the mean, and in a fan-out request you're as slow as your slowest dependency — so a system can have great average Big-O and still feel terrible. Amdahl's law tells you to optimize the actual bottleneck: speeding up code that's 5% of runtime caps your gain at 5%, so profile before optimizing. You also distinguish latency from throughput (batching trades one for the other) and watch for algorithmic-complexity attacks where a malicious input triggers the worst case — hash-collision DoS, catastrophic-backtracking regex (ReDoS) — which Big-O's "average case" hides entirely. The senior posture: measure real distributions under realistic load, attack the dominant cost, and treat worst-case behavior as a security and reliability concern, not a footnote — relevant to MarketMind's latency-sensitive backtesting where the constant factors and I/O are the whole game.`,
       },
-      {
-        id:`swe-09`, q:`What is an exception, and how should errors be handled?`,
+            {
+        id:`swe-9`,
+        q:`What is an exception, and how should errors be handled?`,
         anchor:`An exception represents a failure that interrupts the normal flow of a program.`,
-        compressed:`Exceptions communicate failure. Handle them at a boundary that can recover, translate, retry, or return a meaningful response, and avoid swallowing errors or exposing internals.`,
+        compressed:`An exception represents a failure that interrupts the normal flow of a program.`,
         detail:`Exceptions allow code to signal that it could not complete an operation. The caller may catch the exception if it can recover, retry, return an error response, or release resources. Good error handling preserves context and translates low-level failures into language meaningful at the current boundary. A controller should not expose a raw database stack trace to a client. It might convert a missing record into a 404 response and a validation failure into a 400 response. Catching every exception and continuing can hide corruption. Catching an exception only to log and rethrow it repeatedly can create noisy duplicate logs. Errors should be handled where a real decision can be made.`,
         followup:`Which failures should be retried, and which should fail immediately?`,
         followupAnswer:`Retry transient infrastructure failures — network timeouts, temporary unavailability, rate limits with bounded backoff. Fail immediately on permanent errors — invalid input (400), unauthorized (401/403), not found (404), or business rule violations. Retrying a 400 wastes effort and won't succeed. The question is: could a second attempt produce a different outcome?`,
         tie:`Relate Python-process failures to structured Spring API errors and correlation-friendly logs.`,
         trap:`“Use try/catch so the program does not crash.”`,
+        l2q:`What's the difference between recoverable failures, programming bugs, and how do exceptions vs. result types (Result/Either/Optional) handle each?`,
+        l2a:`There are roughly three categories and they want different handling. Expected failures that are part of normal flow — validation failed, record not found — are best modeled as *values* the caller must handle: a \`Result\`/\`Either\` type or \`Optional\` puts the failure in the type system so it can't be silently ignored. Programming bugs — null dereference, illegal state, a broken invariant — should *fail fast* and loudly rather than be caught, because catching them hides corruption. Truly exceptional infrastructure failures sit in between and suit exceptions. The anti-pattern to avoid is using exceptions for ordinary control flow (throwing to signal "not found" on a hot path), and the anti-pattern at the other extreme is a bare \`catch (Exception)\` that swallows everything including the bugs. Your fail-closed gate runner already leans this way — explicit exit codes are a result-type-style signal that a caller *must* observe.`,
+        l3q:`How do you design error handling and failure semantics across a distributed system or async pipeline?`,
+        l3a:`Across process and network boundaries, errors lose their stack and their type, so you need explicit error *contracts* — stable codes and structured error responses — rather than leaked stack traces. You must also confront partial failure: in a distributed call "did it fail?" is often unanswerable, because the request may have succeeded while the acknowledgment was lost, which forces idempotency keys plus retries plus dedup so a retried request is safe. You isolate failures so one sick dependency doesn't take down the system — circuit breakers to stop hammering a failing service, bulkheads to wall off resource pools, backpressure and load-shedding under overload, dead-letter queues for messages that can't be processed. The decision that defines each component is *fail-closed vs. fail-open*: a correctness or security check (your gate, an auth check) should deny on error; an availability-first feature (a recommendation widget) might allow on error. The senior framing: choose fail-open vs. fail-closed deliberately per component based on whether correctness or availability is the priority, and treat partial failure as a first-class design concern, not an edge case.`,
       },
-      {
-        id:`swe-10`, q:`What is a unit test?`,
+            {
+        id:`swe-10`,
+        q:`What is a unit test?`,
         anchor:`A unit test checks one small behavior in isolation and gives fast feedback when that behavior changes.`,
-        compressed:`A unit test verifies one focused behavior quickly and deterministically, usually with external dependencies replaced. It complements rather than replaces integration testing.`,
+        compressed:`A unit test checks one small behavior in isolation and gives fast feedback when that behavior changes.`,
         detail:`A unit test exercises a focused unit such as a function, class, or service method. It controls the inputs and verifies the observable output or state change. Dependencies are often replaced with fakes or mocks so the test remains fast and deterministic. Unit tests are valuable for business rules, transformations, edge cases, and regression protection. They do not prove that components integrate correctly, so applications also need integration and end-to-end tests. Tests should protect meaningful behavior rather than implementation details; otherwise harmless refactoring breaks the test suite. A useful test name explains the scenario and expected result.`,
         followup:`What is a test that is too tightly coupled to implementation?`,
-        followupAnswer:`A test that breaks when you rename a private method, reorganize internal fields, or change a collaborator — without any change in observable behavior. Testing that <code>processOrder</code> calls <code>validateInventory</code> as a mock expectation is implementation-coupled. Testing that a submitted order with insufficient inventory is rejected is behavior-coupled. Good tests document what code does for callers, not how it does it.`,
+        followupAnswer:`A test that breaks when you rename a private method, reorganize internal fields, or change a collaborator — without any change in observable behavior. Testing that processOrder calls validateInventory as a mock expectation is implementation-coupled. Testing that a submitted order with insufficient inventory is rejected is behavior-coupled. Good tests document what code does for callers, not how it does it.`,
         tie:`Use the structured severe-trigger regression tests and Spring controller/service tests as examples.`,
         trap:`“A unit test tests one function” without discussing isolation, determinism, or behavior.`,
+        l2q:`What is the test pyramid, and what goes wrong when it's inverted? And what's the difference between mocks, stubs, fakes, and spies?`,
+        l2a:`The pyramid says have many fast unit tests at the base, fewer integration tests in the middle, and very few slow end-to-end tests at the top. Invert it into an "ice cream cone" — mostly slow, flaky E2E tests — and you get slow feedback, failures that are hard to localize, and a brittle suite people learn to ignore. The test doubles differ by purpose: a *stub* returns canned answers, a *fake* is a working lightweight implementation (an in-memory repository), a *mock* is preconfigured with expectations you assert against, and a *spy* records calls for later inspection. Over-mocking is the trap that connects to the follow-up — when you assert on *interactions* (mock expectations) instead of *outcomes*, the suite stays green while the system is actually broken, because you've tested how the code is wired rather than what it does.`,
+        l3q:`Beyond example-based unit tests, what strategies catch the bugs unit tests miss — and how do you test things that are hard to test?`,
+        l3a:`Match the technique to the failure mode. Example tests verify known cases; *property-based* tests assert invariants over generated inputs ("parse then serialize round-trips", "the output is always sorted") and explore the input space you'd never enumerate by hand — your strength, and the right tool for the deterministic stat renderer. *Metamorphic* testing helps when you don't know the correct answer but know a relationship that must hold (a refined search should return a subset of the broader search) — which is the realistic situation in RAG evaluation where ground truth is fuzzy. *Mutation testing* tests your tests by injecting bugs and checking the suite catches them; *fuzzing* finds crashes; *contract tests* guard service boundaries; and for nondeterministic systems you inject seeds and fake clocks to make them deterministic. For ML/RAG specifically you test *properties* and use a held-out labeled set as a regression gate rather than asserting exact outputs — your 15 labeled CQIEA eval questions *are* that gate. The senior insight: example tests pin known behavior, property tests explore the space, and where correctness is inherently fuzzy you assert invariants and treat curated evals as the regression suite.`,
       },
-      {
-        id:`swe-11`, q:`What happens in an HTTP request and response?`,
+            {
+        id:`swe-11`,
+        q:`What happens in an HTTP request and response?`,
         anchor:`A client sends an HTTP request to a server, and the server returns a status, headers, and usually a body.`,
-        compressed:`An HTTP request carries a method, URL, headers, and optional body. The server returns a status, headers, and optional body. Because the network is unreliable, APIs need validation, timeouts, retries, and clear semantics.`,
+        compressed:`A client sends an HTTP request to a server, and the server returns a status, headers, and usually a body.`,
         detail:`An HTTP request includes a method such as GET or POST, a URL, headers, and sometimes a body. The server routes the request, validates inputs, runs application logic, and returns a response. The response contains a status code, headers, and an optional body. Status codes communicate categories of outcomes: 2xx success, 4xx client-side problems, and 5xx server-side failures. HTTP is stateless by default, so authentication or session context must be sent or resolved on each request. Network calls can fail, time out, or be retried, which is why idempotency and clear error contracts matter.`,
         followup:`What is the difference between a 400, 404, 409, and 500 response?`,
         followupAnswer:`400 Bad Request: the client sent something malformed — fix the request. 404 Not Found: the resource doesn't exist. 409 Conflict: the request is valid but clashes with current state — a duplicate create or optimistic-lock violation. 500 Internal Server Error: the server failed for reasons the client can't fix by changing the request.`,
-        tie:`Use <code>GET /health</code>, <code>POST /api/checklist</code>, and structured API error responses.`,
+        tie:`Use GET /health, POST /api/checklist, and structured API error responses.`,
         trap:`Listing methods and status codes without explaining the request lifecycle.`,
+        l2q:`What does idempotency mean for HTTP methods, and why does it matter for safe retries?`,
+        l2a:`An idempotent method produces the same end state whether you call it once or many times. GET, PUT, and DELETE are idempotent; POST is not. This is the practical foundation for resilient clients: when a request times out, a client can't tell whether it succeeded, so it must retry — and retrying an idempotent request is safe, while retrying a POST risks creating a duplicate resource. The fix for non-idempotent creates is an *idempotency key*: the client sends a unique token, the server records it, and a retried request with the same token returns the original result instead of creating a second record. Combined with safe methods (GET has no side effects) and statelessness (each request carries its own context, which is what lets you scale horizontally behind a load balancer), idempotency is what makes HTTP survivable over an unreliable network.`,
+        l3q:`How do you design HTTP APIs for evolution, resilience, and scale — versioning, pagination, long-running operations, and read-after-write consistency?`,
+        l3a:`The happy-path request/response is the easy part; the senior work is the failure and scale surfaces. *Versioning*: you can rarely break clients, so you version (URL, header, or media type) and evolve additively. *Pagination* of large collections: prefer cursor-based over offset-based, because offset pagination silently skips or repeats rows when the underlying data changes under concurrent inserts, while a cursor is stable. *Long-running operations* don't fit a synchronous request — you can't hold a connection for a ten-minute job — so you return \`202 Accepted\` with a status resource the client polls, or you call back via webhook; your checklist-generation and final-assessment endpoints are exactly the candidates to ask "is this fast enough to be synchronous, or should it be an async job with a status URL?" You also design for \`429\` rate limiting and for *read-after-write* surprises, where a client creates a record then immediately reads it and gets a \`404\` from a read replica that hasn't caught up — eventual consistency leaking through the API. The senior framing: HTTP is a transport with hard constraints, so design for the client's failure modes (retries, partial reads, stale reads) and for change over time, not just the happy path.`,
       },
-      {
-        id:`swe-12`, q:`What makes an API RESTful?`,
+            {
+        id:`swe-12`,
+        q:`What makes an API RESTful?`,
         anchor:`A REST-style API models resources with predictable URLs and uses HTTP methods and status codes consistently.`,
-        compressed:`REST uses resource-oriented URLs, standard HTTP semantics, stateless requests, and consistent representations. The important part is a predictable contract, not merely returning JSON.`,
-        detail:`REST is an architectural style, not a single library. A RESTful API usually exposes resources through URLs, uses HTTP methods according to intent, communicates outcomes with status codes, and keeps requests stateless. For example, <code>GET /reviews/123</code> retrieves a review, while <code>POST /reviews</code> creates one. Good APIs separate transport DTOs from internal models, validate inputs, and return consistent error shapes. REST does not automatically guarantee good design; an API can use JSON and HTTP while still having confusing semantics. Operations that are workflows rather than simple CRUD may still use action-oriented endpoints when that is clearer.`,
-        followup:`When is an action endpoint such as <code>/reviews/{id}/approve</code> reasonable?`,
-        followupAnswer:`When the operation is a meaningful state transition with attached business rules — not just a field update. Approval might trigger notifications, lock the record, log the actor, or enforce workflow constraints. Forcing those into <code>PATCH /reviews/{id}</code> with <code>{"status": "approved"}</code> hides the semantics. Action endpoints are justified when transitions do more than change a field value.`,
+        compressed:`A REST-style API models resources with predictable URLs and uses HTTP methods and status codes consistently.`,
+        detail:`REST is an architectural style, not a single library. A RESTful API usually exposes resources through URLs, uses HTTP methods according to intent, communicates outcomes with status codes, and keeps requests stateless. For example, GET /reviews/123 retrieves a review, while POST /reviews creates one. Good APIs separate transport DTOs from internal models, validate inputs, and return consistent error shapes. REST does not automatically guarantee good design; an API can use JSON and HTTP while still having confusing semantics. Operations that are workflows rather than simple CRUD may still use action-oriented endpoints when that is clearer.`,
+        followup:`When is an action endpoint such as /reviews/{id}/approve reasonable?`,
+        followupAnswer:`When the operation is a meaningful state transition with attached business rules — not just a field update. Approval might trigger notifications, lock the record, log the actor, or enforce workflow constraints. Forcing those into PATCH /reviews/{id} with {"status": "approved"} hides the semantics. Action endpoints are justified when transitions do more than change a field value.`,
         tie:`Discuss why checklist generation and final assessment are workflow endpoints rather than direct database CRUD.`,
         trap:`“REST means using GET, POST, PUT, and DELETE.”`,
+        l2q:`REST vs. RPC vs. GraphQL — how do you choose, and what does each optimize for?`,
+        l2a:`Choose by the shape of the interaction and the consumers, not by fashion. REST is resource-oriented and cache-friendly, a good fit for CRUD-ish, publicly consumed APIs. RPC (e.g., gRPC) is action-oriented, efficient, and strongly typed via a schema like protobuf — a good fit for internal service-to-service calls where the operations are verbs, not nouns. GraphQL lets the client specify exactly the fields it wants, which solves the over-fetching/under-fetching problem when you have varied clients (a mobile app and a web app with different needs), but it makes HTTP caching and rate-limiting harder and can hide expensive queries behind innocent-looking requests. Most real systems are a pragmatic mix and aren't purely RESTful, which is fine — your Java↔Python boundary could reasonably be REST or a typed RPC depending on whether you value cache-friendly resources or efficient typed calls.`,
+        l3q:`How do you design API contracts that many teams or clients depend on, and evolve them safely?`,
+        l3a:`Treat the API as a long-lived product with a contract you'll maintain for years, and design it consumer-first. Use *consumer-driven contracts* and contract testing — consumers declare the expectations they actually rely on, and the provider verifies them in CI — so you can change the implementation without breaking anyone or coordinating a lockstep deploy. Follow strict compatibility rules: additive changes are safe, but you never remove or repurpose a field, and clients should be *tolerant readers* that ignore unknown fields rather than choke on them. Respect Hyrum's Law: with enough consumers, every observable behavior — including undocumented quirks — becomes something someone depends on, so the surface you expose is a liability you can't easily retract. Schema-first / contract-first development makes this tractable, which is exactly your JSON-Schema-canonical-with-codegen approach: the schema is the single source of truth and you generate the Pydantic/TypeScript/Java types from it, so the contract can't silently drift from the implementations. The senior insight: at scale the contract is the expensive, permanent part — design it consumer-first, evolve it additively, and enforce it with contract tests so implementations stay swappable.`,
       },
-      {
-        id:`swe-13`, q:`What is a database transaction?`,
+            {
+        id:`swe-13`,
+        q:`What is a database transaction?`,
         anchor:`A transaction groups database operations so they succeed or fail as one logical unit.`,
-        compressed:`A transaction makes several database operations one atomic unit. It protects consistency under failure and concurrency, but it should stay short and does not automatically cover external systems.`,
+        compressed:`A transaction groups database operations so they succeed or fail as one logical unit.`,
         detail:`A transaction protects a business operation that requires multiple related database changes. If one step fails, the transaction can roll back the earlier changes so the database does not remain partially updated. Transactions are commonly described with ACID properties: atomicity, consistency, isolation, and durability. Isolation determines how concurrent transactions can observe one another, and stronger isolation can reduce concurrency. Transactions should usually be kept short because long-running transactions hold locks or retain versions. A database transaction cannot automatically include an email service or external API, so cross-system workflows may need an outbox, retry logic, or compensating action.`,
         followup:`Why is calling a slow external API inside a database transaction risky?`,
         followupAnswer:`The database transaction holds locks or versioned rows for its entire duration. A slow external call extends that duration, blocking concurrent writes to the same rows. If the external call hangs or fails mid-transaction, you also face a harder rollback problem. The pattern: commit the database work first, then make the external call — and design for compensation if the external call fails after the commit.`,
         tie:`Apply this later to persisting review state and publishing an audit event.`,
         trap:`Saying a transaction is only “a SQL query that changes data.”`,
+        l2q:`What do the SQL isolation levels actually protect against, and what anomalies remain at each?`,
+        l2a:`Isolation levels trade concurrency for consistency by controlling which anomalies are possible. *Read uncommitted* allows dirty reads (seeing another transaction's uncommitted changes); *read committed* fixes that but allows non-repeatable reads (a row's value changes between two reads in the same transaction); *repeatable read* fixes that but can still allow phantoms (new rows appearing in a re-run query) and *write skew* (two transactions each read a consistent snapshot and write changes that are individually valid but jointly violate an invariant); *serializable* eliminates all of them by making concurrent transactions behave as if run one at a time, at the cost of throughput. Most applications run at read committed and handle the remaining gaps explicitly — typically with optimistic locking via a version column, where a stale update is rejected and surfaced as a \`409 Conflict\` (the tie back to Q11). You reach for serializable only when an invariant genuinely can't tolerate write skew, such as your review-state transitions if two reviewers could otherwise both act on the same case.`,
+        l3q:`How do you maintain consistency across services when a single database transaction can't span them?`,
+        l3a:`This is the heart of distributed systems, and the honest answer is that cross-system atomicity is effectively impossible to do well, so you decompose it. Two-phase commit exists but is usually avoided because it blocks and is fragile to coordinator failure. The *Saga* pattern replaces one distributed transaction with a sequence of local transactions, each with a compensating action that undoes it if a later step fails. The *Outbox* pattern solves the dual-write problem — you can't atomically update the database *and* publish to a message queue, so instead you write the business change and an event row to an outbox table in one local transaction, and a separate relay reads the outbox and publishes, guaranteeing the event fires if and only if the data committed. Consumers must be *idempotent* because messages will be redelivered (exactly-once delivery is a myth; the real world is at-least-once plus idempotency). Your "persist review state and then publish an audit event" tie-in is precisely the outbox pattern — name it as such. The senior framing: you can't have cross-service atomicity, so you build it from local transactions, events, compensation, and idempotent consumers, and you expose the resulting eventual consistency honestly rather than pretending it's instantaneous.`,
       },
-      {
-        id:`swe-14`, q:`Why do teams use Git branches and pull requests?`,
+            {
+        id:`swe-14`,
+        q:`Why do teams use Git branches and pull requests?`,
         anchor:`Git records code history, while branches and pull requests let people develop and review changes safely before merging them.`,
-        compressed:`Branches isolate work, commits record intent, and pull requests provide review plus automated checks before changes enter the main branch.`,
+        compressed:`Git records code history, while branches and pull requests let people develop and review changes safely before merging them.`,
         detail:`Git is a distributed version-control system. A branch lets a developer make a sequence of changes without immediately altering the main line. A pull request presents the change for review, automated tests, and discussion. Good commits are focused and explain intent. Code review catches defects, spreads knowledge, and checks maintainability, but it should not become a substitute for testing or ownership. Merge conflicts occur when branches modify overlapping lines or assumptions. Small, frequent changes reduce conflict and make reviews more effective.`,
         followup:`What makes a pull request easy to review?`,
         followupAnswer:`A focused change that does one thing, a description explaining why not just what, small enough to review in one sitting, tests alongside the code, and no formatting changes mixed with logic changes. Reviewers should understand the intent in the first paragraph and verify the approach without reading every line sequentially.`,
         tie:`Use CI checks, architecture decision records, and focused milestones in MarketMind or the RAG project.`,
         trap:`“Branches stop people from overwriting each other” without discussing review, CI, or history.`,
+        l2q:`How do branching strategies (trunk-based vs. GitFlow vs. long-lived feature branches) affect integration risk and delivery speed?`,
+        l2a:`The longer a branch lives, the more the mainline drifts away from it, so integration debt and merge pain grow roughly with branch lifetime — and a painful merge is also a risky one, because you're reconciling weeks of divergent assumptions at once. Trunk-based development minimizes this by merging small changes into main continuously, using feature flags to keep half-finished work dormant in production rather than isolated on a branch; this decouples *deploy* (shipping the code) from *release* (turning it on). GitFlow's heavier branch structure suits projects with explicit release trains and versioned products but adds ceremony and longer-lived branches. CI is the safety net that makes frequent small merges viable: each merge runs the full test suite, so "integrate often" doesn't mean "break often." Your CI checks and focused milestones already point this way — small, frequently-integrated changes over big long-running branches.`,
+        l3q:`How do you keep a useful, bisectable history and manage large-scale change across a codebase?`,
+        l3a:`History is a debugging tool, so optimize commits for it: each commit should build and pass tests on its own, which makes \`git bisect\` a binary search that can pinpoint the exact commit that introduced a bug — worthless if commits are broken or lump unrelated changes together. Understand the merge-vs-rebase tradeoff: rebasing gives a clean linear history but rewrites commits (so you never rebase a shared branch), while merging preserves the true topology at the cost of a noisier graph. For changes too big to land atomically, use *expand-contract* (parallel-change): add the new code path, migrate callers incrementally while both paths coexist, then remove the old — never a big-bang rename across the whole repo, which is unreviewable and unbisectable. Repo-wide mechanical changes are better done with codemods than by hand, and the monorepo-vs-polyrepo choice trades atomic cross-project changes against build and tooling complexity. Your architecture decision records complement git history here: history records *what* changed and lets you bisect it, ADRs record *why* a direction was chosen so future-you doesn't relitigate it. The senior insight: treat history as part of your tooling — atomic, working, bisectable commits — and make large changes through incremental parallel-change rather than coordinated big-bang merges.`,
       },
-      {
-        id:`swe-15`, q:`How do you debug a problem systematically?`,
+            {
+        id:`swe-15`,
+        q:`How do you debug a problem systematically?`,
         anchor:`Reproduce the issue, narrow the failing layer, inspect evidence, form a hypothesis, test it, fix the root cause, and add regression protection.`,
-        compressed:`I reproduce, isolate, inspect evidence, test a specific hypothesis, fix the root cause, and add regression protection. I avoid changing multiple variables at once.`,
+        compressed:`Reproduce the issue, narrow the failing layer, inspect evidence, form a hypothesis, test it, fix the root cause, and add regression protection.`,
         detail:`Debugging starts by making the failure reproducible and describing expected versus actual behavior. Then reduce the problem: determine whether it is input data, application logic, database behavior, a dependency, configuration, or the environment. Use logs, traces, test cases, and small experiments to gather evidence. Form one hypothesis at a time and change one variable so the result is interpretable. After finding the cause, fix the underlying mechanism rather than only the visible symptom. Finally, add a test, validation rule, monitor, or runbook step that prevents recurrence. Random code changes may occasionally work, but they do not build confidence or understanding.`,
         followup:`How would you debug an API that works locally but fails in a container?`,
         followupAnswer:`Compare environment variables, configuration files, and secret injection between local and container. Check for platform differences (ARM vs x86, glibc vs musl). Verify port bindings, network names, and service discovery work inside the container network. Look at startup order — the container might start before its dependencies are ready. Review container logs for the exact error before guessing.`,
         tie:`Use the negation bug, stale SOP IDs, or retrieval misses from the failure log.`,
-        trap:`“Check the logs and Google the error.” ---`,
-      },
+        trap:`“Check the logs and Google the error.”`,
+        l2q:`How do you debug a problem you can't reproduce locally — an intermittent or production-only failure?`,
+        l2a:`When you can't reproduce it, you invest in *observability* before you guess: structured logs with a correlation ID (your structlog setup), distributed traces, and metrics that make the invisible failure visible at the point it occurs. Then you reason *differentially* — what's different between the cases that pass and the cases that fail? Environment, data, timing, load, concurrency? — and you try to reproduce by capturing real production inputs and replaying them rather than inventing synthetic ones that work. Be aware of Heisenbugs: concurrency-timing bugs can vanish when you add logging because the logging changes the timing, which is itself a clue that the bug is timing-dependent. You can also binary-search the problem space in production safely with feature flags or by selectively disabling components, the same bisection instinct as \`git bisect\` applied to a running system.`,
+        l3q:`How do you debug emergent failures in a distributed system — where no single component is broken but the system misbehaves?`,
+        l3a:`Some failures live in the *interactions*, not the components, and looking at any single service in isolation tells you nothing. Retry storms and thundering herds, cascading failures, and *metastable* failures (a system that's stable until a trigger tips it into a self-sustaining bad state — retries raise load, which causes timeouts, which trigger more retries) are feedback-loop pathologies you can only see by reasoning about the system as a dynamic system with loops, not a static collection of parts. The tools are system-level: distributed tracing to follow one request across every service, correlation IDs to stitch logs together, and comparing healthy versus unhealthy nodes to isolate the variable. You still use hypotheses and controlled experiments, but at scale they look like canaries, dark launches, and load tests that deliberately reproduce the condition. Resist the single-root-cause story — complex systems usually fail from several contributing causes interacting, so postmortems should map the chain of contributors rather than crown one culprit, and chaos engineering surfaces these interactions before they surface themselves. Both MarketMind (a multi-language pipeline) and the Realmwalkers agent pipeline (the gate loop and the unproven planner surface) have exactly this character — the bug you'll chase hardest is in the interaction and the feedback loop, not in any one function.`,
+      }
     ],
   },
   mle: {
     label: `Machine Learning I`, short: `MLE I`,
     icon: `🧠`, color: `mle`,
     questions: [
-      {
-        id:`mle-01`, q:`What is machine learning, and how is it different from rules-based programming?`,
+            {
+        id:`mle-1`,
+        q:`What is machine learning, and how is it different from rules-based programming?`,
         anchor:`Rules-based programs follow logic written directly by a developer; machine-learning systems learn patterns from examples.`,
-        compressed:`Rules-based software executes logic humans specify. Machine learning estimates patterns from data. I use ML when uncertainty and complex relationships justify it, not when a deterministic rule is clearer and safer.`,
+        compressed:`Rules-based programs follow logic written directly by a developer; machine-learning systems learn patterns from examples.`,
         detail:`In rules-based programming, the developer explicitly writes conditions that map inputs to outputs. In machine learning, an algorithm uses historical examples to estimate a function that can make predictions on new data. For example, a rules engine might flag an order as delayed when a fixed threshold is exceeded, while a model might learn how several variables jointly relate to delay risk. Machine learning is useful when the relationship is too complex or changes too often for simple rules. It is not automatically better: rules can be more transparent, easier to validate, and safer when requirements are deterministic. Many production systems combine rules and models, using rules for hard constraints and models for uncertain ranking or prediction.`,
         followup:`Give an example where a rule should override a model prediction.`,
         followupAnswer:`A model might predict a borderline escalation probability of 0.48, falling just below a threshold. But if the case contains a keyword from a controlled vocabulary that triggers mandatory legal review, the rule must override. Rules encode hard constraints and safety requirements that probabilistic models should not be allowed to override — especially in regulated or safety-critical workflows.`,
         tie:`Contrast deterministic severe-trigger routing with probabilistic or retrieval-based assistance in the compounding-quality workflow.`,
         trap:`“Machine learning means the computer teaches itself.”`,
+        l2q:`How do you decide between rules, ML, or a hybrid — and what's the maintenance cost of each?`,
+        l2a:`Reach for ML when the pattern is complex or shifting, you have representative labeled data, and probabilistic errors are tolerable; reach for rules when requirements are deterministic, must be auditable, or labels are scarce. The maintenance profiles are opposite and often counterintuitive: rules rot *visibly* as exceptions pile up — the dreaded rule explosion where the hundredth special case contradicts the third — while ML rots *invisibly* through drift, looking healthy until performance has quietly decayed. The mature design is usually a hybrid, exactly the shape of your compounding-quality workflow: deterministic rules enforce the hard constraints and safety triggers, and the model handles the uncertain ranking and prioritization underneath them. And sometimes the right call is *no* ML — when you can't get representative labels, when errors are unacceptable, or when a three-line rule already solves it.`,
+        l3q:`What does it take to operate ML responsibly in a regulated or safety-critical domain, and when is the ML risk not worth it?`,
+        l3a:`The model is the easy ten percent; the responsible ninety percent is the operational and governance burden around it — monitoring, drift detection, retraining pipelines, model and data versioning with full lineage, and human-in-the-loop design. Two failure modes deserve special attention in regulated settings. The *feedback-loop / selection-bias* trap: a model whose decisions filter future data never learns about the cases it suppressed — a system that denies cases never sees whether those denials were correct — so its training data becomes progressively biased by its own past behavior. And *automation bias*: a human "reviewer" who rubber-stamps the model isn't a safeguard, so the review step has to be designed to provoke genuine scrutiny. In your pharma context, the principle is that the deterministic safety net is the *authority* and the model is *advisory*, the whole system is validated before deployment and monitored after, and you keep an explicit answer to "could this model's error harm a patient, and what stops that?" The senior framing — and the one an MLE II Legal role will probe — is that auditability, lineage, feedback-loop management, and a clear boundary between "ML may act" and "ML may only advise" are the real deliverables, not the model's accuracy number.`,
       },
-      {
-        id:`mle-02`, q:`What is the difference between supervised and unsupervised learning?`,
+            {
+        id:`mle-2`,
+        q:`What is the difference between supervised and unsupervised learning?`,
         anchor:`Supervised learning uses labeled examples; unsupervised learning looks for structure without a known target label.`,
-        compressed:`Supervised learning predicts a known label from labeled examples. Unsupervised learning explores structure without a target. The output still needs domain validation before it becomes useful.`,
+        compressed:`Supervised learning uses labeled examples; unsupervised learning looks for structure without a known target label.`,
         detail:`In supervised learning, each training example has input features and a target value. The model learns to predict that target, such as a category or numeric amount. Classification and regression are supervised tasks. In unsupervised learning, there is no target label; the system may group similar records, reduce dimensionality, or discover patterns. Clustering is a common unsupervised task. Unsupervised results require careful interpretation because a discovered cluster is not automatically a meaningful business segment. Semi-supervised learning combines a small labeled set with a larger unlabeled set, while self-supervised learning creates learning signals from the data itself.`,
         followup:`Why can clustering produce technically valid but operationally useless groups?`,
         followupAnswer:`The algorithm optimizes a mathematical criterion like within-cluster distance, not a business objective. A cluster might group records sharing a numerical pattern but representing completely different business situations. The labels assigned are arbitrary numbers, not meaningful categories. Interpreting them as actionable segments requires domain knowledge, and the clusters may change when data updates.`,
         tie:`Relate supervised labels to hand-written expected outputs and unsupervised similarity to embeddings.`,
         trap:`Saying supervised means “a human watches the model train.”`,
+        l2q:`Where do self-supervised and semi-supervised learning fit, and why have they become dominant for text and images?`,
+        l2a:`They exist because labels are expensive and raw data is nearly free, so techniques that exploit unlabeled data win on economics. *Self-supervised* learning manufactures labels from the data itself — predict the next token, predict a masked word, pull augmented views of the same image together and different images apart (contrastive learning) — which is exactly how the embeddings in your RAG system and the LLMs behind it are pretrained on enormous unlabeled corpora. *Semi-supervised* learning combines a small labeled set with a large unlabeled one, via pseudo-labeling or by using active learning to spend your scarce labeling budget on the most informative examples. The practical upshot for you: the embedding model you retrieve with isn't trained on your labels at all — it inherited its sense of similarity from self-supervised pretraining, which is both why it works out of the box and why it can encode notions of "similar" that don't match your domain.`,
+        l3q:`How do you validate that an unsupervised result (clusters, embeddings, topics) is actually meaningful and stable, rather than an artifact?`,
+        l3a:`The hard truth is that unsupervised learning has no ground truth, so "meaningful" has to be defined by something outside the algorithm. Internal metrics like silhouette score or within-cluster cohesion are circular — they measure how well the data fits the criterion the algorithm already optimized — so real validation is *external*: does the structure hold up against held-out labels, or does it improve a downstream task you actually care about? You also test *stability*: re-run across bootstraps, seeds, and data refreshes, and if the clusters reshuffle each time, they're an artifact, not a finding (your own observation that clusters change when data updates). For embeddings specifically, intrinsic similarity benchmarks are a weak proxy; the only validation that matters is *extrinsic* — whether retrieval improves on your labeled eval set — not whether the clusters look tidy. And beware post-hoc storytelling: any cluster can be given a plausible narrative, and that narrative feels like confirmation, but it isn't evidence. The senior framing: unsupervised methods generate *hypotheses*, not conclusions — you validate them against a downstream objective or a held-out signal and check stability before trusting them.`,
       },
-      {
-        id:`mle-03`, q:`What are features and labels?`,
+            {
+        id:`mle-3`,
+        q:`What are features and labels?`,
         anchor:`Features are the inputs a model uses; the label is the outcome the model is trained to predict.`,
-        compressed:`Features are model inputs and labels are targets. Both need clear definitions, correct timing, and consistent construction; otherwise the model learns the wrong problem.`,
+        compressed:`Features are the inputs a model uses; the label is the outcome the model is trained to predict.`,
         detail:`A feature is a measurable input such as dosage form, order age, text length, or previous event count. The label is the target, such as whether a case belongs to a category or how long a process will take. Good features should be available at the time the prediction is made and should represent the problem without leaking future information. Features may be raw, transformed, aggregated, encoded, or derived from other data. Labels also need clear definitions because inconsistent labeling creates a ceiling on model quality. A model can only learn the patterns present in its feature and label construction.`,
         followup:`Why is “final resolution code” a dangerous feature for predicting a case’s initial risk?`,
         followupAnswer:`The final resolution code is assigned after the case is decided — it describes the outcome, not the initial condition. Using it as a feature means the model learns to predict the resolution using the resolution itself. At prediction time (when the case is first submitted), that code doesn't exist yet. The model appears highly accurate in evaluation but fails completely in production.`,
         tie:`Use controlled taxonomy fields, retrieval metadata, and expected-output labels as examples of explicit definitions.`,
         trap:`Treating every available column as a valid feature.`,
+        l2q:`What's the difference between feature engineering and representation learning, and when is each appropriate?`,
+        l2a:`Hand-crafted feature engineering encodes domain knowledge into explicit, interpretable inputs and works well with limited data — it dominates tabular problems like MarketMind, where a well-chosen derived feature can carry real signal. Representation learning instead lets the model learn its own features from raw data (embeddings, deep networks), which dominates text, vision, and audio but needs lots of data to pay off. The crossover point is largely about data scale: below it, your domain knowledge beats whatever a model would learn; above it, learned representations capture structure you'd never hand-engineer. Two practical cautions: more features isn't better — too many invite overfitting, multicollinearity, and the curse of dimensionality, so feature selection matters — and whichever approach you use, the features must be computed identically at training and serving time (the consistency problem the Level III answer takes up).`,
+        l3q:`How do you ensure feature consistency between training and serving, and prevent the point-in-time leakage that plagues feature pipelines?`,
+        l3a:`The single most common production-ML failure isn't a bad model — it's *training/serving skew*: features computed one way in the offline training pipeline and a different way in the online serving path, so the model meets a different input distribution in production than it trained on and silently underperforms. The fix is shared transformation code or a feature store, so both paths compute features from one implementation rather than two that drift. The subtler hazard is *point-in-time correctness*: when you join features to labels for training, each feature must reflect only what was known at the label's timestamp, or you leak the future into the past. This bites hardest with aggregations — a "30-day average" feature can quietly include data from *after* the prediction point if the windowing is sloppy, producing a model that's brilliant in backtest and useless live. Your MarketMind discipline of time-aware splits and canonical preprocessing outputs is precisely what guards against this. The senior insight: most "the model got worse in prod" incidents are feature-pipeline incidents — skew and point-in-time leakage — and preventing them takes shared transformation code and point-in-time-correct feature computation, not more careful modeling.`,
       },
-      {
-        id:`mle-04`, q:`Why do we split data into training, validation, and test sets?`,
+            {
+        id:`mle-4`,
+        q:`Why do we split data into training, validation, and test sets?`,
         anchor:`Training data fits the model, validation data guides choices, and test data estimates final performance on unseen data.`,
-        compressed:`Training fits the model, validation guides design choices, and testing estimates final generalization. The split must mirror how future data will arrive and prevent related records from leaking across partitions.`,
+        compressed:`Training data fits the model, validation data guides choices, and test data estimates final performance on unseen data.`,
         detail:`The training set is used to learn model parameters. The validation set is used to compare models, choose features, tune hyperparameters, and set thresholds. The test set should remain untouched until the design is mostly finalized so it can provide a less biased estimate of generalization. If the same data guides every decision and reports final performance, the result becomes overly optimistic. The split must respect the real deployment setting. Time-dependent data should usually be split chronologically, and records from the same person, site, or entity may need to remain in one partition to prevent leakage. Small datasets may use cross-validation, but a final held-out test is still valuable.`,
         followup:`Why is a random split risky for time-series or repeated-customer data?`,
         followupAnswer:`Random splitting lets future data leak into training — a model trained on month-12 records sees patterns unavailable when predicting month-3 cases. For repeated customers, the same person may appear in both partitions, so the model learns individual quirks rather than generalizable patterns. The split must preserve temporal order and keep all records for one entity in one partition.`,
         tie:`Apply this to retrieval evaluation fixtures or MarketMind’s time-based model validation.`,
         trap:`“Use 80/20 because that is the standard.”`,
+        l2q:`What's the practical difference between the validation set and the test set, and how does repeatedly looking at validation degrade it?`,
+        l2a:`The validation set is used *many* times — every model comparison, hyperparameter sweep, feature decision, and threshold choice consults it — and each consultation lets your choices fit the validation set a little more, so over a project it slowly stops being an unbiased estimate. This is adaptive overfitting, sometimes called "leakage through the researcher," and it's why Kaggle teams who top the public leaderboard often drop on the private one: they overfit the feedback signal. The test set exists to escape this — you touch it once, at the end, after the design is frozen. When you both tune *and* need an honest estimate, nested cross-validation separates the two roles. The direct caution for CQIEA: if you keep tuning retrieval against the same 15 eval questions, those questions gradually become a training signal, and their reported numbers will overstate how the system handles genuinely new questions.`,
+        l3q:`How do you evaluate with very little labeled data, severe imbalance, or non-stationary data — and what are the limits of held-out evaluation?`,
+        l3a:`Each pathology needs a tailored scheme: nested cross-validation stretches small data, stratification preserves class ratios under imbalance, and time-series CV — walk-forward, or your MarketMind CPCV (combinatorial purged cross-validation, which purges samples whose label windows overlap the test fold) — handles non-stationarity and overlapping labels. But the deeper point is that *all* held-out evaluation assumes train and deployment are drawn from the same distribution, and under drift that assumption fails, so offline metrics systematically overstate online performance. Two specific traps live here. *Backtest overfitting* via multiple testing: try enough strategies or configurations and one looks excellent by pure chance, which is exactly what your deflated Sharpe ratio corrects for by adjusting for the number of trials. And the fact that the only truly honest test of a deployed system is *online* — A/B testing or interleaving on live traffic — because that's the one setting where the deployment distribution is real. The senior framing: held-out test sets estimate generalization only under the i.i.d. assumption; for non-stationary or heavily-searched problems you need purged/walk-forward validation plus multiple-testing correction, and ultimately online evaluation, because every offline number is optimistic. This is squarely MarketMind territory.`,
       },
-      {
-        id:`mle-05`, q:`What is data leakage?`,
+            {
+        id:`mle-5`,
+        q:`What is data leakage?`,
         anchor:`Leakage occurs when training or evaluation uses information that would not actually be available at prediction time.`,
-        compressed:`Leakage is unauthorized information flow from the target, test set, related records, or future into training. It creates false confidence and must be prevented through timing, grouping, and pipeline discipline.`,
+        compressed:`Leakage occurs when training or evaluation uses information that would not actually be available at prediction time.`,
         detail:`Leakage makes a model appear better than it will be in production. Target leakage occurs when a feature directly or indirectly contains the outcome. Train-test contamination occurs when preprocessing, duplicates, or related entities cross the split boundary. Temporal leakage occurs when future information is used to predict the past. For example, fitting a scaler on the full dataset lets test-set statistics influence training. Leakage can also occur through labels created after the decision point. Prevention requires defining the prediction timestamp, fitting transformations only on training data, grouping related records, and reviewing feature lineage. Extremely high validation performance should trigger a leakage investigation.`,
         followup:`How can duplicate records create leakage even when the target column is removed?`,
         followupAnswer:`If the same underlying event appears in both train and test with slightly different IDs or timestamps, the model sees the exact input during training and essentially memorizes it. At test time it retrieves that memorized pattern rather than generalizing, inflating metrics artificially. Deduplication on a stable content hash — not just an ID — is needed before splitting.`,
         tie:`Connect content-hash deduplication and time-aware MarketMind splits to leakage prevention.`,
         trap:`Defining leakage only as “including the label as a feature.”`,
+        l2q:`What are the most common subtle leakage sources beyond duplicates and target leakage, and how do you audit for them?`,
+        l2a:`The recurring culprits are: *preprocessing before splitting* (fitting a scaler, imputer, or feature selector on the full dataset so test statistics bleed into training — the same mechanism as Q10's follow-up), *group leakage* (the same patient, site, or entity landing on both sides of the split), *temporal leakage* via look-ahead features, *label-definition leakage* (the label depends on information generated after the decision point), and *join leakage* (merging external data without aligning timestamps). The audit procedure is mechanical and worth ritualizing: trace every feature's lineage and ask "was this knowable at the moment of prediction?", and treat any suspiciously high metric as a leakage alarm rather than a victory. Your content-hash deduplication is the right instrument for the duplicate case specifically.`,
+        l3q:`How does leakage manifest in modern pipelines — embeddings, pretrained models, confounded features — and how do you reason about it?`,
+        l3a:`Two newer forms and one deep one. *Pretraining contamination*: your test questions, or near-duplicates of them, may have been in the foundation model's or embedding model's pretraining corpus, so benchmark scores are inflated by memorization rather than capability — a live, much-discussed problem in LLM and RAG evaluation that directly touches your work. *Learned-representation leakage*: if the embeddings were trained on data overlapping your evaluation set, similarity is artificially easy. The deepest form is a *confounded / spuriously-correlated* feature — one that's predictive in training through a non-causal path that won't survive deployment: a hospital ID that encodes severity because sicker patients route to specialist hospitals, so the model learns "this hospital ⇒ high risk" and then fails when deployed elsewhere. You can't catch that by checking column overlap; you catch it by reasoning about whether the relationship is *causal* and will hold under intervention or distribution shift. Financial features are notoriously confounded and non-causal, so this is a MarketMind hazard as much as a clinical one. The senior insight: in the foundation-model era, leakage includes pretraining contamination and representation leakage, and its subtlest form is a feature predictive through a spurious path — detectable only by asking whether the relationship is causal and shift-stable, not by checking for shared rows.`,
       },
-      {
-        id:`mle-06`, q:`What are overfitting and underfitting?`,
+            {
+        id:`mle-6`,
+        q:`What are overfitting and underfitting?`,
         anchor:`Underfitting means the model is too simple to learn the pattern; overfitting means it learns the training data too specifically and fails on new data.`,
-        compressed:`Underfitting fails to capture the signal; overfitting memorizes training-specific noise. I diagnose them by comparing training and validation performance, then adjust capacity, features, regularization, or data.`,
+        compressed:`Underfitting means the model is too simple to learn the pattern; overfitting means it learns the training data too specifically and fails on new data.`,
         detail:`An underfit model performs poorly on both training and validation data because it has insufficient capacity, weak features, or too much regularization. An overfit model performs very well on training data but substantially worse on validation or production data because it learned noise or dataset-specific details. The goal is not maximum training accuracy but good generalization. Remedies for underfitting include better features, a more suitable model, or less restrictive assumptions. Remedies for overfitting include more representative data, simpler models, regularization, early stopping, pruning, and stronger validation. Learning curves comparing train and validation performance help diagnose the problem.`,
         followup:`What pattern in training and validation scores suggests overfitting?`,
         followupAnswer:`Training accuracy is high and improving while validation accuracy plateaus or decreases. The gap between training and validation performance grows rather than converging. On a learning curve, overfitting shows as low training error that stays low while validation error rises as model complexity increases.`,
         tie:`Relate this to adding complex retrieval or model features only when evaluation evidence supports them.`,
         trap:`“Overfitting means the model is too accurate.”`,
+        l2q:`What is the bias-variance tradeoff, and how do regularization techniques actually reduce variance?`,
+        l2a:`Total expected error decomposes into bias (error from wrong assumptions — the model is too rigid, underfitting), variance (error from sensitivity to the particular training sample — the model chases noise, overfitting), and irreducible noise. Plotting test error against model complexity gives the classic U-curve: high-bias on the left, high-variance on the right, sweet spot in the middle. Regularization reduces variance by constraining the model's effective freedom: L2/weight decay shrinks weights toward zero, L1 drives some to exactly zero (doubling as feature selection), dropout approximates training an ensemble, early stopping caps effective capacity before it memorizes, and data augmentation manufactures more effective samples. More data also reduces variance (not bias) by making the training sample more representative. Your rule of adding retrieval or model features only when evaluation evidence supports them is variance management in practice — every added degree of freedom is a chance to fit noise.`,
+        l3q:`Where does the classical bias-variance U-curve break down for modern over-parameterized models, and what does that change?`,
+        l3a:`Deep networks violate the classical picture through *double descent*: as you increase capacity, test error follows the usual U down then up, peaks at the *interpolation threshold* (where the model has just enough parameters to fit the training data exactly), and then — counterintuitively — descends *again* as the model grows even larger, so a massively over-parameterized network can generalize well despite fitting its training data perfectly. The explanation involves the *implicit regularization* of SGD, which among the infinitely many interpolating solutions tends to find "simple" ones; this is why the huge models behind your embeddings and LLMs generalize at all (sometimes called benign overfitting, and the related "grokking" phenomenon). The practical consequence is that "reduce capacity to fix overfitting" is *wrong advice* for deep nets — you regularize with data, augmentation, dropout, and early stopping, and you often go *bigger*, not smaller. The crucial caveat: this is regime-dependent. For your tabular MarketMind models, the classical bias-variance tradeoff still rules and capacity control is still the right lever; double descent is a deep-network phenomenon, so the senior move is knowing which regime your model class is in before choosing your overfitting strategy.`,
       },
-      {
-        id:`mle-07`, q:`What is the difference between classification and regression?`,
+            {
+        id:`mle-7`,
+        q:`What is the difference between classification and regression?`,
         anchor:`Classification predicts categories; regression predicts numeric values.`,
-        compressed:`Classification predicts a category or class probability; regression predicts a numeric amount. I choose the framing based on the decision the user needs to make.`,
-        detail:`A classification model predicts a discrete class such as <code>approved</code>, <code>rejected</code>, or <code>needs_review</code>. It may output class probabilities that are later converted into a decision using a threshold. A regression model predicts a continuous numeric value such as duration, demand, or cost. The choice should follow the business question rather than the algorithm name. Some problems can be framed either way: predicting exact delay minutes is regression, while predicting whether delay exceeds two days is classification. Evaluation metrics differ, and converting a continuous outcome into categories loses information but may align better with an operational decision.`,
+        compressed:`Classification predicts categories; regression predicts numeric values.`,
+        detail:`A classification model predicts a discrete class such as approved, rejected, or needs_review. It may output class probabilities that are later converted into a decision using a threshold. A regression model predicts a continuous numeric value such as duration, demand, or cost. The choice should follow the business question rather than the algorithm name. Some problems can be framed either way: predicting exact delay minutes is regression, while predicting whether delay exceeds two days is classification. Evaluation metrics differ, and converting a continuous outcome into categories loses information but may align better with an operational decision.`,
         followup:`When would converting a regression target into risk bands be useful or harmful?`,
         followupAnswer:`Useful when the business decision is categorical — escalate if high risk, monitor if medium, close if low — because a label maps directly to an action. Harmful when the threshold is arbitrary, hides important variation within a band, or loses the ranking precision needed to prioritize cases (all 'high risk' cases get the same treatment even if one has 0.99 probability and another has 0.72).`,
         tie:`Compare predicting a risk lane with predicting a continuous processing time.`,
         trap:`Saying regression is only linear regression or classification is only binary.`,
+        l2q:`How do you handle ordinal targets, multi-label problems, and probability calibration — cases that don't fit clean binary classification or plain regression?`,
+        l2a:`Real targets often sit between the textbook categories. *Ordinal* targets have ordered classes — your risk bands aren't just three labels, low < medium < high — so ordinal regression respects the ordering that plain multiclass throws away and that regression-then-threshold handles awkwardly. *Multi-label* problems let one instance carry several labels at once (a case tagged with multiple issue types), which is structurally different from multiclass where the classes are mutually exclusive. *Probability calibration* is the one people skip: a model's "0.8" should actually mean 80% in the long run, but many models output uncalibrated scores, so you apply Platt scaling or isotonic regression to make the numbers trustworthy. Calibration matters specifically because you *threshold* and *rank* by these probabilities in your risk-lane prediction — and threshold selection is a separate decision from training the model, driven by costs rather than baked in.`,
+        l3q:`What does it mean for predicted probabilities to be calibrated, and why does calibration matter more than accuracy for risk-based decisions?`,
+        l3a:`*Discrimination* (does the model rank positives above negatives, measured by AUC) and *calibration* (are the probabilities numerically truthful) are independent — a model can rank perfectly while being wildly overconfident, or be well-calibrated while discriminating poorly. The reason calibration often matters more is that you *act on the probability itself*: you escalate when P exceeds 0.7, size a MarketMind position by the predicted probability, or route a case by its risk score — and if the model says 0.7 when the true rate is 0.5, every one of those thresholds is misplaced even though accuracy might look fine. Modern neural nets are frequently badly miscalibrated (systematically overconfident), proper scoring rules like log loss and Brier score reward calibration while plain accuracy ignores it, and distribution shift tends to break calibration before it breaks ranking. This connects directly to your documented RQ2 work: when you need *reliable* uncertainty rather than just a point estimate, conformal prediction gives distribution-free coverage guarantees — a principled way to say "this prediction set contains the truth with 90% probability" without assuming the model's probabilities are correct. The senior insight: for any decision that acts on a probability or ranks by risk, calibration and reliable uncertainty quantification outrank raw accuracy — you measure them with proper scoring rules and reliability diagrams, recalibrate when they drift, and reach for conformal methods when you need guaranteed coverage.`,
       },
-      {
-        id:`mle-08`, q:`What do accuracy, precision, recall, and F1 measure?`,
+            {
+        id:`mle-8`,
+        q:`What do accuracy, precision, recall, and F1 measure?`,
         anchor:`Accuracy measures overall correctness; precision measures how often positive predictions are right; recall measures how many real positives are found; F1 balances precision and recall.`,
-        compressed:`Accuracy is overall correctness, precision measures trust in positive predictions, recall measures coverage of actual positives, and F1 balances precision and recall. Metric choice must follow error costs.`,
-        detail:`Accuracy is the fraction of all predictions that are correct. It can be misleading when one class is much more common than another. Precision is <code>true positives / predicted positives</code>, so it answers: when the model flags something, how often is it correct? Recall is <code>true positives / actual positives</code>, so it answers: of all real cases, how many did the model find? F1 is the harmonic mean of precision and recall and is useful when both matter. The correct metric depends on the cost of false positives and false negatives. A safety-screening system may prioritize recall, while an expensive manual-review queue may need adequate precision to avoid overwhelming reviewers.`,
+        compressed:`Accuracy measures overall correctness; precision measures how often positive predictions are right; recall measures how many real positives are found; F1 balances precision and recall.`,
+        detail:`Accuracy is the fraction of all predictions that are correct. It can be misleading when one class is much more common than another. Precision is true positives / predicted positives, so it answers: when the model flags something, how often is it correct? Recall is true positives / actual positives, so it answers: of all real cases, how many did the model find? F1 is the harmonic mean of precision and recall and is useful when both matter. The correct metric depends on the cost of false positives and false negatives. A safety-screening system may prioritize recall, while an expensive manual-review queue may need adequate precision to avoid overwhelming reviewers.`,
         followup:`Which metric would you prioritize for detecting a rare severe escalation case, and why?`,
         followupAnswer:`Recall. A false negative (missed severe case) causes patient or regulatory harm; a false positive (unnecessary escalation) wastes reviewer time. The asymmetry of consequences means catching every real case matters more than avoiding false alarms. You then manage the false-positive rate through threshold tuning, reviewer capacity, or secondary triage.`,
         tie:`Relate recall to severe-trigger detection and precision to avoiding unnecessary leadership escalation.`,
         trap:`Choosing F1 automatically without discussing business costs or class imbalance.`,
+        l2q:`Why is accuracy misleading under class imbalance, and what metrics handle it — PR curves, ROC, and the precision-recall tradeoff?`,
+        l2a:`With 1% positives, a model that predicts "negative" for everything scores 99% accuracy and 0% recall — useless but impressive-looking, which is why accuracy is the wrong headline metric under imbalance. The confusion matrix is the foundation, and from it you read a *precision-recall curve* by sweeping the decision threshold; under heavy imbalance the PR curve is more informative than an ROC curve, because ROC's false-positive rate is diluted by the enormous negative class and can look deceptively good while precision is actually poor. Precision and recall trade off as the threshold moves, so you don't pick a default operating point — you choose it from the business costs, which for your severe-trigger detection means accepting more false positives to push recall up. PR-AUC summarizes the curve when you need a single number for an imbalanced problem.`,
+        l3q:`How do you choose an operating point and evaluate when costs are asymmetric, uncertain, or changing — and how does the metric connect to the actual decision and its downstream load?`,
+        l3a:`Step up from "which metric" to *cost-sensitive decision theory*: the model output feeds a decision with real utilities, so the right objective is expected cost — cost_FP × (false positives) + cost_FN × (false negatives) — and you choose the threshold that minimizes it rather than the one that maximizes F1. Crucially, that optimal threshold depends on *both* the base rate and the cost ratio, and both can shift over time, so the operating point isn't set-and-forget. You also have to respect *capacity constraints*: if reviewers can only handle k cases a day, the metric that matters is precision@k, not global precision — your manual-review-queue concern made quantitative. The deepest framing is that metrics are *proxies* for the expected utility of a decision, and a system can hit a great F1 while being something nobody wants if F1 wasn't the real objective (metric gaming, proxy misalignment), which is why you usually monitor several metrics and re-evaluate as costs move. Your instinct to prioritize recall for severe cases *and* protect reviewer precision is the seed of exactly this — two competing costs under a capacity limit. The senior insight: frame evaluation as cost-sensitive decision-making under a capacity constraint and shifting base rates, set the operating point from real costs, and watch for the metric quietly diverging from the actual objective.`,
       },
-      {
-        id:`mle-09`, q:`Why should you build a baseline model first?`,
+            {
+        id:`mle-9`,
+        q:`Why should you build a baseline model first?`,
         anchor:`A baseline gives a simple reference that more complex models must beat.`,
-        compressed:`A baseline is the simplest credible reference. It tells me whether complexity actually improves value and gives me a transparent fallback for debugging and deployment.`,
+        compressed:`A baseline gives a simple reference that more complex models must beat.`,
         detail:`A baseline prevents the team from confusing complexity with value. For classification, a baseline might predict the majority class, use a simple rule, or fit logistic regression. For regression, it might predict the mean or median. The baseline establishes whether the features contain useful signal and whether a sophisticated approach creates a meaningful improvement. It also provides a fallback that is easier to debug and operate. A complex model that gains a tiny metric improvement but greatly increases latency, cost, or maintenance may not be worthwhile. Baselines should include both predictive performance and operational characteristics.`,
         followup:`What would be a useful baseline for a document-retrieval system?`,
         followupAnswer:`Keyword search (BM25 or TF-IDF) is the right baseline — interpretable, fast, deterministic, and often competitive. It gives you a concrete score to beat. A model that only marginally outperforms keyword search on expensive embeddings may not justify the added cost and complexity. The baseline must be measured on the same labeled evaluation set as any fancier approach.`,
         tie:`Use keyword retrieval as the transparent baseline before embeddings and hybrid retrieval.`,
         trap:`Treating the baseline as a disposable toy rather than a measured comparator.`,
+        l2q:`What makes a baseline *fair*, and how do you avoid the two opposite mistakes — a strawman baseline and an unfairly-tuned comparison?`,
+        l2a:`A fair baseline gets the same data, the same evaluation set, the same preprocessing, and a reasonable (not adversarial, not lovingly hand-optimized) amount of effort. The strawman mistake is comparing your model to a deliberately weak, untuned baseline so that any improvement looks impressive — false progress. The opposite mistake is comparing a carefully tuned model to an untuned baseline, which is unfair *to the baseline* and overstates your gain; if you tune one, tune both comparably or report the asymmetry honestly. Ablations are baselines turned inward — remove one component at a time and check whether the model still wins, which tells you whether each piece earns its keep. For CQIEA the concrete instance is BM25 versus embeddings on the *same* 15 questions with the *same* preprocessing, so the comparison measures the method and not an accidental advantage.`,
+        l3q:`How do you design an evaluation harness and ablation strategy that tells you which components actually contribute, and guards against fooling yourself across many experiments?`,
+        l3a:`Treat the eval harness as an experimental apparatus whose primary job is to keep *you* honest, because the default failure mode of model development is mistaking noise for signal. Run *ablations* that remove one component at a time — reranker, hybrid fusion, query expansion — to attribute the gain to its actual source, and control confounds by changing exactly one variable per run with fixed seeds, data, and eval (the same discipline as systematic debugging). Confront the *multiple-comparisons* trap head-on: try fifty configurations and the best one looks great by luck, so you need held-out confirmation and an awareness of how many things you tested — your MarketMind DSR is exactly this correction applied to strategies. Report *variance*, not a single number: a lone eval score with no spread is unreliable, so you bootstrap confidence intervals on the metric and use paired significance tests to ask whether an improvement is real or within noise. And value *negative* results — learning that embeddings *don't* beat BM25 on your data saves real cost and complexity. Your structured RQ research program and MarketMind statistical controls already embody this mindset. The senior insight: a good eval harness is an apparatus for not fooling yourself — fair baselines, one-variable ablations, variance and significance reporting, and multiple-testing discipline — because believing noise is signal is the most expensive mistake in modeling.`,
       },
-      {
-        id:`mle-10`, q:`Why do preprocessing steps need to be part of the model pipeline?`,
+            {
+        id:`mle-10`,
+        q:`Why do preprocessing steps need to be part of the model pipeline?`,
         anchor:`Training and inference must transform data in the same way.`,
-        compressed:`Preprocessing is part of the model contract. It must be fit on training data, applied identically at inference, and versioned with the model to prevent train-serving skew.`,
+        compressed:`Training and inference must transform data in the same way.`,
         detail:`Models expect inputs with the same meaning and representation they saw during training. Preprocessing may include missing-value handling, scaling, category encoding, tokenization, or feature generation. If training code and production code implement these steps separately, they can drift and produce inconsistent features. A pipeline packages transformations with the model so the same fitted parameters are reused at inference. Transformations that learn statistics, such as means or category vocabularies, must be fit only on training data. Versioning the preprocessing logic is as important as versioning the model because a feature change can alter predictions even when model weights stay the same.`,
         followup:`Why is fitting a scaler before splitting the dataset a form of leakage?`,
         followupAnswer:`The scaler learns statistics (mean, standard deviation, minimum, maximum) from the data it is fit on. If fit on the full dataset including test rows, those test-row statistics influence the transformation applied during training. The model then sees slightly different feature values than a truly unseen row would produce. Scalers must be fit only on training data and applied to validation and test data.`,
         tie:`Relate this to canonical preprocessing outputs and avoiding ad hoc experiment-specific feature frames in MarketMind.`,
         trap:`Treating preprocessing as harmless cleanup that can be repeated differently in each script.`,
+        l2q:`How do you package preprocessing so it can't drift, and what do serialized pipelines and feature stores actually solve?`,
+        l2a:`The mechanism that prevents drift is *one* implementation of the transformations, fitted on training data, serialized *with* the model, and re-applied at inference — a scikit-learn \`Pipeline\` or equivalent that travels as a single artifact, so there's no second hand-written copy of the logic in the serving code to fall out of sync. A *feature store* generalizes this across an organization: it computes features once and serves the identical values to both the training pipeline (offline) and the live model (online), which is how teams guarantee online/offline parity at scale. The discipline that ties it together is versioning preprocessing in lockstep with the model, because a change to a transformation can move predictions even when the weights are byte-for-byte identical — so a "model version" that doesn't pin its preprocessing version is underspecified. Your Spring↔Python boundary is precisely where this risk lives: if feature computation happens on both sides, they must share code or a contract.`,
+        l3q:`How do you make preprocessing pipelines reproducible and safe to evolve in production — data contracts, schema validation, and versioned feature definitions?`,
+        l3a:`At production scale, preprocessing is *code plus data plus schema*, and all three need governance. *Data contracts and schema validation* sit at the pipeline's input (think Great-Expectations-style checks) and fail loudly when an upstream feed changes type, range, or null-rate — because the alternative is a silent transformation of garbage that produces a confident wrong prediction (the same "fail explicitly, don't silently impute" principle as the deployment question). *Versioning* must cover the transformation code, the fitted parameters, and the feature *definitions*, because changing a definition silently changes predictions for everyone downstream and may require *backfilling* historical features so old and new aren't mixed. You also distinguish *code* versioning (Git) from *data/artifact* versioning (content-addressed snapshots), since the same code over different data is a different result — your BLAKE3 content-addressable registry is exactly this idea done rigorously. And you watch for *input* drift at the pipeline boundary as an early signal that the world has moved under your transformations. The senior insight: production preprocessing is a versioned, schema-validated data pipeline, not a cleanup script — you enforce data contracts at the input, version code and data and feature definitions together, and evolve feature definitions through backfills rather than silent in-place changes.`,
       },
-      {
-        id:`mle-11`, q:`What is cross-validation?`,
+            {
+        id:`mle-11`,
+        q:`What is cross-validation?`,
         anchor:`Cross-validation evaluates a model across several train/validation partitions instead of relying on one split.`,
-        compressed:`Cross-validation repeats training across multiple partitions to estimate average performance and variability. The fold strategy must respect time and entity boundaries.`,
+        compressed:`Cross-validation evaluates a model across several train/validation partitions instead of relying on one split.`,
         detail:`In k-fold cross-validation, the data is divided into k folds. The model trains on k minus one folds and validates on the remaining fold, repeating until each fold has served as validation. The results are averaged to estimate performance and variability. Cross-validation uses limited data efficiently and helps reveal sensitivity to a particular split. The folds still need to respect groups, time, or hierarchy; ordinary random k-fold is not valid for every problem. Cross-validation can be computationally expensive because the full pipeline is fitted multiple times. It should be performed inside the training workflow so preprocessing does not leak across folds.`,
         followup:`What is the difference between ordinary k-fold and time-series cross-validation?`,
         followupAnswer:`Ordinary k-fold assigns records to folds randomly, which can put future records in training and past records in validation. Time-series cross-validation always trains on earlier data and validates on later data, using an expanding or sliding training window. For any time-dependent signal, ordinary k-fold is invalid because it violates the temporal ordering constraint.`,
         tie:`Connect this to combinatorial purged cross-validation concepts in MarketMind, while explaining the simpler k-fold foundation first.`,
         trap:`“Cross-validation means testing the model multiple times.”`,
+        l2q:`What are stratified, group, and nested cross-validation, and what problem does each solve?`,
+        l2a:`They're k-fold adapted to the structure of your data. *Stratified* k-fold preserves the class proportions in every fold, which is essential under imbalance — without it, a rare class can be absent from some folds entirely, making those folds meaningless. *Group* k-fold (GroupKFold, leave-one-group-out) keeps all records belonging to one entity — a patient, a customer, a site — together in a single fold, preventing the group leakage from your repeated-customer follow-up where the model otherwise learns individual quirks that don't generalize. *Nested* cross-validation runs an inner loop for hyperparameter tuning inside an outer loop for performance estimation, which you need when you both select a model and report its score; a single CV used for both purposes overstates performance for the same adaptive-overfitting reason the validation set does. The skill is matching the scheme to the data's structure rather than reflexively running random k-fold.`,
+        l3q:`Why does naive cross-validation fail for time-series and overlapping-label data, and what do purging and embargoing fix?`,
+        l3a:`CV's validity rests on the i.i.d. assumption — samples independent and identically distributed — and time-series violates *both* halves: autocorrelation breaks independence, and non-stationarity breaks identical distribution, so the standard machinery quietly lies. Even a time-ordered split can leak when *labels overlap*: in finance a label computed over a forward window means adjacent samples share information, so a training sample's label window can overlap a validation sample, leaking the future. *Purging* removes training samples whose label windows overlap the validation set; *embargoing* additionally drops samples immediately after the validation period to kill serial-correlation leakage across the boundary. *Combinatorial Purged Cross-Validation* — your CPCV — generates many purged train/test combinations to produce a robust, leakage-free *distribution* of performance rather than a single fragile number, and walk-forward analysis is the simpler sequential cousin. The senior insight: cross-validation is only valid under i.i.d. assumptions, so for time-series and overlapping-label problems you must purge and embargo to remove inter-fold information leakage — otherwise CV produces confidently wrong estimates, which is the canonical way backtests deceive quants. This is core MarketMind.`,
       },
-      {
-        id:`mle-12`, q:`What happens when a trained model is deployed?`,
+            {
+        id:`mle-12`,
+        q:`What happens when a trained model is deployed?`,
         anchor:`Deployment makes the trained model available to produce predictions on new inputs.`,
-        compressed:`Model deployment is the complete serving contract: versioned model plus preprocessing, validated inputs, inference, observability, performance limits, and rollback—not merely saving a model file.`,
+        compressed:`Deployment makes the trained model available to produce predictions on new inputs.`,
         detail:`A deployed model needs more than a serialized file. The serving system must load the correct model and preprocessing versions, validate requests, transform inputs, generate predictions, and return a stable response. It also needs latency limits, error handling, logging, access controls, and health checks. Models may run synchronously behind an API, asynchronously in batch jobs, or inside a streaming pipeline. Deployment should include a rollback path and a way to compare the new version with the previous version. A model can be statistically good and still fail operationally because of missing dependencies, incompatible schemas, excessive latency, or unavailable features.`,
         followup:`What should happen when a required feature is missing at inference time?`,
         followupAnswer:`The system should fail explicitly with a clear error rather than silently substituting a default or zero. A missing required feature often means the upstream data pipeline failed, not that the feature is genuinely zero. Silently imputing produces a prediction based on incorrect assumptions. The error should identify which feature is missing so the issue can be diagnosed upstream.`,
         tie:`Use the Spring API boundary and Python engine as an example of separating application serving from model/RAG behavior.`,
-        trap:`“Deploy the <code>.pkl</code> file to the cloud.”`,
+        trap:`“Deploy the .pkl file to the cloud.”`,
+        l2q:`What deployment patterns let you release a model safely — shadow, canary, blue-green, A/B — and what does each tell you?`,
+        l2a:`Each separates *deploy* from *release* and gives you a different signal. *Shadow* deployment runs the new model on real traffic without acting on its outputs, so you can compare predictions and catch errors with zero user impact — the safest first step. *Canary* routes a small percentage of live traffic to the new model, watches metrics, and ramps up only if they hold. *Blue-green* keeps two environments so you can switch instantly and, just as importantly, roll back instantly. *A/B testing* measures the *business* metric, not just the model metric, and is the only one of these that actually tells you whether the new model *helps* rather than merely scores better offline. The unifying principle, and your stated tie-in, is to always have a rollback path and to validate on real traffic before trusting a model — because offline metrics are optimistic (Q4) and the production distribution is the only honest test.`,
+        l3q:`What does production ML serving require beyond the model — latency budgets, the online/offline gap, feedback loops, and graceful degradation?`,
+        l3a:`The model is a small piece of a serving *system*, and the senior concerns are the surfaces around it. *Latency*: the model may be fast while fetching its features from an online store is slow, and what the user feels is the p99 across the *whole* path, so you budget feature-retrieval plus inference together, decide between batching and real-time, and account for cold starts. The *online/offline gap*: offline you have every feature and all the time you want, while online you have a latency budget and possibly stale or missing features, so a model that's brilliant in the notebook can fail at the boundary. *Feedback loops*: in ranking and recommendation systems the model's own predictions shape what users see and therefore what future training data looks like, so the data stops being representative — a trap your potential MLE work will hit directly. You monitor the right things (input drift and prediction drift immediately, label-based performance later when ground truth arrives), load model and feature versions in lockstep (the reproducibility tie to Q15), and design *graceful degradation* — fall back to a simpler model or to rules when the ML path fails, which is the fail-open/fail-closed decision from the error-handling question applied to inference. The senior insight: a deployed model lives inside a serving system whose hard parts are the latency budget across feature retrieval and inference, the online/offline gap, feedback loops that corrupt future training data, version lockstep, and graceful degradation — an offline-accurate model routinely fails on exactly these. Your Spring↔Python separation and the unproven planner/gate surfaces in the Realmwalkers pipeline are this territory.`,
       },
-      {
-        id:`mle-13`, q:`What is model drift?`,
+            {
+        id:`mle-13`,
+        q:`What is model drift?`,
         anchor:`Drift means the production data or the relationship between inputs and outcomes changes over time.`,
-        compressed:`Drift is change in inputs, targets, or their relationship. I monitor distributions and real outcome performance, then investigate impact before deciding to retrain.`,
+        compressed:`Drift means the production data or the relationship between inputs and outcomes changes over time.`,
         detail:`Data drift occurs when the distribution of input features changes. Concept drift occurs when the relationship between features and the target changes. Label drift refers to changes in the target distribution. Drift does not automatically mean the model is wrong; seasonal or expected changes may be harmless. Monitoring should compare current feature distributions, prediction distributions, data quality, and delayed outcome-based performance when labels become available. Teams need thresholds, investigation procedures, and retraining criteria rather than retraining whenever any statistic moves. Drift monitoring is most useful when tied to business impact and known failure modes.`,
         followup:`Why might prediction distribution drift while model accuracy remains stable?`,
         followupAnswer:`If the class distribution in production shifts — more easy cases or fewer borderline ones — the model may maintain accuracy on the cases it sees while the business volume or case mix changes in ways that matter operationally. Prediction distribution drift can signal that the population of requests has shifted even when per-case accuracy hasn't changed.`,
         tie:`Connect process-shift monitoring in the Tableau quality dashboard with the same monitoring mindset for models.`,
         trap:`“Drift means the model gets old and should be retrained.”`,
+        l2q:`How do you actually detect drift, and what's the difference between input drift and performance degradation?`,
+        l2a:`The key practical distinction is *what you can detect now versus what you have to wait for*. *Input/feature drift* you can catch immediately with no labels, by running statistical comparisons of current feature distributions against a training reference — KS tests, population stability index (PSI), KL divergence. *Prediction drift* you catch by monitoring the output distribution, also label-free. *Performance drift* — the thing you actually care about — requires ground truth, which often arrives late or not at all, so it's a *lagging* indicator. That gives you a hierarchy: input and prediction drift are early-warning signals, performance drift is the truth but delayed. The operational craft is setting thresholds that catch real shifts without drowning you in alerts on harmless wiggles (your "don't retrain on every statistic" point), the same monitoring mindset behind your Tableau quality dashboard applied to a model instead of a process.`,
+        l3q:`How do you design a retraining strategy that responds to drift without overreacting — and handle the labeling-delay and feedback-loop problems that make drift hard to even measure?`,
+        l3a:`Drift response is best understood as a *control problem* with badly delayed and sometimes corrupted feedback. Retraining triggers can be scheduled, performance-triggered, or drift-triggered, but performance-triggered retraining presumes timely labels you may not have — the *labeling-delay problem*, where in domains like your compounding cases ground truth comes weeks later or only after manual review, so you're forced to lean on input/prediction drift as leading indicators and live with uncertainty. Worse, *feedback loops* corrupt the measurement itself: a model whose actions filter the data (a fraud model that blocks transactions never observes the true labels of what it blocked) gives you a *biased* view of drift, conflating real-world change with the model's own influence. Two consequences follow. First, retraining on recently-collected data can *amplify* a feedback loop or chase noise, so sometimes the correct action is to *not* retrain — "do nothing" is a legitimate, sometimes optimal, decision. Second, you distinguish drift that *matters* (tied to business impact) from harmless seasonal drift, and you tie triggers to impact rather than to raw statistical movement, often running champion/challenger so a candidate proves itself before promotion. The senior insight: monitor leading indicators because true performance is lagged and sometimes unobservable, tie retraining to business impact not statistics, and recognize that retraining on biased recent data can make things worse — so a deliberate "no retrain" is part of the strategy. Your regulated domain and process-shift monitoring make this concrete.`,
       },
-      {
-        id:`mle-14`, q:`What is RAG, and how is it different from fine-tuning?`,
+            {
+        id:`mle-14`,
+        q:`What is RAG, and how is it different from fine-tuning?`,
         anchor:`RAG retrieves relevant documents at request time and gives them to a language model; fine-tuning changes the model’s learned parameters.`,
-        compressed:`RAG retrieves external evidence at query time; fine-tuning changes model behavior through training. RAG is usually better for current, citeable knowledge, while fine-tuning is better for learned behavior or format.`,
+        compressed:`RAG retrieves relevant documents at request time and gives them to a language model; fine-tuning changes the model’s learned parameters.`,
         detail:`Retrieval-augmented generation separates knowledge access from language generation. A user question is transformed into a search query, relevant chunks are retrieved, and those chunks are supplied as context to the language model. This can improve grounding, provide citations, and make knowledge updates easier because documents can change without retraining the model. Fine-tuning changes model weights to improve behavior, format, style, or task performance. Fine-tuning is not an efficient way to keep rapidly changing factual knowledge current. RAG can still fail through poor chunking, weak retrieval, misleading sources, or unsupported synthesis, so it requires evaluation and refusal behavior.`,
         followup:`Why can a RAG system hallucinate even when the correct document exists in the corpus?`,
         followupAnswer:`The retriever might rank the correct document too low to appear in the top-k results. Even when retrieved, the language model may not faithfully use it — it may blend retrieved content with parametric knowledge, misread the evidence, or synthesize across documents in ways that distort facts. Retrieval solves the access problem; grounding and faithfulness are separate failure modes.`,
         tie:`Use the compounding-quality assistant’s ingestion, chunking, retrieval, citation metadata, and refusal boundaries.`,
         trap:`“RAG eliminates hallucinations.”`,
+        l2q:`How do you decide between RAG, fine-tuning, long-context, and tool-use — and when do you combine them?`,
+        l2a:`Match the technique to what's actually failing. *RAG* fits changing or large knowledge that needs citations and freshness — its whole advantage is that you update documents without retraining. *Fine-tuning* changes behavior, format, style, or domain tone, or teaches a skill; it's a poor way to inject fast-changing facts, which people repeatedly learn the hard way. *Long-context* (stuffing the relevant material directly into the prompt) works when it fits and retrieval overhead isn't worth it, but you pay in cost, latency, and the "lost in the middle" degradation where models attend poorly to the center of a long context. *Tools / function-calling* handle actions and exact computation the model shouldn't guess at. They combine naturally — fine-tune for format *and* use RAG for knowledge is a common pairing — and the decision rule is diagnostic: wrong facts point to retrieval, wrong style points to fine-tuning, missing actions point to tools. CQIEA is correctly a RAG system because the SOPs change and citations are mandatory — fine-tuning the facts in would be the wrong tool.`,
+        l3q:`How do you evaluate and harden a RAG system end-to-end — separating retrieval quality from generation faithfulness, and building in refusal and citation integrity?`,
+        l3a:`This is your deepest area, so the senior answer is to stop treating RAG as one system and treat it as *two* with independent failure modes, then instrument each. *Retrieval* you measure with labeled relevance judgments — recall@k, MRR, nDCG on your 15-question set — because if the right chunk never enters the top-k, no amount of generation skill recovers it. *Generation* you measure separately for *faithfulness/groundedness* (does every claim trace to a retrieved source?), answer relevance, and *citation correctness* — and conflating the two is why your follow-up's distinction matters: you can only fix the right stage if you've localized the failure to it. Faithfulness checking is itself a design choice with a spectrum of rigor: LLM-as-judge (convenient but with its own reliability caveats), NLI/entailment checks, or — your RQ3 finding — narrow deterministic checklets that are more reliable than a broad LLM critic for specific, checkable properties. *Refusal/abstention* must be a first-class, separately-evaluated behavior: the system has to say "not in the corpus" rather than fabricate, and you test that explicitly with adversarial out-of-corpus questions (your refusal boundaries). *Citation integrity* means the cited span must actually support the claim — a citation that doesn't is worse than none, because it manufactures false confidence. Your documented RQ program *is* the hardening toolkit: selective verification (RQ2), checklets vs. broad critics (RQ3), task-graph control (RQ4), and best-of-N with verified selection (RQ5), with the keystone rigor that the false-waiver guarantee *changes type with oracle availability* — a true-correctness bound where a sound oracle exists, only a human-agreement bound where it doesn't. The senior insight: a production RAG system is two systems with independent failure modes, so you evaluate retrieval and faithful generation separately on labeled sets, enforce citation integrity and explicit abstention, and add verification layers whose guarantees you can state precisely rather than hand-wave — exactly the program you've been running against CQIEA.`,
       },
-      {
-        id:`mle-15`, q:`What makes an ML experiment reproducible?`,
+            {
+        id:`mle-15`,
+        q:`What makes an ML experiment reproducible?`,
         anchor:`Reproducibility means another run can use the same data, code, configuration, and environment to obtain the same or explainably similar result.`,
-        compressed:`Reproducibility requires versioned data, code, features, splits, configuration, dependencies, and evaluation—not just a random seed. Every model artifact should have traceable lineage.`,
+        compressed:`Reproducibility means another run can use the same data, code, configuration, and environment to obtain the same or explainably similar result.`,
         detail:`Reproducibility requires versioning more than model code. The dataset or dataset snapshot, feature definitions, split logic, preprocessing, model parameters, random seeds, dependency versions, and evaluation code all affect the result. Experiments should record these inputs together with outputs and metrics. Deterministic seeds help, but some hardware and parallel operations can still introduce nondeterminism. Reproducibility also means documenting how an artifact was produced and preventing later runs from silently overwriting it. Strong lineage makes debugging and governance easier because engineers can trace a model result back to its exact inputs.`,
         followup:`Why is saving only the best model file insufficient?`,
         followupAnswer:`The model file captures the weights but not which dataset version, feature definitions, split logic, preprocessing, hyperparameters, or evaluation code produced them. Without that lineage you can't reproduce the run, compare it fairly to a new candidate, or explain why it performs differently on new data. Reproducibility requires the full artifact lineage, not just the weights.`,
         tie:`Use MarketMind’s governed artifacts, architecture decisions, tests, and run-scoped outputs as the concrete example.`,
-        trap:`“Set <code>random_state=42</code>.” ---`,
-      },
+        trap:`“Set random_state=42.”`,
+        l2q:`What's the difference between experiment tracking, model versioning, and data versioning — and what does each capture?`,
+        l2a:`They answer three different questions and you need all three. *Experiment tracking* (MLflow / Weights & Biases style) logs the parameters, metrics, code version, and artifacts of each run — it answers "what did I try and what happened?" *A model registry* stores versioned models with stages and lineage — it answers "which model is in production and how was it built?" *Data versioning* (DVC, lakeFS, immutable snapshots) pins the exact data — it answers "which data produced this?", and it's the one people skip even though data changes silently, which is precisely why a code-only version is insufficient (your follow-up). Put together, the full lineage is data version + code version + config + environment → result, and your MarketMind content-addressable artifact registry (BLAKE3/SHA-256) is data-and-artifact versioning done about as rigorously as it gets.`,
+        l3q:`How do you achieve true reproducibility and lineage at scale — content-addressing, deterministic pipelines, the irreducible nondeterminism — and why does governance need it?`,
+        l3a:`The gold standard is *content-addressable artifacts*: hash the inputs so identical inputs produce the same address, which gives you automatic deduplication and verifiable, tamper-evident provenance — your BLAKE3 registry exactly. You pair that with *deterministic pipelines* (pinned dependencies, fixed seeds, a controlled environment via Docker or Nix), while accepting that some nondeterminism is *irreducible*: floating-point reduction isn't associative, so GPU parallel reductions can differ run to run, and library or hardware differences add more — which is why the honest target is "explainably similar," not bitwise identical, and why you record enough metadata to *account* for any difference rather than pretending there is none (your "some hardware introduces nondeterminism" point). You build *lineage graphs* that trace a prediction back through model → training run → data snapshot → raw source, and you keep artifacts *immutable* with append-only ledgers so a later run can't silently overwrite an earlier one — your Resolution Ledger and fail-closed gate are this discipline made operational, addressing your explicit concern about silent overwrites. The governance angle is the punchline, and it's exactly what an MLE II Legal role cares about: in a regulated domain reproducibility isn't a convenience, it's a compliance requirement — you must be able to reproduce *and explain* any decision the model made, which is impossible without the full lineage chain. The senior insight: reproducibility at scale means content-addressed, immutable artifacts with full lineage graphs and deterministic-as-possible pipelines, accepting irreducible hardware nondeterminism so you target explainable similarity — and in regulated settings that lineage is a legal requirement, not an engineering nicety. Your MarketMind governance stack is a textbook realization of this.`,
+      }
     ],
   },
   ds: {
     label: `Data Science I`, short: `DS I`,
     icon: `📊`, color: `rag`,
     questions: [
-      {
-        id:`ds-01`, q:`What does a data scientist do?`,
+            {
+        id:`ds-1`,
+        q:`What does a data scientist do?`,
         anchor:`A data scientist turns an ambiguous question into a measurable analysis, model, experiment, or recommendation.`,
-        compressed:`A data scientist converts a business question into a measurable problem, analyzes or models the data, validates the result, and communicates what decision the evidence supports and what it does not prove.`,
+        compressed:`A data scientist turns an ambiguous question into a measurable analysis, model, experiment, or recommendation.`,
         detail:`Data science begins with problem framing rather than modeling. The data scientist clarifies the decision, defines the outcome, identifies available data, evaluates data quality, chooses an appropriate method, and communicates results. Depending on the problem, the deliverable may be descriptive analysis, a dashboard, an experiment, a forecast, or a predictive model. The role overlaps with analytics, statistics, machine learning, and data engineering, but the center is evidence-based decision support. A technically correct analysis can still fail if it answers the wrong question, uses a misleading denominator, or cannot be acted on. Good data science makes assumptions and limitations explicit.`,
         followup:`When is a dashboard a better deliverable than a machine-learning model?`,
         followupAnswer:`When the decision is recurring and the user needs to see current state to decide — a model automates the decision but a dashboard informs it. When the relationship is too uncertain to model reliably. When the business needs to retain judgment, audit the reasoning, or explain the decision. When building a model would take longer than the value it would produce.`,
         tie:`Use the compounding-quality dashboard and operational root-cause work as examples of decision support without forcing ML.`,
         trap:`“A data scientist builds machine-learning models.”`,
+        l2q:`How do you decide whether a problem even warrants a data scientist versus an analyst with a SQL query?`,
+        l2a:`The dividing line is uncertainty and method, not data size. If the question has a known answer that a query or report simply retrieves — "how many orders shipped last week" — that is analytics, not data science. Data science earns its keep when the question requires estimating something unobserved, quantifying uncertainty, designing an experiment, or building a model whose behavior has to be validated. The honest position in an interview is that a great deal of "data science" work is actually well-scoped analytics, and recognizing that saves the organization from over-engineering a dashboard into a model nobody needed.`,
+        l3q:`How do you keep a data science function from producing technically-correct analyses that never change a decision?`,
+        l3a:`You tie every project to a decision and a decision-maker before any data is pulled — if no one can name the action a result would trigger, the project is decoration. The senior practice is to work backward from the decision: what threshold flips it, who owns it, what the cost of being wrong is in each direction, and whether the analysis is even on the critical path of that decision. The classic failure is the "insight" that is interesting but inert — a finding no one is positioned to act on, often delivered after the window to act has already closed. The senior insight: a data scientist's real output is not analysis but decisions changed, and the discipline is ruthlessly pruning work that cannot move one — exactly the framing that keeps the compounding-quality root-cause work pointed at operational action rather than retrospective storytelling.`,
       },
-      {
-        id:`ds-02`, q:`How do you turn a business question into an analytical question?`,
+            {
+        id:`ds-2`,
+        q:`How do you turn a business question into an analytical question?`,
         anchor:`Identify the decision, define the outcome, specify the population and time window, and choose a measurable success metric.`,
-        compressed:`I clarify the decision, population, time window, outcome, denominator, comparison, and action. Then I verify the available data can actually support that question.`,
+        compressed:`Identify the decision, define the outcome, specify the population and time window, and choose a measurable success metric.`,
         detail:`Business questions are often vague, such as “Why is quality getting worse?” A data scientist makes the question operational: which quality measure, for which sites, over what time period, compared with what baseline, and what action could follow? The outcome and denominator must be defined carefully. For example, raw incident count and incident rate per 1,000 orders answer different questions. The data grain should match the question, and important exclusions should be explicit. The final analytical question should be answerable with available data and linked to a decision. If the data cannot support causality, the question should be framed as association or diagnosis rather than proof.`,
         followup:`How would you refine “Which site performs best?”`,
         followupAnswer:`Best on what measure — incident rate, resolution time, percentage severe, customer complaints? Over what time period and compared to what baseline? Adjusted for case mix, volume, or acuity differences between sites? Including sites with zero incidents (denominator problem) or only sites with enough volume to be meaningful? Each clarification can reverse the answer.`,
         tie:`Use governed definitions for QRE rate, negative-review rate per 1,000 orders, or RRC value.`,
         trap:`Starting analysis before defining the metric and denominator.`,
+        l2q:`A stakeholder insists on a single number to rank sites. How do you give them one without it being misleading?`,
+        l2a:`You can deliver a single ranking metric, but you engineer it deliberately and disclose its construction. Pick a rate with a defensible denominator (incidents per 1,000 orders, not raw count), adjust for case mix if the sites differ systematically, and pair the point estimate with an uncertainty band so a low-volume site with one bad month is not crowned worst on noise. The skill is satisfying the request for simplicity while building in the guards — a composite or adjusted metric with documented weights — rather than refusing the question or handing over a naive average that inverts the moment someone scrutinizes it.`,
+        l3q:`How do metric definitions become a source of organizational conflict, and how do you prevent it?`,
+        l3a:`When two teams compute "the same" metric differently — different denominators, time windows, inclusion rules, or grain — they end up arguing about reality when they are really arguing about definitions, and trust in all the numbers erodes. The senior move is governed metric definitions: a single source of truth where QRE rate, negative-review rate per 1,000 orders, and RRC value each have one canonical SQL definition, one owner, and a versioned changelog, so a number means exactly one thing across the organization. This is as much a political and process problem as a technical one, because the hard part is getting teams to adopt the shared definition, not computing it. The senior insight: at scale the value of a metric is its agreed, stable definition, and ungoverned definitions silently fork until no one trusts the dashboard — which is why the governed definitions in the compounding-quality work are infrastructure, not bureaucracy.`,
       },
-      {
-        id:`ds-03`, q:`What is the difference between a population and a sample?`,
+            {
+        id:`ds-3`,
+        q:`What is the difference between a population and a sample?`,
         anchor:`A population is the full group of interest; a sample is the subset actually observed.`,
-        compressed:`The population is the target group; the sample is the observed subset. Valid inference requires the sample to represent the population and account for sampling uncertainty.`,
+        compressed:`A population is the full group of interest; a sample is the subset actually observed.`,
         detail:`The population is the complete set about which we want to draw a conclusion, such as all orders processed by a network during a year. A sample is the subset available for analysis. Sampling allows estimation when observing the full population is expensive or impossible. The sample must represent the population relevant to the decision. Selection bias occurs when inclusion depends on factors related to the outcome, such as analyzing only customers who submitted reviews. Sampling variability means different random samples would produce different estimates. Statistical inference quantifies some of that uncertainty, but it cannot repair a systematically biased sample.`,
         followup:`Why are customer reviews not a representative sample of all customer experiences?`,
         followupAnswer:`Reviews are submitted voluntarily, which selects for extreme experiences — the very satisfied and the very dissatisfied. Neutral experiences are systematically underrepresented. Customers who encountered a problem and gave up without contacting support are excluded. Any conclusion from review data applies to 'customers who left reviews,' not to all customers, and that distinction can reverse an inference.`,
         tie:`Discuss review-selection bias when interpreting customer-review dashboards.`,
         trap:`Assuming a large sample is automatically representative.`,
+        l2q:`You only have a biased sample (reviews) but must still say something useful. What can and can't you legitimately claim?`,
+        l2a:`You scope every claim to the sampled population and resist the urge to generalize. From review data you can legitimately describe what reviewers say, track how that population changes over time, and surface themes worth investigating — that is real value. What you cannot do is estimate the rate of a problem across all customers, because the silent majority is missing and the selection is correlated with the outcome. The applied skill is reframing the deliverable from "X% of customers experienced this" to "among customers who reviewed, this theme rose 30% — worth a follow-up through a representative channel," which is honest and still actionable.`,
+        l3q:`How do selection effects compound when a biased sample becomes training data or feeds a downstream model?`,
+        l3a:`A selection bias that is merely an analysis caveat becomes a structural defect once the biased sample trains a model, because the model learns the selection mechanism as if it were the world. Build a complaint-classifier on reviews and it is calibrated to reviewers, not customers, and its error rate on the unobserved majority is unknown and unmeasurable from the same data. Worse, if the model's outputs influence which cases get reviewed next, you get a feedback loop that amplifies the original bias — the model manufactures its own future training distribution. The senior insight: in a static analysis selection bias bounds your conclusions, but in a deployed system it propagates and compounds, so you must either correct it at the source (deliberately sample the silent population) or continuously validate against an unbiased holdout — a concern that is front-of-mind for any model feeding decisions in a regulated, auditable setting like the MLE II Legal domain.`,
       },
-      {
-        id:`ds-04`, q:`What are mean, median, and mode, and when would you use each?`,
+            {
+        id:`ds-4`,
+        q:`What are mean, median, and mode, and when would you use each?`,
         anchor:`Mean is the arithmetic average, median is the middle value, and mode is the most frequent value.`,
-        compressed:`Mean summarizes total magnitude, median gives a robust center for skewed data, and mode identifies the most common value. I choose based on distribution and decision context.`,
+        compressed:`Mean is the arithmetic average, median is the middle value, and mode is the most frequent value.`,
         detail:`The mean uses every numeric value and is useful when the distribution is reasonably symmetric and outliers are meaningful parts of the process. The median is the middle ordered value and is more resistant to extreme observations, making it useful for skewed data such as turnaround time or cost. The mode is the most common value and can describe categories or repeated discrete values. No single summary describes a distribution completely. Two datasets can have the same mean but different spread or shape. Analysts should pair central tendency with sample size, variability, and a distribution view.`,
         followup:`Why might median processing time improve while the 95th percentile gets worse?`,
         followupAnswer:`The median is the middle value. If the bulk of routine cases are processed faster (pulling the median down) but a small number of complex cases take much longer (pushing the 95th percentile up), both can happen simultaneously. Reporting only the median hides deterioration at the tail, which may be where the most important or harmed cases live.`,
         tie:`Apply this to pharmacy processing times, latency, or financial-impact distributions.`,
         trap:`Saying median is always better because it ignores outliers.`,
+        l2q:`Which central-tendency or summary statistic would you put on an operational SLA, and why not the mean?`,
+        l2a:`For latency or turnaround SLAs you target a high percentile — p95 or p99 — not the mean, because users and harmed cases live in the tail and the mean hides them. A mean can look healthy while a meaningful slice of cases blow past the limit; a percentile target ("95% of cases under N minutes") directly constrains the experience you actually care about. The tradeoff is that percentiles need enough volume to estimate stably and can be noisy for low-traffic segments, so you pair the percentile with a count and sometimes a hard maximum-acceptable ceiling.`,
+        l3q:`How do you summarize a distribution that's multimodal or generated by distinct subpopulations mixed together?`,
+        l3a:`When a distribution is a blend of distinct processes — routine compounds finishing fast and complex ones finishing slow — a single mean or median describes a population that does not exist, the "average" landing in a valley where no real cases are. The senior move is to find and report the structure: segment by the variable that splits the modes (dosage form, complexity, site), summarize each segment on its own terms, and only then decide whether an overall number is honest. This connects to mixture thinking — recognizing that one observed distribution is several latent ones — and to control charts, where mixing subpopulations inflates apparent variation and triggers false signals. The senior insight: before summarizing, ask whether the distribution is one thing or several, because reporting a single statistic over a mixture manufactures a phantom "typical" case and masks the very heterogeneity that explains the process.`,
       },
-      {
-        id:`ds-05`, q:`What do variance and standard deviation tell you?`,
+            {
+        id:`ds-5`,
+        q:`What do variance and standard deviation tell you?`,
         anchor:`They describe how spread out numeric values are around the mean.`,
-        compressed:`Variance and standard deviation measure dispersion around the mean. Standard deviation is easier to interpret because it uses the original units, but distribution shape and process context still matter.`,
+        compressed:`They describe how spread out numeric values are around the mean.`,
         detail:`Variance is the average squared distance from the mean, with an adjustment for sample variance when estimating from a sample. Standard deviation is the square root of variance, so it is expressed in the original unit. A small standard deviation indicates values cluster near the mean; a large one indicates greater variation. Standard deviation is most interpretable for distributions where the mean is meaningful and does not fully describe skewed or multimodal data. Variation is not always bad: some processes naturally have heterogeneous cases. Analysts should distinguish expected common-cause variation from unusual process shifts.`,
         followup:`Can two groups have the same mean and standard deviation but very different distributions?`,
         followupAnswer:`Yes. A bimodal distribution (two clusters of values) and a normal distribution can have identical means and standard deviations but look completely different. Anscombe's Quartet demonstrates this with datasets identical in mean, variance, and correlation but with visually different structures. Summary statistics alone cannot describe distribution shape.`,
         tie:`Connect standard deviation and 3-sigma control limits to the quality dashboard, while distinguishing control limits from specification limits.`,
         trap:`Interpreting standard deviation as an error or assuming high variation always means poor quality.`,
+        l2q:`On a control chart, how do you tell normal process variation from a real shift, and what's the cost of getting the threshold wrong?`,
+        l2a:`Statistical process control distinguishes common-cause variation (the inherent noise of a stable process, inside the control limits) from special-cause variation (a signal — a point beyond 3-sigma or a non-random run pattern) that warrants investigation. The threshold is a direct false-positive/false-negative tradeoff: tighten the limits and you chase noise and breed alert fatigue; loosen them and you miss real deterioration. The applied skill is choosing limits and run rules (e.g., the Western Electric rules) matched to the cost of a missed shift versus the cost of a wasted investigation, and remembering that control limits describe the process, not the customer-facing spec.`,
+        l3q:`Why is the distinction between control limits and specification limits so often confused, and what goes wrong when a team conflates them?`,
+        l3a:`Control limits come from the process's own variation (what it does do); specification limits come from requirements (what it should do), and they are computed from entirely different inputs. Teams conflate them because both render as horizontal lines on a chart, but the failure modes are opposite: a process can be in statistical control yet routinely out of spec (stably bad), or capable against spec yet showing a special-cause signal (drifting but still passing). Acting on the wrong one means either tampering with a stable process — Deming's funnel experiment shows that adjusting to noise increases variation — or ignoring a real shift because points are still inside the spec. The senior insight: control limits answer "is the process stable?" and spec limits answer "is the output acceptable?", and conflating them leads to tampering or complacency — which is exactly why the quality dashboard keeps the two explicitly separate.`,
       },
-      {
-        id:`ds-06`, q:`What is the difference between correlation and causation?`,
+            {
+        id:`ds-6`,
+        q:`What is the difference between correlation and causation?`,
         anchor:`Correlation means two variables move together; causation means changing one variable produces a change in the other.`,
-        compressed:`Correlation shows association; causation requires evidence that changing one factor changes the outcome. Confounding, reverse causality, and selection can create misleading correlations.`,
+        compressed:`Correlation means two variables move together; causation means changing one variable produces a change in the other.`,
         detail:`Correlation measures association, not a causal mechanism. Two variables may correlate because one causes the other, because a third variable affects both, because the direction is reversed, or by chance. For example, a site with more incidents may simply process more orders, so volume is a confounder. Causal claims usually require randomized experiments or strong observational designs with defensible assumptions. Temporal order, domain knowledge, and alternative explanations should be considered. Correlation is still useful for prediction and investigation, but the language should match the evidence.`,
         followup:`How would you communicate a strong association when you cannot establish causality?`,
         followupAnswer:`State the direction and magnitude of the association clearly, name the confounders you couldn't rule out, describe what a causal mechanism would require and why your data can't prove it, and frame the recommendation accordingly — 'this association is consistent with X causing Y and warrants investigation' rather than 'X causes Y.' Being precise about evidence strength builds credibility.`,
         tie:`Use site-level quality rates and incident types as examples where root-cause claims need care.`,
         trap:`Saying “correlation does not imply causation” without explaining what would strengthen a causal claim.`,
+        l2q:`Given only observational data, what designs or adjustments can strengthen a causal claim short of a randomized experiment?`,
+        l2a:`You can move from naive correlation toward credible causal inference with observational designs that make assumptions explicit: control for measured confounders via stratification or regression, use difference-in-differences when you have before/after across a treated and an untreated group, regression discontinuity around a threshold, or instrumental variables when you have a quasi-random nudge. Each buys causal credibility in exchange for assumptions you must defend — no unmeasured confounding, parallel trends, a valid instrument — and stating those assumptions plainly is what separates a defensible quasi-experiment from hand-waving. The applied skill is matching the design to the data-generating situation and being honest that adjustment only handles the confounders you actually measured.`,
+        l3q:`How can controlling for the wrong variable make a causal estimate worse, not better?`,
+        l3a:`Adding controls is not free goodness — conditioning on a collider (a variable caused by both your treatment and outcome) or on a mediator (a variable on the causal path) can induce spurious association or erase a real effect, so "controlling for everything" is actively dangerous. The discipline is to reason about the causal structure first — a DAG of what causes what — then adjust only for confounders and never for colliders or mediators, which is the opposite of throwing every available column into a regression. This is where data science meets genuine causal modeling: the variables you must include and exclude are dictated by the assumed graph, not by what improves fit. The senior insight: causal inference is a modeling assumption about structure, not a property of the data, so more controls can degrade an estimate, and credibility comes from defending the graph — a standard worth internalizing before any model output is used to justify a decision with legal or regulatory weight.`,
       },
-      {
-        id:`ds-07`, q:`What is a hypothesis test?`,
+            {
+        id:`ds-7`,
+        q:`What is a hypothesis test?`,
         anchor:`A hypothesis test asks whether observed data are sufficiently inconsistent with a specified null hypothesis.`,
-        compressed:`A hypothesis test evaluates how compatible the data are with a null hypothesis. The p-value is conditional on the null and assumptions; it does not measure practical importance or the probability the null is true.`,
+        compressed:`A hypothesis test asks whether observed data are sufficiently inconsistent with a specified null hypothesis.`,
         detail:`A hypothesis test starts with a null hypothesis, such as no difference between two groups. A test statistic summarizes the observed difference relative to expected sampling variation. The p-value is the probability, assuming the null hypothesis and model assumptions are true, of observing a result at least as extreme as the one obtained. A small p-value is evidence against the null, but it is not the probability that the null is true. Statistical significance does not guarantee practical importance. The result also depends on sample size and assumptions such as independence or distributional form. Effect sizes and confidence intervals should accompany the test.`,
         followup:`Why can a tiny difference become statistically significant with a huge sample?`,
         followupAnswer:`Statistical significance depends on both effect size and sample size. A difference that explains almost no variance can still produce a p-value near zero when n is large because the standard error shrinks toward zero as n grows. Large-sample significance tests require effect size reporting — Cohen's d, relative risk, or a practical threshold — so readers know whether the finding is operationally meaningful.`,
         tie:`Apply this to comparing rates before and after a workflow change while reporting effect size and operational relevance.`,
         trap:`“A p-value below 0.05 proves the effect is real.”`,
+        l2q:`You run multiple comparisons across sites, categories, and time windows. Why is that a problem and how do you handle it?`,
+        l2a:`Every additional test at α=0.05 is another 5% shot at a false positive, so testing twenty site-category slices nearly guarantees a "significant" finding that is pure noise — the multiple-comparisons problem. You handle it by controlling the family-wise error rate (Bonferroni, Holm) when any single false positive is costly, or the false discovery rate (Benjamini-Hochberg) when you can tolerate a known fraction of false discoveries among many exploratory tests. The applied judgment is pre-registering the primary comparison versus flagging the rest as exploratory and correcting accordingly, rather than mining all slices and reporting the winners as if they were planned.`,
+        l3q:`Why is "peeking" at an experiment and stopping when it hits significance statistically invalid, and what's the right way to monitor a running test?`,
+        l3a:`Fixed-horizon p-values assume you look exactly once, at the planned sample size; if you peek repeatedly and stop the moment p dips below 0.05, the actual false-positive rate balloons far above the nominal level because you have given noise many independent chances to cross the line. The correct approaches are sequential methods designed for continuous monitoring — group-sequential designs with alpha-spending (O'Brien-Fleming), or always-valid inference via mixture sequential probability ratio tests and confidence sequences that hold no matter when you stop. This is exactly the discipline behind MarketMind's statistical controls: continuous evaluation requires inference that is valid under optional stopping, not naive repeated t-tests. The senior insight: a significance test is only valid under the stopping rule it was designed for, so a system that monitors results continuously needs always-valid or alpha-spending methods — naive peeking is one of the most common and most invisible ways teams fool themselves.`,
       },
-      {
-        id:`ds-08`, q:`What is a confidence interval?`,
+            {
+        id:`ds-8`,
+        q:`What is a confidence interval?`,
         anchor:`A confidence interval gives a range of plausible values for an estimated population quantity under a statistical procedure.`,
-        compressed:`A confidence interval expresses uncertainty around an estimate. Its width reflects sample size and variability, but it does not correct bias or prove the model assumptions are valid.`,
+        compressed:`A confidence interval gives a range of plausible values for an estimated population quantity under a statistical procedure.`,
         detail:`A confidence interval combines a point estimate with uncertainty from sampling. A 95% confidence procedure is designed so that, across repeated samples, 95% of intervals constructed by that method contain the true parameter. It is commonly described informally as a plausible range, but it is not strictly a 95% probability statement about a fixed parameter under frequentist statistics. Wider intervals indicate greater uncertainty, often because of small samples or high variability. Narrow intervals may still center on a biased estimate if the sample or model is flawed. Intervals help distinguish statistical precision from practical significance.`,
         followup:`What does it mean when a treatment-effect confidence interval includes zero?`,
         followupAnswer:`Zero is a plausible estimate of the true effect under the statistical procedure used. The data are compatible with no treatment effect. It does not prove the effect is zero, only that the sample doesn't provide strong evidence it's nonzero. Combined with a large point estimate and wide interval (small sample), it's compatible with a practically important effect the study was underpowered to detect.`,
         tie:`Use rate estimates for low-volume sites where point estimates alone can overstate certainty.`,
         trap:`“There is a 95% chance the true value is inside this specific interval.”`,
+        l2q:`A low-volume site shows the "worst" rate but a huge confidence interval. How do you present this responsibly?`,
+        l2a:`You present the uncertainty as the headline, not a footnote: the point estimate is the worst, but the interval is so wide that the site is statistically indistinguishable from the average, so ranking it last would be acting on noise. Concretely, you would use the interval to say "we can't yet tell this site apart from the pack — it needs more data before we act," and you might apply shrinkage so small-sample estimates are pulled toward the overall mean rather than taken at face value. The applied skill is letting interval width gate the strength of the recommendation, which prevents the recurring error of crowning a low-n outlier as best or worst.`,
+        l3q:`When you're ranking many groups by an estimated rate, why do naive point estimates systematically mislead, and what's the principled fix?`,
+        l3a:`Ranking groups by raw rates systematically promotes the smallest groups to the extremes, because low-n estimates have the highest variance and therefore produce the most extreme highs and lows by chance alone — the "ranking on noise" problem that plagues hospital and school league tables. The principled fix is partial pooling via a hierarchical / empirical-Bayes model: estimate each group's rate as a compromise between its own data and the population, shrinking unreliable small-sample estimates toward the global mean in proportion to their uncertainty. This gives more honest rankings and stable estimates for sparse groups, at the cost of a more complex model and the assumption that groups are exchangeable. The senior insight: comparing estimated rates across groups of different sizes is a shrinkage problem, not a sorting problem, and naive league tables reliably reward small-sample noise — which is why low-volume sites deserve pooled estimates before anyone ranks them.`,
       },
-      {
-        id:`ds-09`, q:`How should missing data be handled?`,
+            {
+        id:`ds-9`,
+        q:`How should missing data be handled?`,
         anchor:`First understand why values are missing; then choose a treatment that matches the missingness mechanism and the analysis.`,
-        compressed:`I profile missingness, investigate why it occurs, choose a treatment appropriate to the mechanism and use case, and document the effect. Blind row deletion or mean imputation can introduce bias.`,
+        compressed:`First understand why values are missing; then choose a treatment that matches the missingness mechanism and the analysis.`,
         detail:`Missing data should not be handled automatically. Missing completely at random means missingness is unrelated to observed or unobserved values. Missing at random means it can be explained by observed variables. Missing not at random means the missingness depends on the missing value or an unobserved factor. Options include leaving values missing, filtering records, simple imputation, model-based imputation, adding a missingness indicator, or collecting better data. Dropping all incomplete rows can bias the sample and waste information. Imputation should be fit within the training data for predictive modeling to avoid leakage. The analysis should report missingness rates and sensitivity to the chosen approach.`,
         followup:`When can “missing” itself be a useful signal?`,
         followupAnswer:`When missingness is not random — when data is absent because of the behavior or condition being studied. A missing discharge date might mean the patient is still admitted. A missing credit inquiry might mean the customer never applied. A missing severity field in a compounding record might indicate informal handling. The absence is informative and should be encoded as a feature rather than filled.`,
         tie:`Relate explicit missing-information fields in the review workflow to preserving uncertainty rather than fabricating values.`,
         trap:`“Fill numeric nulls with the mean and categorical nulls with the mode.”`,
+        l2q:`Why is mean imputation often the worst defensible choice, and what would you do instead for a predictive model?`,
+        l2a:`Mean imputation quietly damages a model: it shrinks variance, distorts correlations, and pretends to certainty by inventing a value with no uncertainty attached, which is why it is both a common default and a common mistake. Better options depend on the mechanism — model-based imputation (e.g., iterative / MICE) that predicts the missing value from the other features, or simply adding a missingness indicator so the model can learn that absence itself is informative. Critically, any imputation must be fit on the training fold and applied to validation and test, the same boundary discipline as any other learned transformation, or you leak information about the held-out data.`,
+        l3q:`How do you handle missingness that isn't random (MNAR), where the fact of being missing depends on the unobserved value itself?`,
+        l3a:`MNAR is the hard case because no imputation from observed data can recover information the data-generating process actively hid — a severity field left blank precisely because the case was handled informally encodes its outcome in its absence. You cannot statistically "fix" MNAR from the same dataset; the honest responses are to model the missingness mechanism explicitly (selection models, pattern-mixture models), to encode missingness as a first-class feature and let the model use it, and above all to run sensitivity analyses showing how conclusions shift under different assumptions about what the missing values are. The senior insight: under MNAR the absence is data, so the goal is not to fill the gap but to model why it is there and bound how much your answer depends on the unknown — which is exactly why the review workflow keeps explicit "missing-information" fields rather than fabricating values, preserving the signal instead of erasing it.`,
       },
-      {
-        id:`ds-10`, q:`What is an outlier, and should it be removed?`,
+            {
+        id:`ds-10`,
+        q:`What is an outlier, and should it be removed?`,
         anchor:`An outlier is an observation far from the rest of the data, but it may be an error, a rare valid case, or an important signal.`,
-        compressed:`An outlier is unusual, not automatically wrong. I investigate its origin, assess domain meaning, and use correction, exclusion, transformation, or robust methods based on evidence.`,
+        compressed:`An outlier is an observation far from the rest of the data, but it may be an error, a rare valid case, or an important signal.`,
         detail:`Outliers can result from data-entry mistakes, unit mismatches, duplicate records, system failures, or genuine rare events. Detection methods include visualization, domain thresholds, z-scores, interquartile ranges, and model residuals. Removal should follow investigation, not convenience. In safety or quality work, an extreme event may be the most important record in the dataset. If an outlier is corrected or excluded, the rule and rationale should be documented and applied consistently. Robust statistics or transformations may reduce sensitivity without discarding valid information.`,
         followup:`Why can automatic three-standard-deviation filtering be dangerous in quality analysis?`,
         followupAnswer:`In quality work the most extreme values are often exactly the cases that matter most — events that caused patient harm, batches that failed specification, sites with incident clusters. Three-sigma filtering would automatically exclude them as statistical noise, hiding the most important signal. Outlier removal in quality analysis should require human judgment and domain review, not automatic rules.`,
         tie:`Use the June out-of-control signal as an example of an extreme value worth investigating rather than deleting.`,
         trap:`“Remove outliers because they skew the mean.”`,
+        l2q:`How do you build an outlier-handling rule that's defensible and reproducible rather than ad hoc?`,
+        l2a:`A defensible rule separates detection from action and documents both: detect candidates with a method appropriate to the distribution (IQR or robust z-scores for skewed data, model residuals for relationships), then route them to a decision — investigate, correct, exclude-with-reason, or keep — rather than auto-deleting. The rule must be versioned and applied consistently across runs so the same input always yields the same disposition, and every exclusion carries a recorded rationale so the analysis stays auditable. The applied skill is making outlier handling a logged, repeatable policy instead of a one-off judgment that can't be reproduced or explained later.`,
+        l3q:`In a quality or safety domain, why might the outlier be the entire point of the analysis, and how does that invert standard practice?`,
+        l3a:`In most modeling, outliers are nuisances that degrade a fit; in quality and safety, the extreme event — the batch that failed spec, the incident cluster, the June out-of-control signal — is frequently the most valuable record in the dataset, and discarding it discards the signal you were hired to find. This inverts the usual toolkit: instead of robust methods that down-weight extremes, you build detection that surfaces and escalates them, and you treat any automated exclusion as a safety risk requiring human review and documentation. There is also a governance dimension — silently dropping the worst cases in a regulated setting can look like, or become, suppression of adverse signals. The senior insight: whether an outlier is noise or the most important data point depends entirely on the domain's goal, and in safety-critical work the default flips from "remove" to "investigate and preserve" — which is why automatic sigma-filtering has no place in the quality pipeline.`,
       },
-      {
-        id:`ds-11`, q:`What is exploratory data analysis?`,
+            {
+        id:`ds-11`,
+        q:`What is exploratory data analysis?`,
         anchor:`EDA is the structured process of understanding the data before formal modeling or conclusions.`,
-        compressed:`EDA validates the data and reveals distributions, missingness, anomalies, relationships, and potential hypotheses before modeling. Exploratory findings still need confirmation.`,
+        compressed:`EDA is the structured process of understanding the data before formal modeling or conclusions.`,
         detail:`Exploratory data analysis examines schema, grain, distributions, missingness, duplicates, relationships, anomalies, and time patterns. It checks whether the data represent the intended process and whether assumptions are reasonable. Typical tools include summary statistics, frequency tables, plots, grouped comparisons, and targeted queries. EDA is not an excuse to search endlessly for interesting patterns and then present them as confirmed findings. Insights discovered during exploration may require separate validation. Good EDA produces documented data-quality findings, candidate hypotheses, and a clearer analysis plan.`,
         followup:`What checks would you run first on a newly delivered incident table?`,
         followupAnswer:`Row count and date range to confirm scope matches expectations. Distinct values on key identifiers to check for duplicates or missing records. Null rates on required fields like incident date, site, and category. Distribution of the category field to spot unexpected values or encoding changes. Time trend to see if there are obvious gaps or spikes. These five checks reveal most structural quality problems.`,
         tie:`Use row-count reconciliation, schema validation, duplicate detection, category distributions, and time trends from the ETL pipeline.`,
         trap:`“EDA means making charts until something looks interesting.”`,
+        l2q:`How do you keep EDA from turning into p-hacking, where you explore until something looks significant and then report it as a finding?`,
+        l2a:`The guard is a firewall between exploration and confirmation: anything discovered while fishing through the data is a hypothesis, not a result, and it must be validated on data that wasn't used to generate it. Practically that means reserving a holdout, pre-registering the confirmatory analysis before touching it, and reporting exploratory findings honestly as "generated here, not yet tested" rather than dressing them up with a p-value computed on the same data that suggested them. The applied skill is tracking which claims are exploratory versus confirmatory and never letting the former cross the line silently.`,
+        l3q:`What's the "garden of forking paths," and why can a researcher p-hack without ever consciously running multiple tests?`,
+        l3a:`Gelman's garden of forking paths is the subtler cousin of multiple comparisons: even an analyst who runs a single test can inflate false positives, because the many defensible choices made along the way — which outliers to drop, how to bin, which subgroup to focus on, which covariates to include — were themselves influenced by the data, so a different dataset would have led to a different "single" test. The false-positive rate reflects all the analyses you would have run had the data looked different, not just the one you did run, which is why honest exploratory work can still mislead without any conscious cherry-picking. The defenses are pre-registration, blinding analytic decisions to the outcome, and multiverse analysis that reports results across many reasonable analytic choices. The senior insight: data-dependent analytic decisions are an invisible form of multiple testing, so reproducibility on fresh data — not the cleanliness of any single p-value — is the real evidence, a standard built into MarketMind's evaluation discipline precisely to avoid fooling yourself.`,
       },
-      {
-        id:`ds-12`, q:`How do you choose an appropriate visualization?`,
+            {
+        id:`ds-12`,
+        q:`How do you choose an appropriate visualization?`,
         anchor:`Match the chart to the analytical question and the structure of the data.`,
-        compressed:`I choose the chart based on the comparison: categories, time, distribution, or relationship. I label units and denominators and avoid visual choices that exaggerate or hide the effect.`,
+        compressed:`Match the chart to the analytical question and the structure of the data.`,
         detail:`Bar charts compare categories, line charts show change over ordered time, histograms show numeric distributions, scatterplots show relationships between two numeric variables, and boxplots summarize group distributions. The chart should make the intended comparison easy and should not distort scale or area. Axes, units, denominators, time windows, and sample sizes should be labeled. Color should carry meaning rather than decoration, and too many categories can obscure the message. A dashboard may support exploration, but an executive presentation often needs a focused chart with one clear takeaway and the necessary caveat.`,
         followup:`When should a bar chart’s y-axis start at zero, and why?`,
         followupAnswer:`When the bars represent counts, totals, or quantities where bar length encodes a whole value. Bar area visually encodes magnitude, so a non-zero baseline distorts perceived ratios — a 10% difference can look like a 500% difference. Exceptions: showing deviation from a meaningful reference (profit/loss around zero) or encoding position rather than magnitude. Line charts and scatter plots are less constrained.`,
         tie:`Apply this to quality rates, SPC charts, customer-review categories, and financial-impact views.`,
         trap:`Choosing charts based on appearance rather than the question.`,
+        l2q:`How does a well-intentioned chart mislead, and what choices keep it honest for an executive audience?`,
+        l2a:`Charts mislead through encoding choices that distort perceived magnitude even with correct data: truncated bar baselines, dual y-axes that manufacture a correlation, area or 3-D effects that exaggerate differences, missing denominators, and cherry-picked time windows. For an executive audience the discipline is one clear takeaway per chart with the necessary caveat on the same slide — the denominator, the time period, the comparison group, the sample size — so the headline can't be read out of context. The applied skill is matching the encoding to the comparison (length for magnitude, position for relationships) and labeling the things an audience would otherwise silently assume.`,
+        l3q:`How do you design a dashboard that supports honest exploration without enabling people to construct whatever story they want?`,
+        l3a:`A self-serve dashboard is a powerful tool and a liability, because the same flexibility that lets a user explore also lets them filter, slice, and window their way to a misleading narrative — the looser the guardrails, the easier it is to "prove" anything. Senior dashboard design builds in guardrails: governed metric definitions so a number means one thing, sensible default views and time windows, denominators and sample sizes shown alongside rates, and visual cues (or suppression) when a slice has too little data to trust. There is a real tension between flexibility and safety, and the resolution is to make the honest path the easy path — defaults and annotations that steer toward correct interpretation while still allowing depth. The senior insight: a dashboard is not neutral, its defaults and affordances shape what people conclude, so you design it to make misinterpretation hard rather than merely possible — the same governed-definition discipline that keeps the compounding-quality views consistent across the org.`,
       },
-      {
-        id:`ds-13`, q:`What are SQL aggregation and grouping used for?`,
+            {
+        id:`ds-13`,
+        q:`What are SQL aggregation and grouping used for?`,
         anchor:`Aggregation summarizes many rows into measures such as counts, sums, averages, or rates by one or more groups.`,
-        compressed:`Aggregation summarizes rows at a defined grain. I verify joins and denominator alignment because row multiplication can silently corrupt counts and rates.`,
-        detail:`SQL aggregate functions such as <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, and <code>MAX</code> combine rows. <code>GROUP BY</code> defines the grain of the output. For example, grouping by site and month creates one output row per site-month. Rates require a numerator and denominator at compatible grains. <code>WHERE</code> filters rows before aggregation, while <code>HAVING</code> filters aggregated groups. Joining tables before grouping can multiply rows and inflate metrics, so analysts should inspect join cardinality and count distinct keys where appropriate. The output grain should be stated explicitly.`,
+        compressed:`Aggregation summarizes many rows into measures such as counts, sums, averages, or rates by one or more groups.`,
+        detail:`SQL aggregate functions such as COUNT, SUM, AVG, MIN, and MAX combine rows. GROUP BY defines the grain of the output. For example, grouping by site and month creates one output row per site-month. Rates require a numerator and denominator at compatible grains. WHERE filters rows before aggregation, while HAVING filters aggregated groups. Joining tables before grouping can multiply rows and inflate metrics, so analysts should inspect join cardinality and count distinct keys where appropriate. The output grain should be stated explicitly.`,
         followup:`Why can joining orders to order items inflate an order count?`,
         followupAnswer:`If one order has three line items, joining orders to order items creates three rows with the same order ID. Counting rows after the join counts line items, not orders. Fix: count distinct order IDs, aggregate at the right grain before joining, or join on a pre-aggregated subquery. This is one of the most common silent data errors in analytical SQL.`,
         tie:`Use monthly site-level QRE rates and order-denominator joins.`,
-        trap:`Writing <code>GROUP BY</code> without being able to state the resulting grain.`,
+        trap:`Writing GROUP BY without being able to state the resulting grain.`,
+        l2q:`Walk through how a rate metric silently breaks when numerator and denominator come from different grains or different joins.`,
+        l2a:`A rate is only correct when numerator and denominator are counted at compatible grains, and a join is the usual place that breaks. If incidents are joined to order-items before counting orders, the denominator becomes line-items and the rate is understated; if a one-to-many join fans out the numerator, the rate is overstated. The fix is to aggregate each side to the intended grain in separate subqueries (or CTEs) and join the pre-aggregated results, or to count distinct keys explicitly, and to state the output grain so a reviewer can verify it. The applied skill is treating "what does one row mean after this join?" as a question you answer before trusting any ratio.`,
+        l3q:`Why are fan-out and grain errors the most dangerous class of analytical SQL bug, and how do you defend against them systematically?`,
+        l3a:`Grain and fan-out errors are uniquely dangerous because they produce no error and a plausible-looking number — the query runs, returns rows, and the total is just quietly wrong, so it survives review and ships into a decision. The systematic defenses are structural, not vigilance-based: build from a declared fact grain (one row per incident, per the data model), aggregate to grain before joining dimensions, assert row-count invariants and key-uniqueness as automated checks in the pipeline, and reconcile totals against an independent source. This is the same fail-closed philosophy worth applying everywhere — make the pipeline detect a grain violation and refuse to publish rather than emit a wrong rate. The senior insight: the worst data bugs are the ones that return a believable answer, so you defend against them with declared grains and automated invariant checks rather than hoping a reviewer eyeballs the join cardinality — exactly the row-count reconciliation the quality ETL enforces.`,
       },
-      {
-        id:`ds-14`, q:`What is an A/B test?`,
+            {
+        id:`ds-14`,
+        q:`What is an A/B test?`,
         anchor:`An A/B test randomly assigns comparable units to different experiences and measures the difference in outcomes.`,
-        compressed:`An A/B test uses random assignment to estimate a causal treatment effect. The metric, sample, duration, and analysis plan should be defined in advance, and significance must be interpreted with effect size.`,
+        compressed:`An A/B test randomly assigns comparable units to different experiences and measures the difference in outcomes.`,
         detail:`In an A/B test, eligible units are randomly assigned to control and treatment groups. Randomization helps balance both observed and unobserved confounders on average, supporting a causal estimate. The primary metric, sample size, duration, eligibility rules, and stopping criteria should be defined before analyzing the result. Interference between users, noncompliance, repeated peeking, attrition, or changing assignment can bias results. Statistical significance should be paired with effect size and operational value. Not every change can or should be randomized, but when feasible, experiments provide stronger causal evidence than before-after comparisons.`,
         followup:`Why is comparing this month after launch with last month before launch weaker than an A/B test?`,
         followupAnswer:`The before-after comparison cannot control for time-based confounders — seasonal effects, market changes, other simultaneous initiatives, or natural trend. You can't tell whether the change came from the launch or from something else that changed simultaneously. An A/B test controls for these by having a concurrent control group experiencing the same time period without the treatment.`,
         tie:`Imagine testing a new internal review workflow on eligible teams while monitoring quality and cycle time.`,
         trap:`“Show version A to half the users and version B to half” without discussing randomization, eligibility, or metrics.`,
+        l2q:`You need to estimate the sample size and duration for an A/B test before launching. What drives those numbers and what goes wrong if you skip it?`,
+        l2a:`Required sample size is driven by the minimum effect you care to detect, the baseline rate and its variance, and your chosen significance and power — smaller effects and rarer events demand far more samples. Duration then depends on traffic and on covering full business cycles (weekday/weekend, seasonality) so you don't measure a partial week. Skipping the power calculation produces the two classic failures: an underpowered test that can't detect a real effect and gets misread as "no difference," or an open-ended test someone stops the moment it looks good, which inflates false positives. The applied skill is committing to sample size, duration, and the primary metric before launch.`,
+        l3q:`What assumptions does A/B test validity rest on beyond randomization, and how do they break in a real product?`,
+        l3a:`Randomization buys an unconfounded comparison only if the supporting assumptions hold, and in real systems they routinely do not: SUTVA (no interference between units) breaks when treated and control users interact — marketplace, social, or shared-resource effects mean one group's experience leaks into the other's; noncompliance and dilution break it when assigned users don't actually receive the treatment; attrition breaks it when dropout differs by arm; and novelty or primacy effects mean the early measured lift is not the long-run effect. Senior practice anticipates these — cluster-randomize when interference is likely, analyze by intent-to-treat to preserve randomization, monitor for differential attrition, and run long enough to see past novelty. The senior insight: the experiment's causal guarantee is only as good as its assumptions about interference, compliance, and time, so designing an A/B test is mostly about protecting those assumptions, not just splitting traffic in half.`,
       },
-      {
-        id:`ds-15`, q:`How should a data scientist communicate a result to stakeholders?`,
+            {
+        id:`ds-15`,
+        q:`How should a data scientist communicate a result to stakeholders?`,
         anchor:`Start with the decision-relevant conclusion, show the evidence, explain uncertainty, and state the recommended next action.`,
-        compressed:`I lead with the decision and practical finding, support it with clear evidence, separate fact from interpretation, state limitations, and recommend the next step.`,
+        compressed:`Start with the decision-relevant conclusion, show the evidence, explain uncertainty, and state the recommended next action.`,
         detail:`Stakeholders usually need the answer before the method. A strong presentation states the question, the key finding, the practical magnitude, and the action it supports. Then it explains the data scope, method, and important limitations. Technical detail should be available but not allowed to hide the business meaning. The analyst should distinguish observed facts, interpretation, and recommendation. Negative or inconclusive results should be communicated honestly. A result should include the denominator, time period, comparison group, and uncertainty so the audience does not overgeneralize it.`,
         followup:`How would you explain a statistically significant but operationally tiny improvement?`,
         followupAnswer:`'The improvement is real statistically — our data strongly suggests it's not zero — but the size is about X, which is below our operational threshold of Y. We can be confident the change has some positive effect, but it's likely too small to justify the cost or be noticeable to users.' Separating 'real' from 'meaningful' is the key communication skill.`,
         tie:`Use director-level dashboard presentations and root-cause findings from compounding quality.`,
-        trap:`Walking through every analysis step before stating the conclusion. ---`,
-      },
+        trap:`Walking through every analysis step before stating the conclusion.`,
+        l2q:`How do you tailor the same finding for a director, an operational lead, and a technical peer without telling three different stories?`,
+        l2a:`The finding and its caveats stay fixed; the framing, depth, and call-to-action change per audience. A director needs the decision-relevant conclusion, the practical magnitude, and the recommended action up front, with method available but not foregrounded; an operational lead needs what changes in their workflow and the thresholds that trigger it; a technical peer needs the method, assumptions, and limitations so they can stress-test it. The discipline is one set of facts presented at three altitudes — never softening the uncertainty for the executive or inflating it for the peer — so the three accounts reconcile if anyone compares notes. The applied skill is leading with the answer and layering detail, rather than walking everyone through the analysis chronologically.`,
+        l3q:`How do you communicate a negative, null, or inconclusive result without it being ignored or, worse, spun?`,
+        l3a:`Negative and null results are where communication integrity is really tested, because the organization's incentive is to bury them or reframe them as wins, and a data scientist's credibility depends on refusing both. The senior approach distinguishes precisely between the three — "we found no effect and were powered to detect one if it existed" (an informative null), "the effect is real but below the operational threshold" (significant but immaterial), and "the data can't tell us either way" (inconclusive, needs more) — because conflating them is how a null gets spun into a success or a wasted test gets sold as a discovery. You state plainly what the result rules in and rules out, what decision it supports (often "don't ship" or "keep the simpler option"), and you treat a well-run null as a real finding that saved the cost of a bad change. The senior insight: a credible analyst is defined by how they report results nobody wanted, and the key skill is separating "no effect," "tiny effect," and "we can't tell" — because each supports a different decision and each is routinely misrepresented as the others.`,
+      }
     ],
   },
   de: {
     label: `Data Engineering I`, short: `DE I`,
     icon: `🔧`, color: `python`,
     questions: [
-      {
-        id:`de-01`, q:`What is a data pipeline?`,
+            {
+        id:`de-1`,
+        q:`What is a data pipeline?`,
         anchor:`A data pipeline moves data from one or more sources through processing steps into a destination where it can be used reliably.`,
-        compressed:`A data pipeline is a repeatable, observable process that moves and transforms data from sources to trusted outputs. The production concerns are contracts, quality, lineage, reruns, and failure handling.`,
+        compressed:`A data pipeline moves data from one or more sources through processing steps into a destination where it can be used reliably.`,
         detail:`A data pipeline is a repeatable flow that extracts or receives data, validates it, transforms it, and publishes it to a destination such as a database, warehouse, file, dashboard, or model feature store. A useful pipeline defines the input and output contracts, execution schedule, failure behavior, and ownership. It should preserve lineage so users can trace where a result came from. Production pipelines also need logging, data-quality checks, retries, alerting, and safe reruns. A script that succeeds once is not automatically a reliable pipeline. Reliability means the same logic can run repeatedly, detect bad inputs, and avoid silently publishing incomplete or duplicated outputs.`,
         followup:`What would make a working Python script unsuitable as a production pipeline?`,
         followupAnswer:`No error handling — a bad row crashes the whole run. No idempotency — rerunning it doubles the data. Hardcoded paths and credentials. No logging of what was processed, how many rows, or what failed. No data quality checks before publishing. No notification when it fails. Running it requires manually logging in and typing a command. These are the gaps between 'it works once' and 'it's reliable.'`,
         tie:`Use the multi-source quality ETL pipeline that ingests Smartsheet, Excel, and Snowflake and publishes governed outputs.`,
         trap:`“A pipeline is code that moves data from A to B.”`,
+        l2q:`What does it take to make a pipeline observable, so you find out it's broken before a stakeholder does?`,
+        l2a:`Observability means the pipeline emits enough signal to answer "is it healthy and did it do the right thing?" without reading the data by hand: structured logs with run ID, source, partition, row counts and timing; metrics on volume, freshness, and failure rate; and alerts tied to data assertions (row count outside expected range, null spike, schema drift) rather than just "did the process exit zero." The distinction that matters is between liveness ("the job ran") and correctness ("the job produced valid data") — a pipeline can succeed technically and publish garbage. The applied skill is instrumenting the data, not just the process, so a bad load pages you before it ever reaches the dashboard.`,
+        l3q:`How do data-pipeline failures differ from application failures, and why is "the job succeeded" a dangerous definition of success?`,
+        l3a:`Application failures are usually loud — an exception, a 500, a crash — but data pipelines fail silently and correctly: the job exits zero, writes rows, and the numbers are subtly wrong because a source changed a category, a join fanned out, or an upstream feed was a day stale. This is why exit code is the wrong success signal; the right one is a set of data contracts and quality assertions that must pass before publication, treating "valid data delivered" rather than "code ran" as the definition of done. The senior framing layers defenses — schema validation, row-count reconciliation, freshness checks, and a fail-closed gate that refuses to publish on violation, optionally preserving the last-known-good output clearly marked stale. The senior insight: the dangerous pipeline failure is the one that succeeds technically while corrupting the data, so production data engineering is mostly about detecting silent correctness failures — the philosophy behind the quality ETL's reconciliation and preserve-last-good behavior.`,
       },
-      {
-        id:`de-02`, q:`What is the difference between ETL and ELT?`,
+            {
+        id:`de-2`,
+        q:`What is the difference between ETL and ELT?`,
         anchor:`ETL transforms data before loading it into the target; ELT loads raw data first and transforms it inside the target platform.`,
-        compressed:`ETL transforms before the destination; ELT lands data first and transforms with destination compute. The choice depends on governance, scale, latency, and the value of retaining raw data.`,
+        compressed:`ETL transforms data before loading it into the target; ELT loads raw data first and transforms it inside the target platform.`,
         detail:`ETL stands for extract, transform, load. It is useful when the destination expects cleaned, shaped data or when sensitive and invalid data should be filtered before loading. ELT stands for extract, load, transform. It takes advantage of scalable warehouse compute and preserves raw data for later transformations. Modern systems often use a combination: land source data, apply basic validation and normalization, then perform business transformations in the warehouse. The choice depends on data volume, governance, latency, source constraints, and platform capabilities. Neither pattern removes the need for clear lineage and data contracts.`,
         followup:`Why might a team keep both raw and curated layers?`,
         followupAnswer:`The raw layer is an immutable record of what the source sent. If a transformation rule was wrong, you reprocess from raw without re-extracting from the source. The curated layer is what analysts query — cleaned, joined, typed, business logic applied. Bugs in curation are recoverable because the raw data is preserved. Without the raw layer, a pipeline bug means permanently lost data.`,
         tie:`Compare pulling source data into normalized intermediate frames with publishing CSV, XLSX, and Hyper outputs.`,
         trap:`Treating ELT as universally newer and therefore always better.`,
+        l2q:`How does the cloud warehouse era shift the ETL-vs-ELT calculus, and where does ETL still win?`,
+        l2a:`Cheap elastic warehouse compute (Snowflake, BigQuery) tilts the default toward ELT: land raw data fast, transform in-warehouse with SQL/dbt, and keep raw as a replayable record so logic bugs are fixable without re-extracting. But ETL still wins where transformation must happen before landing — stripping or masking PII for governance, filtering data you are not permitted to store, reducing volume at the edge for cost, or meeting a destination that demands a fixed shape. The applied judgment is driven by governance, source constraints, latency, and cost rather than fashion, and many real systems are hybrid: light normalization on landing, business logic in-warehouse.`,
+        l3q:`How does the raw/curated split underpin reproducibility and recovery, and what does it cost you if you skip the raw layer?`,
+        l3a:`An immutable raw layer is the foundation of reprocessing: when a transformation rule turns out to be wrong — a misclassification, a bad dedup, a timezone error — you rebuild the curated layer from raw without going back to the source, which may no longer hold the original data or may have changed. Skip the raw layer and a transformation bug becomes permanent data loss: you have discarded the source's record and can't recover what it actually sent. This is the data-engineering expression of the same principle behind content-addressable, immutable artifacts in MarketMind — preserve the source of truth so any downstream state can be regenerated and audited. The senior insight: raw is your recovery point and your audit trail, so the cost of skipping it isn't storage saved, it's the permanent inability to fix a curation bug or prove what the source delivered — which is why mature pipelines treat raw as sacred and curated as disposable.`,
       },
-      {
-        id:`de-03`, q:`What is the difference between batch and streaming data processing?`,
+            {
+        id:`de-3`,
+        q:`What is the difference between batch and streaming data processing?`,
         anchor:`Batch processing handles accumulated data on a schedule; streaming processes events continuously or in very small windows.`,
-        compressed:`Batch processes bounded data periodically; streaming handles events continuously. Streaming lowers latency but adds ordering, duplication, late-data, and state complexity.`,
+        compressed:`Batch processing handles accumulated data on a schedule; streaming processes events continuously or in very small windows.`,
         detail:`Batch systems process a bounded collection such as yesterday’s orders or a weekly file. They are often simpler, cheaper, and easier to replay. Streaming systems process events near real time and are useful when freshness matters, such as fraud detection or operational alerts. Streaming introduces additional concerns: event ordering, duplicates, late-arriving data, windowing, state management, and exactly-once claims. Many business problems do not require true streaming and are better served by frequent micro-batches. The architecture should match the actual latency requirement instead of using streaming for prestige.`,
         followup:`When would a five-minute batch be preferable to a streaming architecture?`,
         followupAnswer:`When five-minute-old data satisfies the business requirement, which is most operational reporting. Streaming adds operational complexity — exactly-once guarantees, watermarking, late-data handling, checkpoint recovery, stateful operator debugging — that a simple scheduled batch avoids. If the downstream consumer checks every five minutes anyway, the extra infrastructure cost of streaming doesn't buy anything.`,
         tie:`The current quality dashboard is a batch reporting workflow; explain what business need would justify lower latency.`,
         trap:`“Streaming is faster and therefore better.”`,
+        l2q:`Walk through the concrete operational complexity streaming adds that batch avoids. When is that complexity actually justified?`,
+        l2a:`Streaming brings a tax batch never pays: event-time versus processing-time reasoning, watermarks for late data, windowing and state that must be checkpointed and recovered, exactly-once semantics that are genuinely hard to achieve, and operators that are far harder to debug and replay than a re-run of yesterday's batch. That complexity is justified only when freshness has real value measured in seconds — fraud blocking, real-time alerting, live personalization — where acting a minute later materially changes the outcome. The applied skill is sizing the latency requirement honestly: if the consumer polls every five minutes, streaming buys nothing, and a frequent micro-batch captures most of the benefit at a fraction of the operational cost.`,
+        l3q:`What are exactly-once semantics really, and why is "exactly-once delivery" largely a myth that mature systems engineer around?`,
+        l3a:`In a distributed system you generally cannot guarantee a message is delivered exactly once — network and failure realities force a choice between at-most-once (may lose) and at-least-once (may duplicate), and the honest target is at-least-once delivery plus exactly-once processing, achieved by making consumers idempotent or transactionally deduplicating. Practically that means stable business keys, idempotency keys, dedup windows, or transactional sinks so that replays and retries converge to the correct state regardless of duplicate delivery — the same idempotency discipline that makes a batch pipeline safe to rerun, applied continuously. Frameworks advertise "exactly-once" by combining at-least-once delivery with checkpointed state and idempotent commits, not by magically delivering each event once. The senior insight: you don't get exactly-once for free, you engineer effectively-once by making processing idempotent, which is why idempotency is the central reliability concept in both batch and streaming — the difference is only how relentlessly the duplicates arrive.`,
       },
-      {
-        id:`de-04`, q:`What is a source-to-target mapping?`,
+            {
+        id:`de-4`,
+        q:`What is a source-to-target mapping?`,
         anchor:`It documents how each source field becomes a field in the destination, including transformations and validation rules.`,
-        compressed:`A source-to-target mapping is the field-level contract from incoming data to the destination, including types, transformations, keys, defaults, and validation.`,
+        compressed:`It documents how each source field becomes a field in the destination, including transformations and validation rules.`,
         detail:`A source-to-target mapping makes the data contract explicit. It identifies source systems, source columns, target columns, data types, transformation logic, defaults, keys, and rejection conditions. It also records semantic differences, such as one source using local time and another using UTC. Without a mapping, pipelines accumulate hidden assumptions and inconsistent definitions. The mapping should be versioned with schema changes and tests. It is especially important when multiple systems use similar names for different concepts or different names for the same concept.`,
         followup:`What should happen when a source adds a new category value that the target does not recognize?`,
         followupAnswer:`Reject or quarantine the record and alert the team rather than silently mapping the unknown value to null or 'other.' An unrecognized category often means the source changed a controlled vocabulary without coordination — a data contract violation. Silently continuing hides the problem. Fail noisily, investigate, and update the mapping before continuing.`,
         tie:`Relate this to the data dictionary and controlled taxonomy for compounding-quality records.`,
         trap:`Treating it as a simple column-renaming spreadsheet.`,
+        l2q:`What turns a source-to-target mapping into an enforceable data contract rather than documentation that drifts?`,
+        l2a:`A mapping becomes a contract when it is executable and gated: the agreed schema, types, allowed enumerations, and required fields are encoded as validation (Pydantic models, a schema registry, dbt tests) that runs on every load and rejects or quarantines violations, rather than living in a spreadsheet nobody re-reads. The contract also assigns ownership and a change process — the producer can't silently alter a controlled vocabulary or rename a field without a coordinated, versioned update — so the document and the enforcement can't diverge. The applied skill is making the contract code that fails loudly on violation, which is the difference between a mapping that protects the pipeline and one that merely describes its intentions.`,
+        l3q:`Who owns a data contract, and why is enforcing one as much an organizational problem as a technical one?`,
+        l3a:`The hard part of data contracts is not writing the validation, it is that the producer and consumer are usually different teams with different incentives — the producing team optimizes their own system and experiences contract enforcement as friction, while the consuming team bears the cost of every silent break. A contract only holds when ownership and accountability are explicit: the producer commits to a stable interface and a deprecation process, breaking changes go through expand-contract migrations with notice, and violations are made visible to the producer (shifting the cost back to where the change originated) rather than absorbed silently downstream. This is the data analog of API versioning and consumer-driven contracts in service design. The senior insight: data contracts fail for organizational reasons more than technical ones, so the real work is aligning incentives and ownership across producer and consumer teams — the validation code is the easy 20%, the coordination is the hard 80%, and it maps directly to the governed taxonomy and synchronized schemas in the compounding-quality work.`,
       },
-      {
-        id:`de-05`, q:`What is the difference between an operational database, a data warehouse, and a data lake?`,
+            {
+        id:`de-5`,
+        q:`What is the difference between an operational database, a data warehouse, and a data lake?`,
         anchor:`Operational databases support application transactions, warehouses support structured analytics, and lakes store large amounts of raw or varied data.`,
-        compressed:`Operational databases serve transactions, warehouses serve governed historical analytics, and lakes preserve large, varied datasets. I choose based on workload, governance, and query patterns.`,
+        compressed:`Operational databases support application transactions, warehouses support structured analytics, and lakes store large amounts of raw or varied data.`,
         detail:`An operational database is optimized for current application reads and writes, often at individual-record granularity with constraints and transactions. A data warehouse is optimized for analytical queries across historical, integrated data. It often uses dimensional models and columnar storage. A data lake stores large volumes of structured, semi-structured, and unstructured data, usually in object storage. A lakehouse adds table formats and management features intended to bring warehouse-like reliability to lake storage. These categories overlap in modern platforms, but the workload remains the important distinction: transactional consistency versus analytical scanning and history.`,
         followup:`Why should a dashboard usually not query a high-volume production application database directly?`,
         followupAnswer:`Production databases are tuned for low-latency transactional reads and writes, not analytical scans across large date ranges. A long-running dashboard query can hold connections, consume pool slots, degrade application response times, and impose load the operational SLA wasn't designed for. Analytical queries belong on a replica, reporting database, or warehouse synchronized from the operational system.`,
         tie:`Contrast operational Smartsheet/source systems with Snowflake and published Tableau extracts.`,
         trap:`“A data lake is just a cheaper warehouse.”`,
+        l2q:`Why are OLTP and OLAP systems built so differently under the hood, and what does that mean for where each workload belongs?`,
+        l2a:`OLTP systems are row-oriented and optimized for many small, low-latency transactions with strong consistency — indexes, locks, and storage all tuned for "read or write one record fast." OLAP systems are columnar and optimized for scanning and aggregating huge ranges across few columns — compression, vectorized execution, and partition pruning tuned for "summarize millions of rows." Running an analytical scan on an OLTP store fights its design (no column pruning, lock contention, cache eviction, SLA risk to the app), which is why analytics belongs on a replica, reporting DB, or warehouse fed from the operational system. The applied skill is matching the workload to the engine and synchronizing rather than co-locating them.`,
+        l3q:`How do you choose among warehouse, lake, and lakehouse for a real workload, and what failure modes does each invite?`,
+        l3a:`The choice follows the data and the access pattern, and each option fails in a characteristic way. A warehouse gives reliable structured analytics and governance but can be costly and rigid for semi/unstructured data; a raw lake on object storage is cheap and flexible but degrades into a "data swamp" — undiscoverable, ungoverned, unreliable — without cataloging, schema-on-read discipline, and ownership; a lakehouse adds table formats (Delta, Iceberg) to bring ACID, time travel, and schema enforcement to lake storage, at the cost of newer, more complex tooling. The honest senior position is that these categories blur in modern platforms and the durable distinction is the workload (transactional consistency vs. analytical scanning vs. cheap retention of varied data), not the marketing label. The senior insight: there is no universally best store, only a best fit for the access pattern, and the dangerous default is dumping everything into a lake and discovering a swamp — governance and cataloging are what separate a lake from a swamp.`,
       },
-      {
-        id:`de-06`, q:`What are fact and dimension tables?`,
+            {
+        id:`de-6`,
+        q:`What are fact and dimension tables?`,
         anchor:`Fact tables store measurable events at a defined grain; dimension tables store descriptive context used to group and filter those facts.`,
-        compressed:`Facts are measurable events at a declared grain; dimensions provide descriptive context. Grain comes first because it controls valid joins and aggregations.`,
+        compressed:`Fact tables store measurable events at a defined grain; dimension tables store descriptive context used to group and filter those facts.`,
         detail:`A fact table contains events or measurements such as orders, incidents, or review outcomes. Its grain states exactly what one row represents. Measures such as quantity, cost, or duration belong in the fact. Dimension tables contain descriptive entities such as date, site, product, customer, or concern category. Facts reference dimensions using keys. This structure supports consistent analytical slicing and reduces repeated descriptive data. The most important design step is declaring the fact grain before selecting columns. Mixing multiple grains in one fact table creates duplicate counts and confusing measures.`,
         followup:`What would the grain of a quality-incident fact table be?`,
         followupAnswer:`One row per incident — the smallest event representing one quality occurrence. Each row captures one reported issue for one batch or order at one site on one date. Aggregates like weekly counts or site totals are computed at query time by grouping the atomic fact. Mixing grains — individual incidents and weekly summaries in one table — creates joins that double-count.`,
         tie:`Use QRE incidents as facts and site, date, dosage form, and category as dimensions.`,
         trap:`Defining facts as numeric columns and dimensions as text columns.`,
+        l2q:`Dimensions change over time — a site gets renamed or re-regioned. How do you preserve historical accuracy?`,
+        l2a:`This is the slowly-changing-dimension problem, and the right type depends on whether history matters. Type 1 overwrites the old value (simple, but it rewrites the past — a report rerun shows the new region for old facts); Type 2 adds a new dimension row with effective-date ranges and a surrogate key, so each fact joins to the dimension version that was current when the event happened, preserving "as-was" reporting. The applied skill is recognizing that overwriting a dimension silently restates history, so when "what was true at the time" matters — most quality and financial reporting — you use Type 2 and join facts to the version valid at the event date.`,
+        l3q:`Why is declaring the fact grain the single most important modeling decision, and what specifically goes wrong when grains are mixed?`,
+        l3a:`The grain is the contract for what one row means, and every measure, join, and aggregation depends on it being singular and explicit — get it right and the model is composable; get it wrong and the dimensional model produces double counts that survive review because the numbers still look plausible. Mixing grains is the classic failure: storing individual incidents and weekly summaries in one fact table means any join or sum double-counts, and additive measures stop being safely additive. The senior discipline is to declare grain first ("one row per incident"), keep each fact table to a single grain, build separate aggregate tables rather than co-mingling, and know which measures are additive, semi-additive (like balances, summable across some dimensions but not time), or non-additive (like ratios, never summable). The senior insight: the grain is the foundation the entire model rests on, so you declare it before choosing a single column, because a mixed-grain fact table produces believable wrong totals — the most expensive kind of error.`,
       },
-      {
-        id:`de-07`, q:`What are primary keys and foreign keys?`,
+            {
+        id:`de-7`,
+        q:`What are primary keys and foreign keys?`,
         anchor:`A primary key uniquely identifies a row; a foreign key links a row to a valid row in another table.`,
-        compressed:`Primary keys define unique row identity, and foreign keys protect relationships between tables. Key design is part of the business model, not merely indexing.`,
+        compressed:`A primary key uniquely identifies a row; a foreign key links a row to a valid row in another table.`,
         detail:`A primary key enforces row identity and uniqueness. It may be a natural business key or a generated surrogate key. A foreign key enforces referential integrity by ensuring that a referenced parent exists, unless null is allowed. These constraints protect data correctness under concurrent writes and alternate ingestion paths. Composite keys use multiple columns when identity naturally depends on more than one value. Keys are not just database syntax; they define the entities and relationships in the model. Poorly chosen mutable keys make updates and history management difficult.`,
         followup:`When would you use a surrogate key instead of a natural key?`,
         followupAnswer:`When the natural key is long, composite, or unstable (it changes when business data changes). A surrogate key is a generated integer or UUID that never changes regardless of what happens to the business data. Stable surrogates mean foreign key relationships survive data corrections. Natural keys work well when they are truly immutable and single-column.`,
         tie:`Consider stable document IDs, chunk IDs, retrieval-run IDs, and review-case IDs.`,
         trap:`Saying keys exist only to make queries faster.`,
+        l2q:`In a distributed or high-ingest system, why can a single auto-incrementing primary key become a problem, and what are the alternatives?`,
+        l2a:`A single monotonic auto-increment key requires central coordination, which becomes a bottleneck and a single point of failure at scale, and it can't be generated independently across nodes or before a row reaches the database. Alternatives trade coordination against locality: UUIDs/GUIDs generate anywhere with no coordination but are large and, if fully random, hurt index locality and insert performance; time-ordered IDs like ULIDs or Snowflake IDs restore sortability and index locality while staying distributed. The applied skill is choosing the key strategy to match write distribution and access pattern — random UUIDs for decentralized generation, ULID/Snowflake when you also need time-ordering and tight indexes.`,
+        l3q:`Analytical/warehouse environments often don't enforce foreign keys. Why, and what does that shift onto the pipeline?`,
+        l3a:`Many warehouses either don't enforce referential integrity or let you declare it as unvalidated metadata, because enforcing constraints on bulk loads of billions of rows is expensive and the warehouse assumes data was already validated upstream. That shifts the burden from the database to the pipeline: integrity becomes something you assert and test (orphan-key checks, referential-integrity assertions in dbt, reconciliation) rather than something the engine guarantees, and surrogate keys plus careful load ordering replace enforced FKs for stitching facts to dimensions. The tradeoff is load performance and flexibility in exchange for the pipeline owning correctness that an OLTP database would have enforced automatically. The senior insight: in analytical systems referential integrity moves from a database guarantee to a pipeline responsibility, so you replace enforced constraints with automated data-quality assertions — the same fail-closed, validate-before-publish discipline that keeps the quality ETL's keys consistent without a relational engine policing them.`,
       },
-      {
-        id:`de-08`, q:`What are common data-quality dimensions?`,
+            {
+        id:`de-8`,
+        q:`What are common data-quality dimensions?`,
         anchor:`Data quality includes completeness, validity, uniqueness, consistency, accuracy, and timeliness.`,
-        compressed:`I evaluate completeness, validity, uniqueness, consistency, accuracy, timeliness, and referential integrity, then set thresholds based on downstream impact.`,
+        compressed:`Data quality includes completeness, validity, uniqueness, consistency, accuracy, and timeliness.`,
         detail:`Completeness asks whether required data are present. Validity checks whether values follow allowed types, ranges, and categories. Uniqueness checks duplicate business keys or records. Consistency checks whether related systems and fields agree. Accuracy asks whether data reflect reality, which often requires external verification or reconciliation. Timeliness asks whether data arrive soon enough for their use. Integrity checks relationships and keys. Data-quality rules should be tied to the downstream risk: a dashboard may tolerate a delayed optional description but not a missing denominator or duplicated incident record.`,
         followup:`Which quality checks would you block publication on versus only warn about?`,
         followupAnswer:`Block on: missing required fields, duplicate business keys, row counts outside expected range, foreign key violations, invalid enumeration values. Warn on: optional fields with high null rates, values near but not exceeding range limits, slower-than-expected processing. The blocking threshold should match business risk — duplicated incident counts produce wrong decisions, but a late optional description can wait.`,
         tie:`Use schema validation, row-count reconciliation, content-hash deduplication, and preserve-last-good-extract behavior.`,
         trap:`“Clean data means no nulls.”`,
+        l2q:`How do you tie data-quality thresholds to downstream risk instead of picking arbitrary numbers?`,
+        l2a:`You set thresholds by reasoning from the cost of being wrong in the specific decision the data feeds, not from round-number defaults. A duplicated incident or a missing denominator corrupts a rate that drives an operational decision, so those block publication; a high null rate on an optional free-text description degrades nothing decision-critical, so it warns. The applied skill is mapping each check to its blast radius — "what wrong decision does this error cause, and how costly is it?" — and calibrating block-vs-warn and the numeric bounds accordingly, so the gate is strict where harm is high and tolerant where it isn't.`,
+        l3q:`How do you operationalize data quality as a continuous, monitored system rather than a one-time validation script?`,
+        l3a:`Mature data quality is a control system, not a checklist run once: you encode expectations as versioned, executable tests (Great Expectations, dbt tests) that run on every load, you track quality metrics as first-class time series so you can see degradation trends before they cross a threshold, and you wire a fail-closed gate that refuses to publish on a blocking violation while clearly marking any preserved last-good output as stale. Crucially you also distinguish point-in-time validation from distributional monitoring — a value can be individually valid yet collectively anomalous (a sudden category-mix shift), which is a data-drift signal a row-level check misses. This is the data-engineering sibling of model monitoring, and the same fail-closed philosophy behind MarketMind's gates. The senior insight: data quality at scale is a monitored control loop with executable expectations and trend-aware alerting, not a script you run once — which is exactly the schema validation, row-count reconciliation, and content-hash dedup the quality pipeline runs on every cycle.`,
       },
-      {
-        id:`de-09`, q:`What does it mean for a pipeline to be idempotent?`,
+            {
+        id:`de-9`,
+        q:`What does it mean for a pipeline to be idempotent?`,
         anchor:`An idempotent pipeline can process the same input again without creating duplicate or inconsistent results.`,
-        compressed:`Idempotency means retries and reruns do not duplicate or corrupt business results. Stable keys, deduplication, upserts, or atomic partition replacement usually enforce it.`,
+        compressed:`An idempotent pipeline can process the same input again without creating duplicate or inconsistent results.`,
         detail:`Pipelines are retried because of timeouts, partial failures, operator reruns, and backfills. If rerunning the same data appends duplicates or applies a transformation twice, the pipeline is unsafe. Idempotency can be achieved through stable business keys, upserts, partitions that are replaced atomically, content hashes, checkpoints, and transaction boundaries. The exact design depends on whether the output is a snapshot, append-only event log, or mutable table. Idempotency does not mean every run produces identical timestamps or logs; it means the intended business state remains correct.`,
         followup:`How would you make a daily file ingestion safe to rerun?`,
         followupAnswer:`On each run, compute a content hash of the file and compare it to previously ingested hashes. If already processed, skip. If new, upsert records using a stable business key so duplicate rows aren't created. Write to a staging table first, validate row counts and required fields, then swap or merge into the final table atomically. Log the file hash, row count, and run timestamp for lineage.`,
         tie:`Use content-hash deduplication and reproducible output generation in the quality pipeline.`,
         trap:`“Idempotent means the code can run more than once.”`,
+        l2q:`Compare the concrete mechanisms for achieving idempotency across snapshot, append-only, and mutable-table outputs.`,
+        l2a:`The right mechanism depends on the output shape. For a mutable table, upsert/merge on a stable business key so a rerun overwrites rather than appends; for partitioned outputs, replace the whole partition atomically (write-then-swap) so a rerun rebuilds a clean partition; for append-only event logs, dedupe on an idempotency key or content hash so replays don't duplicate events. Content hashing also lets you skip work entirely when the input is unchanged. The applied skill is picking the technique to match the destination's semantics — merge keys, atomic partition swaps, or dedup keys — rather than assuming one approach fits every sink, and writing to staging then publishing atomically so a mid-run failure never leaves a half-written result visible.`,
+        l3q:`Why is idempotency the foundational reliability property of data systems, and how does it interact with exactly-once and retries?`,
+        l3a:`Idempotency is what makes retries safe, and retries are unavoidable because timeouts, partial failures, operator reruns, and backfills all reprocess the same data — so without idempotency every reliability mechanism becomes a duplication hazard. It is also the practical resolution of the exactly-once myth: since distributed delivery is realistically at-least-once, you achieve effectively-once by making the consumer idempotent (dedup keys, merges, transactional commits) so duplicate deliveries converge to the correct state. The discipline composes — staging plus atomic publish, stable keys, content hashing, checkpoints — into a pipeline where "run it again" is always safe, which is the precondition for automated retries, orchestrated recovery, and confident backfills. The senior insight: idempotency is not a nice-to-have, it is the property that makes a data system safely retryable, and almost every other reliability guarantee (exactly-once processing, automated recovery, safe backfills) is built on top of it.`,
       },
-      {
-        id:`de-10`, q:`What is an incremental load?`,
+            {
+        id:`de-10`,
+        q:`What is an incremental load?`,
         anchor:`An incremental load processes only data that are new or changed since the previous successful run.`,
-        compressed:`Incremental loading processes new or changed records using a reliable change signal. It must handle updates, deletes, late data, and checkpoint failure without gaps or duplicates.`,
+        compressed:`An incremental load processes only data that are new or changed since the previous successful run.`,
         detail:`Full refreshes reread and rebuild all data, which is simple but can become slow and expensive. Incremental loads reduce work by using a watermark, modification timestamp, sequence number, change-data-capture stream, or source partition. The design must account for updates, deletes, late arrivals, clock issues, and failed checkpoints. Watermarks should advance only after successful publication. A small overlap window can capture late records, with deduplication protecting against repeats. Periodic reconciliation or full rebuilds may still be necessary to detect missed changes.`,
-        followup:`Why can <code>updated_at > last_run_time</code> miss records?`,
-        followupAnswer:`Clocks can differ between systems. Records might be created and updated within the same millisecond and land exactly on the boundary. Records from a replicated source may have an <code>updated_at</code> reflecting the original system's clock rather than the replica's ingestion time. A small overlap window combined with deduplication on the business key handles most of these edge cases.`,
+        followup:`Why can updated_at > last_run_time miss records?`,
+        followupAnswer:`Clocks can differ between systems. Records might be created and updated within the same millisecond and land exactly on the boundary. Records from a replicated source may have an updated_at reflecting the original system's clock rather than the replica's ingestion time. A small overlap window combined with deduplication on the business key handles most of these edge cases.`,
         tie:`Apply this to API extraction windows and last-good-run tracking.`,
         trap:`Assuming timestamps are perfectly reliable and records never arrive late.`,
+        l2q:`Walk through designing a watermark-based incremental load that's robust to late data and failures.`,
+        l2a:`A robust incremental load advances its watermark only after the batch is successfully published — never before — so a failed run reprocesses rather than skips, and it reads with a small overlap window behind the last watermark to catch records that arrived or were updated late. Deduplication on a stable business key absorbs the repeats that the overlap creates, and you persist the watermark and run state durably so an interrupted run resumes correctly. The applied skill is the combination — advance-after-success, overlap window, dedup on key — which together handle clock skew, boundary collisions, and late arrivals that a naive "strictly greater than last run" filter silently drops.`,
+        l3q:`Incremental loads improve performance but accumulate risk over time. How do you keep them trustworthy, and why still do periodic full rebuilds?`,
+        l3a:`Incremental loads trade completeness for speed, and small gaps compound silently: a handful of late records missed by a too-narrow window, a few changes lost to clock skew, a missed delete, and over months the incremental table drifts from the source without any error firing. The senior practice is defense plus reconciliation: change-data-capture where available (which captures deletes that timestamp-based logic misses), periodic reconciliation counts against the source, and scheduled full rebuilds that reset accumulated drift and validate that incremental logic still matches a from-scratch computation. The deletes problem is especially insidious because a timestamp watermark can't see a row that is simply gone. The senior insight: incremental processing is an optimization that accrues silent drift, so you pair it with reconciliation and periodic full rebuilds to catch what the watermark misses — speed from incremental, correctness from the rebuild that proves the two agree.`,
       },
-      {
-        id:`de-11`, q:`What is orchestration?`,
+            {
+        id:`de-11`,
+        q:`What is orchestration?`,
         anchor:`Orchestration schedules pipeline tasks, manages dependencies, tracks state, and handles retries and alerts.`,
-        compressed:`Orchestration coordinates schedule, dependencies, retries, state, and alerts. It should invoke testable pipeline logic rather than becoming the only place that logic exists.`,
+        compressed:`Orchestration schedules pipeline tasks, manages dependencies, tracks state, and handles retries and alerts.`,
         detail:`An orchestrator coordinates a workflow made of tasks. It determines when tasks run, which tasks depend on others, what parameters and environments they use, and how failures are retried or surfaced. Examples include Airflow, Dagster, Prefect, and managed cloud services. Orchestration should not contain all transformation logic; the tasks should remain testable outside the scheduler. Good workflows are observable and support rerunning a failed partition rather than restarting everything. Overly complex dependency graphs become difficult to operate, so workflows should be decomposed around meaningful data products and clear ownership.`,
         followup:`Why is a cron job sometimes enough, and when is it not?`,
         followupAnswer:`A cron job is enough when the pipeline is a single script with no inter-step dependencies, when partial failure is acceptable (just rerun tomorrow), and when the schedule is fixed. It's not enough when you need task-level retry without restarting everything, dependency management between steps, visibility into which step failed, dynamic parameters, or more specific alerts than 'the job ran at 2am.'`,
         tie:`Use the required order of the Smartsheet scheduling scripts as a simple dependency workflow that could later be orchestrated.`,
         trap:`“Airflow is an ETL tool.”`,
+        l2q:`As pipelines multiply, what specific capabilities push you from cron to a real orchestrator, and what does the orchestrator deliberately not own?`,
+        l2a:`You graduate from cron when you need things cron can't express: dependency management between tasks (run B only after A succeeds), task-level retry without restarting the whole job, backfills over historical partitions, dynamic parameters, and visibility into which step failed and why. An orchestrator (Airflow, Dagster, Prefect) coordinates the workflow — when tasks run, what depends on what, how failures retry and alert. What it deliberately should not own is the transformation logic itself: tasks should be testable outside the scheduler, so the orchestrator stays a thin coordination layer rather than absorbing business logic that then can't be unit-tested or run locally. The applied skill is keeping orchestration and computation separate.`,
+        l3q:`Why is an idempotent, partition-based, observable DAG the durable design, and how does this connect to controllers you've built elsewhere?`,
+        l3a:`The robust orchestration pattern is a DAG of idempotent, partition-scoped tasks: model the workflow as a dependency graph (not a linear script), make each task safely rerunnable so a failed node can be retried or backfilled without rerunning everything, scope work to partitions so you reprocess one day rather than all history, and instrument each task so failures are visible and actionable. This is the same DAG-controller-over-linear-chain principle from the RQ4 work on task-graph controllers — explicit dependencies and independent, retryable units beat a monolithic sequence for both reliability and recovery. The pattern degrades gracefully: a partition fails in isolation rather than taking down the run, and recovery is "retry that node," not "restart the job." The senior insight: orchestration maturity is a graph of idempotent, observable, partition-scoped tasks rather than a scheduled monolith — the same structural argument (explicit dependencies, independent retryable units) that favors task-graph controllers over linear chains in agentic systems.`,
       },
-      {
-        id:`de-12`, q:`What are partitioning and indexing?`,
+            {
+        id:`de-12`,
+        q:`What are partitioning and indexing?`,
         anchor:`Partitioning divides data into manageable physical groups; indexing creates a structure that speeds specific lookups.`,
-        compressed:`Partitioning prunes large data regions; indexes accelerate targeted row access. Both improve reads only when aligned with real query patterns and both have maintenance costs.`,
+        compressed:`Partitioning divides data into manageable physical groups; indexing creates a structure that speeds specific lookups.`,
         detail:`Partitioning often organizes a large table or file dataset by date, site, or another common filter. Query engines can skip irrelevant partitions, reducing scanned data. Poor partition choices create too many tiny partitions or fail to match query patterns. An index stores selected key values with references to rows, helping databases avoid full scans for filters, joins, or ordering. Indexes consume storage and slow writes because they must be maintained. Composite index order matters. Partitioning and indexing solve related but different problems and should be driven by observed workloads and query plans.`,
         followup:`Why is indexing every column a bad strategy?`,
         followupAnswer:`Every index slows down writes because the database must update the index structure on insert, update, and delete. Indexes consume storage and memory. The query planner may choose a wrong index, producing worse performance than no index. Indexes pay off when a column appears frequently in WHERE clauses, JOIN conditions, or ORDER BY with high selectivity (many distinct values).`,
         tie:`Think about partitioning retrieval-evaluation runs by date and indexing case IDs or document IDs.`,
         trap:`Treating partitions as folders only or indexes as free performance improvements.`,
+        l2q:`How do you choose a partition key, and what does a bad choice cost you in practice?`,
+        l2a:`A good partition key matches how queries filter — usually a date for time-bounded analytical queries — so the engine prunes irrelevant partitions and scans a fraction of the data. The failure modes are concrete: too-fine a key (partitioning by a high-cardinality ID) creates millions of tiny files with crushing metadata and per-file overhead — the "small files problem" — while too-coarse a key forces full scans because nothing can be pruned, and a key that doesn't match the query filter buys nothing at all. The applied skill is partitioning on the dominant filter dimension at a granularity that balances pruning against file count, and validating it against real query plans rather than guessing.`,
+        l3q:`How do composite index order, write amplification, and the query planner interact, and why can "obvious" indexes hurt?`,
+        l3a:`Indexing is a set of tradeoffs, not free speed. A composite index serves queries that filter on a left-prefix of its columns, so column order determines which queries it accelerates — wrong order and a seemingly relevant index goes unused. Every index also imposes write amplification: inserts, updates, and deletes must maintain each index structure, so over-indexing silently taxes every write and consumes storage and memory. And the planner uses statistics to choose an access path, so stale statistics or low selectivity can lead it to pick a worse index than a full scan, meaning an index can degrade performance rather than improve it. The senior insight: indexing trades write cost and storage for read speed on specific access patterns, so you index deliberately for observed query shapes — composite order matched to filters, selectivity high enough to matter — and verify via query plans, because the "obvious" index can slow writes and still go unused.`,
       },
-      {
-        id:`de-13`, q:`What is schema evolution?`,
+            {
+        id:`de-13`,
+        q:`What is schema evolution?`,
         anchor:`Schema evolution is the controlled process of changing data fields and types without silently breaking producers or consumers.`,
-        compressed:`Schema evolution manages structural and semantic changes across independently changing producers and consumers. Additive changes, versioning, migration, and deprecation reduce breakage.`,
+        compressed:`Schema evolution is the controlled process of changing data fields and types without silently breaking producers or consumers.`,
         detail:`Schemas change when fields are added, renamed, removed, or retyped. Additive optional changes are usually easier to support than removals or semantic changes. Producers and consumers may deploy at different times, so compatibility matters. Data contracts, versioning, migration logic, default handling, and deprecation windows reduce breakage. Historical records may not contain new fields, and backfills may be required. A field can remain technically the same type while its business meaning changes, which is equally dangerous. Schema changes should trigger tests, documentation updates, and downstream impact review.`,
         followup:`Why is renaming a column often a breaking change even when the data are unchanged?`,
         followupAnswer:`Every upstream query, downstream consumer, API contract, ORM model, report, and dashboard that references that column by name breaks. The data is unchanged but all the code reading it is wrong. Renaming requires a migration strategy — adding the new name as an alias, deprecating the old name over a transition period, and coordinating all consumers — rather than a simple column rename.`,
         tie:`Use the synchronized Pydantic schemas, data dictionary, expected outputs, and workflow taxonomy.`,
         trap:`“Just add the new column and update the query.”`,
+        l2q:`What's the difference between backward, forward, and full schema compatibility, and why does the direction matter when producers and consumers deploy independently?`,
+        l2a:`Backward compatibility means new consumers can read old data; forward compatibility means old consumers can read new data; full compatibility is both. The direction matters because producers and consumers deploy at different times, so during a rollout you may have a new producer writing data an old consumer must still read (needs forward compatibility) or a new consumer reading historical data (needs backward). Additive optional fields are usually safe in both directions; removals, renames, and type changes break one or both. The applied skill is knowing which compatibility your deployment order requires and restricting schema changes to ones that preserve it, often enforced by a schema registry that rejects incompatible changes.`,
+        l3q:`How do you safely rename or retype a column in a live system with many independent consumers, and why is the same-type-new-meaning change the most dangerous of all?`,
+        l3a:`You never rename in place; you use expand-contract (parallel-change): add the new column alongside the old, dual-write both, migrate consumers one at a time onto the new name, and only drop the old column once nothing reads it — a multi-phase migration with a deprecation window, not a rename. The genuinely worst change is the one schema validation can't catch: a field keeps its name and type but its business meaning shifts (a status code is redefined, a unit silently changes from grams to milligrams), so every consumer keeps working while computing wrong results, and no compatibility check fires because the structure is unchanged. Defenses are semantic versioning of the contract, documented meaning, and tests that assert on values and distributions, not just types. The senior insight: structural schema changes are handled by expand-contract migrations, but the dangerous change is semantic — same type, new meaning — because it passes every type check while silently corrupting every consumer, which is why the synchronized schemas and data dictionary in the quality work govern meaning, not just shape.`,
       },
-      {
-        id:`de-14`, q:`How should a pipeline handle failures and retries?`,
+            {
+        id:`de-14`,
+        q:`How should a pipeline handle failures and retries?`,
         anchor:`Failures should be classified, logged with context, retried only when safe, and prevented from publishing corrupt partial results.`,
-        compressed:`I separate transient from permanent failures, use bounded idempotent retries, validate before atomic publication, preserve context in logs, and make stale fallback data explicit.`,
+        compressed:`Failures should be classified, logged with context, retried only when safe, and prevented from publishing corrupt partial results.`,
         detail:`Transient failures such as a temporary network timeout may be retried with bounded attempts and backoff. Permanent failures such as invalid schema or missing required fields should fail fast and route the bad input for investigation. Retries must be idempotent so they do not duplicate outputs. Pipelines should write to staging locations and publish atomically after validation when possible. Logs should include run ID, source, partition, row counts, timing, and error category. Alerts should focus on actionable failures. A last-known-good output can preserve availability, but it must be clearly marked stale rather than silently presented as current.`,
         followup:`Why can unlimited retries make an outage worse?`,
         followupAnswer:`If many pipeline instances retry a failed operation simultaneously without backoff, they create a thundering herd that amplifies load on a recovering service. The recovering service gets overwhelmed by retry traffic before stabilizing, causing repeated failure. Exponential backoff with jitter, maximum retry limits, and circuit breakers prevent retry storms from converting a temporary outage into a prolonged one.`,
         tie:`Use preserve-last-good-extract behavior, row-count reconciliation, and structured logging from the quality pipeline.`,
         trap:`“Retry three times for every exception.”`,
+        l2q:`How do you classify failures so retries are safe and useful rather than harmful?`,
+        l2a:`The first move is to split transient from permanent. Transient failures (network timeout, throttling, a briefly unavailable dependency) are retried with bounded attempts, exponential backoff, and jitter so recovery doesn't trigger a thundering herd. Permanent failures (schema violation, missing required field, malformed input) should fail fast and route the bad record to a dead-letter queue or quarantine for investigation, because retrying them just wastes work and delays the alert. Retries are only safe if the operation is idempotent, so a retried write can't duplicate output. The applied skill is encoding this taxonomy — retry-with-backoff for transient, fail-fast-and-quarantine for permanent — rather than blindly retrying every exception N times.`,
+        l3q:`What patterns keep a failure in one dependency from cascading into a system-wide outage, and how do you fail without corrupting data?`,
+        l3a:`Resilience against cascading failure comes from a small family of patterns working together: exponential backoff with jitter prevents retry storms against a recovering service; circuit breakers stop hammering a failing dependency and let it heal; bulkheads isolate resources so one saturated component can't starve the rest; and timeouts bound how long any call can hang. Alongside availability you protect correctness with staging-then-atomic-publish so a partial failure never leaves half-written data visible, and a clearly-marked last-known-good output preserves availability without masquerading as current. The deepest lesson is that retries themselves are a load amplifier — naive retries convert a brief outage into a sustained one by piling traffic onto a recovering service. The senior insight: resilience is backoff, circuit breakers, bulkheads, and timeouts to contain cascades, plus atomic publish and clearly-stale fallbacks to fail without corrupting or silently misleading — designing the failure path as deliberately as the success path.`,
       },
-      {
-        id:`de-15`, q:`What is a backfill, and how do you run one safely?`,
+            {
+        id:`de-15`,
+        q:`What is a backfill, and how do you run one safely?`,
         anchor:`A backfill reprocesses historical data to repair, enrich, or populate outputs using corrected logic.`,
-        compressed:`A backfill safely reprocesses historical partitions. I scope and test it, use idempotent versioned logic, isolate it from normal runs, reconcile outputs, and communicate metric restatements.`,
+        compressed:`A backfill reprocesses historical data to repair, enrich, or populate outputs using corrected logic.`,
         detail:`Backfills are needed after a bug fix, schema addition, missed ingestion period, or new derived field. They can consume far more compute and write volume than normal daily processing, so they should be scoped by partition and tested on a small range first. The logic should be versioned, idempotent, and isolated from current production runs. Teams should estimate downstream impact, monitor row counts and quality metrics, and preserve the ability to roll back. A backfill may change historical dashboards, so stakeholders need to know whether previous numbers will be restated. Successful completion should be reconciled against expected coverage.`,
         followup:`How would you backfill a year of data without overwhelming the source system?`,
         followupAnswer:`Process in small day-sized or week-sized partitions sequentially rather than one massive query. Add rate limiting or sleep intervals between requests. Run during off-peak hours on the source system. Use a read replica or export snapshot rather than querying production directly. Track completed partitions in a checkpoint table so you can resume from the last success if interrupted.`,
         tie:`Apply this to rebuilding historical quality outputs after a corrected normalization or deduplication rule.`,
-        trap:`Running the normal full pipeline over all history without capacity, reconciliation, or rollback planning. --- # Cross-Track Foundation Check You are ready to move from this Level I bank into the existing SWE II / MLE II banks when you can consistently do the following without notes: - define the concept accurately in plain English - explain one mechanism rather than only naming the concept - give one project or real-world example - name one failure mode or limitation - answer the follow-up in a structured way The next-level banks then add deeper design tradeoffs, production debugging, observability, system boundaries, and ownership expectations.`,
-      },
+        trap:`Running the normal full pipeline over all history without capacity, reconciliation, or rollback planning.`,
+        l2q:`How do you run a backfill alongside live production without the two corrupting each other or restating numbers unexpectedly?`,
+        l2a:`You isolate the backfill from the daily run so they can't collide on the same outputs — separate compute, careful partition targeting, and idempotent writes so reprocessing a partition replaces rather than duplicates. You scope and test on a small date range first to validate the corrected logic and estimate cost before scaling out, you monitor row counts and quality metrics as it runs, and you preserve rollback. Crucially, because a backfill can restate historical dashboards, you communicate to stakeholders whether and how prior numbers will change before they notice on their own. The applied skill is treating a backfill as a controlled, isolated, reversible operation with stakeholder communication, not just rerunning the normal pipeline over all history.`,
+        l3q:`A backfill changes numbers people have already seen and made decisions on. How do you handle the integrity and trust dimension, not just the mechanics?`,
+        l3a:`The hard part of a backfill is rarely compute — it is that restating history can erode trust and even reopen settled decisions, so the integrity work matters as much as the mechanics. Senior practice makes restatements visible and explainable: announce before the change what will move and why, version the logic so the before/after is reproducible, keep the raw layer so anyone can verify the restatement from source, and consider preserving the prior figures (as-reported vs. as-restated) so a decision made on old numbers remains auditable rather than silently rewritten. This is the data-lineage and immutable-artifact discipline applied to history — you don't quietly overwrite the past, you document the correction with full provenance. The senior insight: a backfill is a restatement of record, so the discipline is reproducible, communicated, provenance-tracked correction rather than silent overwrite — the same append-only, content-addressable thinking behind MarketMind's Resolution Ledger, where history is corrected transparently, never erased.`,
+      }
     ],
   },
   react: {
@@ -2218,7 +2518,7 @@ if(document.readyState==='loading') {
    RUBRIC — Technical Competency Scoring System v1.5
 ══════════════════════════════════════════════════════ */
 
-const RUBRIC_VERSION = '1.9';
+const RUBRIC_VERSION = '1.10';
 const RUBRIC_LOG_KEY = 'rubric-log-v1';
 
 /* ── REFERENCE DATA ─────────────────────────────────── */
@@ -2577,11 +2877,25 @@ const RD = {
   ],
 
   weaknessTags: [
-    'Shallow reasoning','Missed edge cases','Thin tradeoffs',
-    'Evidence gaps','Explanation unclear','Incomplete execution',
-    'Excessive prompting','Incorrect reasoning','No test strategy',
-    'Missing failure handling','Ownership unclear','Confident false claim'
+    'Mechanism gap','Thin tradeoff analysis','Incomplete execution',
+    'Insufficient evidence','Incorrect reasoning','Confident false claim',
+    'Terminology imprecision','Scope boundary missed','Failure handling gap',
+    'Validation gap','Edge-case gap','Complexity analysis missing',
+    'Overprompted answer','Ownership unclear','Application gap',
+    'Interview phrasing gap','Definition gap','Implementation detail gap'
   ],
+
+  /* v1.10 attempt types */
+  attemptTypes: [
+    'initial','retry','assisted_retry','post_coaching_retry',
+    'final_retry','retention_retest','session_parent','rollup'
+  ],
+
+  /* v1.10 assessment outcomes */
+  assessmentOutcomes: ['Demonstrated','Partial discovery','Concept discovery'],
+
+  /* v1.10 coverage statuses */
+  coverageStatuses: ['included','excluded','suspected_missing','duplicate_linked','rollup_only'],
 
   /* §19 Grading principles */
   gradingPrinciples: [
@@ -2741,7 +3055,43 @@ function rNormaliseEntry(raw) {
     retestPlan:          raw.retestPlan          || null,
     roleReadinessRollup: raw.roleReadinessRollup || null,
     proofStrength:       raw.proofStrength       || null,
-    antiInflationChecks: raw.antiInflationChecks || null
+    antiInflationChecks: raw.antiInflationChecks || null,
+
+    /* §17 Diagnostic Progress Model — v1.9.x */
+    assessmentOutcome:   raw.assessmentOutcome  || null,
+    conceptDiscovery:    raw.conceptDiscovery   || null,
+
+    /* §16 Attempt tracking — v1.9.3+ */
+    sessionId:           raw.sessionId          || null,
+    parentAssessmentId:  raw.parentAssessmentId || null,
+    attemptGroupId:      raw.attemptGroupId     || null,
+    attemptNumber:       raw.attemptNumber      || null,
+    attemptType:         raw.attemptType        || 'initial',
+    priorAssessmentId:   raw.priorAssessmentId  || null,
+    sourceFile:          raw.sourceFile         || null,
+    sourceItemId:        raw.sourceItemId       || null,
+    coverageStatus:      raw.coverageStatus     || null,
+    secondaryTaskSignals:raw.secondaryTaskSignals || [],
+    problemName:         raw.problemName        || null,
+    platform:            raw.platform           || null,
+    codingPattern:       raw.codingPattern      || null,
+    primaryDataStructure:raw.primaryDataStructure || null,
+    compileStatus:       raw.compileStatus      || null,
+    testStatus:          raw.testStatus         || null,
+    labelSetVersion:     raw.labelSetVersion    || null,
+    proposedNewTags:     raw.proposedNewTags    || [],
+
+    /* §17 Decision quality — v1.10 */
+    calibrationAnchors:         raw.calibrationAnchors         || [],
+    scoreUncertainty:           raw.scoreUncertainty           || null,
+    gapRecurrence:              raw.gapRecurrence              || null,
+    transferSignal:             raw.transferSignal             || null,
+    retestQueue:                raw.retestQueue                || null,
+    assessmentQuality:          raw.assessmentQuality          || null,
+    roleReadinessEvidenceFloor: raw.roleReadinessEvidenceFloor || null,
+    recoveryBehavior:           raw.recoveryBehavior           || null,
+    scoreLiftActions:           raw.scoreLiftActions           || null,
+    trackerHealth:              raw.trackerHealth              || null
   };
 }
 
@@ -3579,6 +3929,309 @@ function buildRubric() {
 
       diagSec.appendChild(diagGrid);
       el.appendChild(diagSec);
+    })();
+
+    /* ── v1.10 DIAGNOSTIC SECTIONS ──────────────────────── */
+
+    /* 1. Tracker Health */
+    (function buildTrackerHealth() {
+      const healthEntries = entries.filter(e => e.trackerHealth && e.trackerHealth.overallHealth);
+      if (!healthEntries.length) {
+        // Compute health locally from entry quality
+        const missingLS  = entries.filter(e => !e.levelScores || e.levelScores.L1 === undefined).length;
+        const missingOut = entries.filter(e => !e.assessmentOutcome).length;
+        const missingPL  = entries.filter(e => !e.problemLevel).length;
+        if (!entries.length) return;
+        const health = missingLS > 2 || missingOut > entries.length * 0.5 ? 'Warning' : 'Good';
+        const sec = rEl('div', 'r-v110-section');
+        sec.appendChild(rEl('div', 'r-section-label', 'Tracker Health (§17.33)'));
+        const bar = rEl('div', 'r-th-bar');
+        const badge = rEl('span', 'r-th-badge th-' + health.toLowerCase(), health);
+        bar.appendChild(badge);
+        if (missingLS)  bar.appendChild(rEl('span', 'r-th-item', missingLS  + ' missing level scores'));
+        if (missingOut) bar.appendChild(rEl('span', 'r-th-item', missingOut + ' missing outcome'));
+        if (missingPL)  bar.appendChild(rEl('span', 'r-th-item', missingPL  + ' missing problem level'));
+        sec.appendChild(bar);
+        el.appendChild(sec);
+        return;
+      }
+      const latest = healthEntries[healthEntries.length - 1].trackerHealth;
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Tracker Health (§17.33)'));
+      const bar = rEl('div', 'r-th-bar');
+      const h = latest.overallHealth || 'Unknown';
+      bar.appendChild(rEl('span', 'r-th-badge th-' + h.toLowerCase(), h));
+      const checks = [
+        ['levelScores', latest.recordsWithMissingLevelScores],
+        ['noncanonical tags', latest.recordsWithNoncanonicalTags],
+        ['outcome', latest.recordsMissingAssessmentOutcome],
+        ['problemLevel', latest.recordsMissingProblemLevel],
+        ['coverage defects', latest.coverageDefects]
+      ];
+      checks.forEach(([lbl, val]) => {
+        if (val) bar.appendChild(rEl('span', 'r-th-item', val + ' missing ' + lbl));
+      });
+      if (!checks.some(([,v]) => v)) bar.appendChild(rEl('span', 'r-th-ok', '\u2713 All checks clean'));
+      sec.appendChild(bar);
+      el.appendChild(sec);
+    })();
+
+    /* 2. Assessment Outcome Distribution */
+    (function buildOutcomeDist() {
+      const withOutcome = entries.filter(e => e.assessmentOutcome);
+      if (!withOutcome.length) return;
+      const OUTCOMES = ['Demonstrated', 'Partial discovery', 'Concept discovery'];
+      const COLORS   = ['var(--done)', 'var(--doing)', '#a78bfa'];
+      const freq = {};
+      withOutcome.forEach(e => { freq[e.assessmentOutcome] = (freq[e.assessmentOutcome] || 0) + 1; });
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Assessment Outcomes (§17)'));
+      const grid = rEl('div', 'r-outcome-grid');
+      OUTCOMES.forEach((outcome, i) => {
+        const cnt = freq[outcome] || 0;
+        const pct = withOutcome.length ? Math.round(cnt / withOutcome.length * 100) : 0;
+        const card = rEl('div', 'r-outcome-card');
+        const val  = rEl('div', 'r-outcome-val', cnt + '');
+        val.style.color = COLORS[i];
+        const lbl  = rEl('div', 'r-outcome-lbl', outcome);
+        const bw   = rEl('div', 'r-outcome-bar-wrap');
+        const bf   = rEl('div', 'r-outcome-bar');
+        bf.style.width = pct + '%';
+        bf.style.background = COLORS[i];
+        bw.appendChild(bf);
+        card.appendChild(val);
+        card.appendChild(lbl);
+        card.appendChild(bw);
+        grid.appendChild(card);
+      });
+      sec.appendChild(grid);
+      el.appendChild(sec);
+    })();
+
+    /* 3. Concept Discovery Aggregate */
+    (function buildConceptDiscovery() {
+      const cds = entries.filter(e => e.conceptDiscovery);
+      if (!cds.length) return;
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Concept Discovery (§17 §26)'));
+      const grid = rEl('div', 'r-diag-grid');
+
+      // Teaching need distribution
+      const tnFreq = {};
+      cds.forEach(e => { const tn = e.conceptDiscovery.teachingNeed; if (tn && tn !== 'None') tnFreq[tn] = (tnFreq[tn]||0)+1; });
+      if (Object.keys(tnFreq).length) {
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Teaching Need'));
+        Object.entries(tnFreq).sort((a,b)=>b[1]-a[1]).forEach(([lbl, cnt]) => {
+          const row = rEl('div', 'r-diag-gap-row');
+          row.appendChild(rEl('span', 'r-diag-gap-lbl', lbl.replace(' ', '\n')));
+          const bw = rEl('div', 'r-diag-gap-bar-wrap'); const bf = rEl('div', 'r-diag-gap-bar');
+          bf.style.width = (cnt / Math.max(...Object.values(tnFreq)) * 100) + '%'; bf.style.background = '#a78bfa';
+          bw.appendChild(bf); row.appendChild(bw); row.appendChild(rEl('span', 'r-diag-gap-cnt', cnt));
+          card.appendChild(row);
+        });
+        grid.appendChild(card);
+      }
+
+      // First-principles signal rate
+      const fpFreq = {};
+      cds.forEach(e => { const fp = e.conceptDiscovery.firstPrinciplesSignal; if (fp) fpFreq[fp] = (fpFreq[fp]||0)+1; });
+      if (Object.keys(fpFreq).length) {
+        const card = rEl('div', 'r-diag-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'First Principles Signal'));
+        ['Strong','Moderate','Weak','None'].forEach(lbl => {
+          const cnt = fpFreq[lbl] || 0; if (!cnt) return;
+          const row = rEl('div', 'r-diag-gap-row');
+          const col = lbl==='Strong'?'var(--done)':lbl==='Moderate'?'var(--doing)':lbl==='Weak'?'var(--audit)':'var(--border)';
+          row.appendChild(rEl('span', 'r-diag-gap-lbl', lbl));
+          const bw = rEl('div', 'r-diag-gap-bar-wrap'); const bf = rEl('div', 'r-diag-gap-bar');
+          bf.style.width = (cnt / cds.length * 100) + '%'; bf.style.background = col;
+          bw.appendChild(bf); row.appendChild(bw); row.appendChild(rEl('span', 'r-diag-gap-cnt', cnt));
+          card.appendChild(row);
+        });
+        grid.appendChild(card);
+      }
+
+      sec.appendChild(grid);
+      el.appendChild(sec);
+    })();
+
+    /* 4. Retest Queue */
+    (function buildRetestQueue() {
+      const today = new Date().toISOString().slice(0,10);
+      // From retestQueue fields
+      const dueNow  = entries.flatMap(e => e.retestQueue && e.retestQueue.dueNow  ? e.retestQueue.dueNow  : []);
+      const dueSoon = entries.flatMap(e => e.retestQueue && e.retestQueue.dueSoon ? e.retestQueue.dueSoon : []);
+      const blocked = entries.flatMap(e => e.retestQueue && e.retestQueue.blockedBy ? e.retestQueue.blockedBy : []);
+      // Also pull from retestPlan
+      const planNow  = entries.filter(e => e.retestPlan && e.retestPlan.retestDate && e.retestPlan.retestDate <= today);
+      const planSoon = entries.filter(e => e.retestPlan && e.retestPlan.retestDate && e.retestPlan.retestDate > today);
+      if (!dueNow.length && !dueSoon.length && !blocked.length && !planNow.length && !planSoon.length) return;
+
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Retest Queue (§17.25)'));
+      const grid = rEl('div', 'r-gc-grid');
+
+      if (dueNow.length || planNow.length) {
+        const card = rEl('div', 'r-gc-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', '\u26a0 Due Now'));
+        [...new Set([...dueNow, ...planNow.map(e => e.task)])].slice(0,5).forEach(item => {
+          card.appendChild(rEl('div', 'r-gc-item r-retest-urgent', item.slice(0,60)));
+        });
+        grid.appendChild(card);
+      }
+      if (dueSoon.length || planSoon.length) {
+        const card = rEl('div', 'r-gc-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Due Soon'));
+        [...new Set([...dueSoon, ...planSoon.map(e => e.task + ' — ' + e.retestPlan.retestDate)])].slice(0,5).forEach(item => {
+          card.appendChild(rEl('div', 'r-gc-item', item.slice(0,60)));
+        });
+        grid.appendChild(card);
+      }
+      if (blocked.length) {
+        const card = rEl('div', 'r-gc-card');
+        card.appendChild(rEl('div', 'r-diag-card-title', 'Blocked By'));
+        [...new Set(blocked)].slice(0,5).forEach(item => {
+          card.appendChild(rEl('div', 'r-gc-item', item.slice(0,60)));
+        });
+        grid.appendChild(card);
+      }
+      sec.appendChild(grid);
+      el.appendChild(sec);
+    })();
+
+    /* 5. Gap Recurrence */
+    (function buildGapRecurrence() {
+      const recurring = entries.filter(e => e.gapRecurrence && e.gapRecurrence.isRecurring);
+      if (!recurring.length) return;
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Gap Recurrence (§17.23)'));
+      const note = recurring.filter(e => e.gapRecurrence.worsening).length;
+      if (note) sec.appendChild(rEl('p', 'r-th-item r-gap-warn', '\u26a0 ' + note + ' gap' + (note>1?'s':'')+' worsening'));
+
+      const sorted = [...recurring].sort((a,b) => (b.gapRecurrence.priorOccurrences||0) - (a.gapRecurrence.priorOccurrences||0));
+      sorted.slice(0, 6).forEach(e => {
+        const row = rEl('div', 'r-recur-row');
+        const gr  = e.gapRecurrence;
+        const worsening = gr.worsening ? ' \u2191' : '';
+        row.appendChild(rEl('span', 'r-recur-task', e.task.slice(0,45) + (e.task.length>45?'\u2026':'')));
+        row.appendChild(rEl('span', 'r-recur-cnt' + (gr.worsening?' r-recur-warn':''), (gr.priorOccurrences||0) + 'x' + worsening));
+        if (gr.pattern) row.appendChild(rEl('span', 'r-recur-pattern', gr.pattern.slice(0,50)));
+        sec.appendChild(row);
+      });
+      el.appendChild(sec);
+    })();
+
+    /* 6. Recovery Behavior */
+    (function buildRecoveryBehavior() {
+      const withRB = entries.filter(e => e.recoveryBehavior);
+      if (!withRB.length) return;
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Recovery Behavior (§17.28)'));
+      const grid = rEl('div', 'r-diag-grid');
+      const card = rEl('div', 'r-diag-card');
+      card.appendChild(rEl('div', 'r-diag-card-title', 'Under Uncertainty'));
+
+      const checks = [
+        ['Acknowledged uncertainty', 'acknowledgedUncertainty'],
+        ['Reasoned from first principles', 'reasonedFromFirstPrinciples'],
+        ['Asked clarifying question', 'askedClarifyingQuestion'],
+        ['Avoided fabrication', 'avoidedFabrication']
+      ];
+      checks.forEach(([lbl, key]) => {
+        const yes = withRB.filter(e => e.recoveryBehavior[key] === true).length;
+        const row = rEl('div', 'r-diag-five-row');
+        row.appendChild(rEl('span', 'r-diag-five-lbl', lbl.slice(0,18)));
+        const bw = rEl('div', 'r-diag-five-bar-wrap'); const bf = rEl('div', 'r-diag-five-bar');
+        const pct = withRB.length ? yes / withRB.length : 0;
+        bf.style.width = (pct*100) + '%'; bf.style.background = pct >= 0.7 ? 'var(--done)' : 'var(--audit)';
+        bw.appendChild(bf); row.appendChild(bw);
+        row.appendChild(rEl('span', 'r-diag-five-cnt', yes + '/' + withRB.length));
+        card.appendChild(row);
+      });
+      const qualFreq = {};
+      withRB.forEach(e => { const q = e.recoveryBehavior.recoveryQuality; if (q) qualFreq[q]=(qualFreq[q]||0)+1; });
+      ['Strong','Partial','Weak','None'].forEach(lbl => {
+        if (!qualFreq[lbl]) return;
+        const row = rEl('div', 'r-diag-five-row');
+        const col = lbl==='Strong'?'var(--done)':lbl==='Partial'?'var(--doing)':lbl==='Weak'?'var(--audit)':'var(--text-dim)';
+        row.appendChild(rEl('span', 'r-diag-five-lbl', lbl + ' quality'));
+        const bw = rEl('div', 'r-diag-five-bar-wrap'); const bf = rEl('div', 'r-diag-five-bar');
+        bf.style.width = (qualFreq[lbl]/withRB.length*100) + '%'; bf.style.background = col;
+        bw.appendChild(bf); row.appendChild(bw);
+        row.appendChild(rEl('span', 'r-diag-five-cnt', qualFreq[lbl]));
+        card.appendChild(row);
+      });
+      grid.appendChild(card);
+      sec.appendChild(grid);
+      el.appendChild(sec);
+    })();
+
+    /* 7. Transfer Signal */
+    (function buildTransferSignal() {
+      const withTS = entries.filter(e => e.transferSignal && e.transferSignal.sourceConcept);
+      if (!withTS.length) return;
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Concept Transfer (§17.24)'));
+      const qFreq = {};
+      withTS.forEach(e => { const q = e.transferSignal.transferQuality || 'None'; qFreq[q]=(qFreq[q]||0)+1; });
+      const strong = withTS.filter(e => (e.transferSignal.transferQuality||'')  === 'Strong').length;
+      const pct = withTS.length ? Math.round(strong/withTS.length*100) : 0;
+      const bar = rEl('div', 'r-th-bar');
+      bar.appendChild(rEl('span', 'r-th-ok', strong + '/' + withTS.length + ' strong transfer (' + pct + '%)'));
+      ['Strong','Partial','Weak','None'].forEach(lbl => {
+        if (!qFreq[lbl]) return;
+        const col = lbl==='Strong'?'var(--done)':lbl==='Partial'?'var(--doing)':lbl==='Weak'?'var(--audit)':'var(--text-dim)';
+        const tag = rEl('span', 'r-th-item'); tag.style.color = col; tag.textContent = lbl + ': ' + qFreq[lbl];
+        bar.appendChild(tag);
+      });
+      sec.appendChild(bar);
+      // List strong transfers
+      withTS.filter(e => e.transferSignal.transferQuality === 'Strong').slice(0,4).forEach(e => {
+        const row = rEl('div', 'r-gc-item');
+        row.textContent = e.transferSignal.sourceConcept + (e.transferSignal.transferredTo.length ? ' \u2192 ' + e.transferSignal.transferredTo.join(', ') : '');
+        sec.appendChild(row);
+      });
+      el.appendChild(sec);
+    })();
+
+    /* 8. Score Lift Actions */
+    (function buildScoreLiftActions() {
+      const withSLA = entries.filter(e => e.scoreLiftActions && e.scoreLiftActions.toPassNextLevel && e.scoreLiftActions.toPassNextLevel.length);
+      if (!withSLA.length) return;
+      // Show the most recent 3 distinct actions
+      const allActions = [...new Set(withSLA.flatMap(e => e.scoreLiftActions.toPassNextLevel))];
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Score Lift Actions (§17.30)'));
+      allActions.slice(0, 5).forEach(action => {
+        const row = rEl('div', 'r-lift-row');
+        row.appendChild(rEl('span', 'r-lift-dot', '\u25b8'));
+        row.appendChild(rEl('span', 'r-lift-text', action));
+        sec.appendChild(row);
+      });
+      el.appendChild(sec);
+    })();
+
+    /* 9. Score Uncertainty Summary */
+    (function buildScoreUncertainty() {
+      const withSU = entries.filter(e => e.scoreUncertainty && Array.isArray(e.scoreUncertainty.range) && e.scoreUncertainty.range.length === 2);
+      if (!withSU.length) return;
+      const avgRange = withSU.reduce((s, e) => s + (e.scoreUncertainty.range[1] - e.scoreUncertainty.range[0]), 0) / withSU.length;
+      const wide = withSU.filter(e => (e.scoreUncertainty.range[1] - e.scoreUncertainty.range[0]) > 15).length;
+      const sec = rEl('div', 'r-v110-section');
+      sec.appendChild(rEl('div', 'r-section-label', 'Score Uncertainty (§17.22)'));
+      const bar = rEl('div', 'r-th-bar');
+      const cls = avgRange > 15 ? 'r-th-badge th-warning' : 'r-th-badge th-good';
+      bar.appendChild(rEl('span', cls, '\u00b1' + avgRange.toFixed(1) + ' avg range'));
+      if (wide) bar.appendChild(rEl('span', 'r-th-item', wide + ' wide-range entries'));
+      sec.appendChild(bar);
+      // Show top limiters
+      const limiters = {};
+      withSU.flatMap(e => e.scoreUncertainty.confidenceLimiters || []).forEach(l => { limiters[l]=(limiters[l]||0)+1; });
+      Object.entries(limiters).sort((a,b)=>b[1]-a[1]).slice(0,3).forEach(([lbl, cnt]) => {
+        sec.appendChild(rEl('div', 'r-gc-item', lbl + ' (' + cnt + ')'));
+      });
+      el.appendChild(sec);
     })();
 
     /* Promotion evidence */
