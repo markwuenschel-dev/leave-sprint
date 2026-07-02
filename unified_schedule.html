@@ -37,6 +37,7 @@
   <button class="tab" onclick="showTab('calendar')">📅 Calendar</button>
   <button class="tab" onclick="showTab('qbank')">📚 Q Bank</button>
   <button class="tab" onclick="showTab('rubric')">⚖️ Rubric</button>
+  <button class="tab" onclick="showTab('progress')">📈 Progress</button>
 </div>
 
 <div class="content">
@@ -47,27 +48,27 @@
     <!-- MAY 24 STATUS BANNER — workbench monorepo pivot -->
     <div class="status-banner">
       <div class="status-banner-header">
-        <span class="status-banner-title">June 14 — Phase 5 Complete · Leave Begins June 17 · Applications July 8</span>
-        <span class="status-banner-date">Updated June 14</span>
+        <span class="status-banner-title">July 2 — Day 16 of 29 · Build Complete · Interview Prep Is the Live Risk</span>
+        <span class="status-banner-date">Updated July 2</span>
       </div>
 
       <div class="status-grid">
         <div class="status-cell done">
-          <div class="status-cell-label">✓ Week 6 shipped — Phase 5 done (3 PRs)</div>
-          <div class="status-cell-text"><strong>PR 1 — React polish:</strong> branded shell · 4-step progress indicator · metric cards · evidence cards · two-column reviewer form · handling-path banner · demo sidebar · responsive layout. <strong>PR 2 — Demo script:</strong> <code>browser_demo_script.md</code> · Vite proxy → Spring · PowerShell API checks · troubleshooting guide. <strong>PR 3 — Operator controls + hardening:</strong> <code>demoCases.ts</code> typed cases · <code>DemoToolbar</code> selector/load/reset · <code>assessmentSummary.ts</code> clipboard export · clipboard test fix · Python UTF-8 encoding fix. All checks: ✅ <code>npm test</code> ✅ <code>npm run build</code> ✅ <code>gradlew.bat test</code> ✅ full browser workflow.</div>
+          <div class="status-cell-label">✓ Full build shipped — RAG · Java · React · ETL · Audit all done</div>
+          <div class="status-cell-text"><strong>rag-engine-python/</strong> — v8 spine + Phase 5 bridge complete, now in maintenance/polish mode, not active build. <strong>services/review-api/</strong> — Spring Boot API done. <strong>apps/review-ui/</strong> — React/TS review surface done (Phase 5 complete). <strong>Chewy ETL pipeline</strong> — existing shipped portfolio piece. <strong>3-system reconciliation audit</strong> — done. Every build-track box is checked; the portfolio itself is not the risk right now.</div>
         </div>
-        <div class="status-cell doing">
-          <div class="status-cell-label">▶ Tomorrow (Jun 15) — pre-leave</div>
-          <div class="status-cell-text">Demo quality polish for tomorrow's rehearsal. README update with screenshots and architecture framing. Phase 5 gate check — confirm the 5-minute manual demo script works end-to-end against the running Spring Boot service.</div>
+        <div class="status-cell audit">
+          <div class="status-cell-label">⚠ At risk — coding challenges + walkthroughs, 13 days left</div>
+          <div class="status-cell-text">The daily discipline (Tier A–D coding drills, file defense, Q&amp;A) has not kept pace with the build. <strong>Live coding practice</strong> is the most under-covered item heading into Mock #1 (Day 21). <strong>Project walkthroughs</strong> — the "walk an interviewer through what you built" narrative prep — have not been started at all. <strong>SQL/Snowflake</strong> and <strong>Kotlin</strong> study, both planned for the sprint's daily rhythm, are also not started. See the 📈 Progress tab for the full picture.</div>
         </div>
         <div class="status-cell next">
-          <div class="status-cell-label">→ Leave Sprint: Jun 17 – Jul 15</div>
-          <div class="status-cell-text">Phase 5 already done: leave Week 1 shifts to <strong>Phase 6 CI/Docker + interview prep start</strong>. Applications <strong>deliberately scheduled July 8 (Day 22)</strong> — intentional, not a slip. Coding drills + file defense every day starting Day 1.</div>
+          <div class="status-cell-label">→ 13 days to Mock #1 (Day 21) · 14 to Applications (Day 22)</div>
+          <div class="status-cell-text">Applications remain scheduled for <strong>July 8 (Day 22)</strong>. With the build done, remaining leave-sprint days need to shift weight toward the four gap items above rather than further build work — there isn't more build work left to do that matters more than closing these gaps before Mock #1.</div>
         </div>
       </div>
 
       <div class="status-narrative">
-        Phase 5 (React/TypeScript Review UI) is complete ahead of the leave sprint plan. The system is now demoable end-to-end: concern → checklist → evidence → reviewer notes → final assessment, with operator controls for a repeatable live demo. Leave starts June 17 with Phase 6 (CI/Docker/runbook) and daily interview prep as the parallel tracks. The applications going in on July 8 is an intentional decision to have Phase 6 done before applying so the portfolio is reproducible.
+        The workbench build (RAG engine, Spring Boot API, React review UI, CI/Docker, ETL, 3-system audit) is fully shipped as of Day 16. What's unfinished is entirely on the interview-prep side: coding challenges and project walkthroughs are the two flagged gaps, with SQL/Snowflake and Kotlin study as secondary gaps under the same Interview Prep track. None of these are build problems — they're daily-discipline problems, and there are 13 days left before Mock #1.
 
         <div class="signal-row">
           <div class="signal-card mle">
@@ -828,7 +829,10 @@
 
   <!-- RHYTHM TAB -->
   <div id="tab-rhythm" class="tab-panel">
-    <div class="section-title">Workbench Daily Rhythm (60–75 min weekdays · 2–3 h Saturday)</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--done);border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--text-mid);line-height:1.6;">
+      <strong style="color:var(--done);">This weekly cadence is complete</strong> — it covers the pre-leave build (May 4–June 14), which shipped in full. Kept for reference. The live daily rhythm is now the leave-sprint discipline (coding drill + file defense + Q&amp;A, see Week by Week and 📈 Progress).
+    </div>
+    <div class="section-title">Workbench Daily Rhythm (60–75 min weekdays · 2–3 h Saturday) · Pre-Leave Build, May 4–June 14 · DONE</div>
     <div class="rhythm-grid">
       <div class="rhythm-day">
         <div class="rhythm-day-name">Monday</div>
@@ -912,7 +916,7 @@
       </div>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:28px;font-size:12px;color:var(--text-mid);line-height:1.6;">
-      <strong style="color:var(--text);">Total personal-time budget:</strong> ~10–11 hours/week. Audit and ETL work happens in work hours only. The previous SQL / Java drills / Jonas course / Buchalka course tracks are <em>gone</em> — the same skills are now built directly in workbench code, which is stronger interview signal than course completion.
+      <strong style="color:var(--text);">Total personal-time budget:</strong> ~10–11 hours/week during the build. Audit and ETL work happened in work hours only. The Jonas / Buchalka course tracks are gone — that skill signal came from workbench code instead, which was the right call. <strong style="color:var(--audit);">Correction as of Day 16:</strong> SQL/Snowflake and Kotlin were not fully absorbed by the build and are open gaps in the leave sprint — see 📈 Progress.
     </div>
 
     <div class="section-title">Phase Shifts</div>
@@ -925,9 +929,9 @@
         <span class="phase-badge p2" style="flex-shrink:0">WK 5–8</span>
         <span style="color:var(--text-mid);font-size:13px;">Wk 5: real Java→Python vertical slice. Wk 6: hybrid retrieval comparison (MLE evidence). Wk 7: full UI HITL loop. Wk 8: README + 5-min demo recording.</span>
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--phase3);border-radius:6px;padding:14px;display:flex;gap:16px;align-items:center;">
-        <span class="phase-badge p3" style="flex-shrink:0">WK 9–13</span>
-        <span style="color:var(--text-mid);font-size:13px;">CI green, Docker Compose, runbook. Mock screens weekly. Apply broadly. Q2 lane: deeper MLE (multi-hop, RAGAS) vs deeper SWE (auth, audit log, AWS deploy).</span>
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--audit);border-radius:6px;padding:14px;display:flex;gap:16px;align-items:center;">
+        <span class="phase-badge p3" style="flex-shrink:0;background:rgba(244,114,182,0.2);color:var(--audit);">DAY 16–29</span>
+        <span style="color:var(--text-mid);font-size:13px;">Build is done — CI/Docker/audit/ETL all shipped. Remaining leave-sprint days go entirely to interview prep: coding challenges (Tier A–D) and project walkthroughs are the top-priority gaps, SQL/Snowflake and Kotlin close behind. Mock #1 on Day 21, Mock #2 on Day 26. No further build work is scheduled.</span>
       </div>
     </div>
 
@@ -970,7 +974,7 @@
           <div class="track-icon" style="background:var(--python-bg)">🐍</div>
           <div>
             <div class="track-card-name">rag-engine-python/</div>
-            <div class="track-card-subtitle">Python RAG engine · primary MLE signal</div>
+            <div class="track-card-subtitle">Python RAG engine · primary MLE signal · ✅ DONE — maintenance mode</div>
           </div>
         </div>
         <div class="track-progression">
@@ -1048,15 +1052,19 @@
         </div>
       </div>
 
-      <div class="track-card">
+      <div class="track-card" style="border-left:3px solid var(--audit);">
         <div class="track-card-header">
           <div class="track-icon" style="background:var(--mle-bg);color:var(--mle);">🎤</div>
           <div>
             <div class="track-card-name">Interview Prep</div>
-            <div class="track-card-subtitle">Coding drills · file defense · mock screens</div>
+            <div class="track-card-subtitle">Coding drills · file defense · mock screens · ⚠ AT RISK — Day 16 of 29</div>
           </div>
         </div>
         <div class="track-progression">
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--audit);">GAP</span><span class="track-phase-text"><strong>Coding challenges (Tier A→D)</strong> — the biggest active gap heading into Mock #1. Live coding practice has not kept pace with the daily 30-minute target. Highest priority for the remaining 13 days.</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--audit);">GAP</span><span class="track-phase-text"><strong>Project walkthroughs</strong> — narrative "walk an interviewer through what you built" prep, not started. Needed for the project deep-dive portion of every mock and real screen.</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--audit);">GAP</span><span class="track-phase-text"><strong>SQL/Snowflake</strong> — not started. Was slotted into the sprint's daily rhythm; hasn't happened yet.</span></div>
+          <div class="track-phase"><span class="track-phase-label" style="color:var(--audit);">GAP</span><span class="track-phase-text"><strong>Kotlin</strong> — not started. Java side of the daily coding drill is in progress but behind pace; Kotlin hasn't been touched.</span></div>
           <div class="track-phase"><span class="track-phase-label">DAILY</span><span class="track-phase-text">30m coding drill (Tier A→D) + 20m file defense + 15m Q&A bank — every day of the leave sprint without exception.</span></div>
           <div class="track-phase"><span class="track-phase-label">DAY 11</span><span class="track-phase-text">Mock #0 — 5-min demo cold, no notes. Record what breaks. Fix before Mock #1.</span></div>
           <div class="track-phase"><span class="track-phase-label">DAY 21</span><span class="track-phase-text">Mock #1 — full DSA + project deep-dive. Written feedback committed to <code>docs/mock_interview_notes.md</code>.</span></div>
@@ -1452,6 +1460,11 @@
 </div>
     </div>
     <div id="cal-detail"></div>
+  </div>
+
+  <!-- PROGRESS TAB — built by buildProgressTab() -->
+  <div id="tab-progress" class="tab-panel">
+    <!-- built by buildProgressTab() -->
   </div>
 
 </div>

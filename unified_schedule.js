@@ -209,6 +209,7 @@
           const s = load(); s[key] = cb.checked; save(s);
           row.classList.toggle('problem-solved', cb.checked);
           refreshDashboard();
+          buildProgressTab();
         });
         td.appendChild(cb); row.appendChild(td);
       });
@@ -946,6 +947,149 @@
     }
   }
 
+  /* ═══════════════ PROGRESS TAB ═══════════════
+     Scalable by design: add a track to PG_TRACKS or an entry to PG_ACTIVITY
+     and it renders automatically — no other code changes needed. ── */
+
+  const PG_COLORS = { done: '#10b981', watch: '#f59e0b', risk: '#f472b6' };
+
+  // pct: null means "compute live from checkboxes" via the pctFn below.
+  const PG_TRACKS = [
+    { id:'coding',       name:'Coding challenges (Tier A–D)', cat:'prep',  status:'risk',
+      note:'Biggest active gap heading into Mock #1',
+      pctFn: () => {
+        const boxes = document.querySelectorAll('.problem-check');
+        if (!boxes.length) return 0;
+        return Math.round(100 * document.querySelectorAll('.problem-check:checked').length / boxes.length);
+      } },
+    { id:'walkthroughs', name:'Project walkthroughs', cat:'prep', status:'risk', pct:0,
+      note:'"Walk an interviewer through what you built" — not started' },
+    { id:'sql',          name:'SQL / Snowflake', cat:'prep', status:'watch', pct:0,
+      note:'Sprint sub-item, not started' },
+    { id:'kotlin',       name:'Kotlin', cat:'prep', status:'watch', pct:0,
+      note:'Sprint sub-item, not started' },
+    { id:'rag',    name:'CQIEA / RAG engine',      cat:'build', status:'done', pct:100, note:'Maintenance / polish only' },
+    { id:'java',   name:'Java · Spring Boot API',  cat:'build', status:'done', pct:100 },
+    { id:'react',  name:'React / TS review UI',    cat:'build', status:'done', pct:100 },
+    { id:'etl',    name:'ETL pipeline',             cat:'build', status:'done', pct:100 },
+    { id:'audit',  name:'3-system audit',           cat:'build', status:'done', pct:100 },
+  ];
+
+  // Add new entries here as things happen — newest first, renders automatically.
+  const PG_ACTIVITY = [
+    { date:'2026-07-02', status:'risk', text:'<strong>Day 16 review:</strong> build fully shipped (RAG, Java, React, ETL, audit). Coding challenges and project walkthroughs flagged as the live risk with 13 days to Mock #1.' },
+    { date:'2026-06-17', status:'watch', text:'Leave sprint begins. SQL/Snowflake and Kotlin slotted into the daily rhythm alongside Tier A–D coding drills.' },
+    { date:'2026-06-14', status:'done', text:'Phase 5 (React/TS review UI) shipped — 3 PRs merged. Build portion of the workbench complete ahead of leave.' },
+  ];
+
+  function pgPct(t) { return typeof t.pctFn === 'function' ? t.pctFn() : (t.pct ?? 0); }
+
+  function pgRingSVG(pct, colorHex, size) {
+    size = size || 88;
+    const r = size / 2 - 8, c = size / 2, circ = 2 * Math.PI * r;
+    const offset = circ * (1 - Math.max(0, Math.min(100, pct)) / 100);
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="var(--border)" stroke-width="7"/>
+      <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${colorHex}" stroke-width="7"
+        stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" stroke-linecap="round"
+        transform="rotate(-90 ${c} ${c})"/>
+      <text x="${c}" y="${c - 2}" text-anchor="middle" fill="var(--text)" font-size="${size > 70 ? 17 : 13}"
+        font-weight="600" font-family="var(--mono)">${Math.round(pct)}%</text>
+    </svg>`;
+  }
+
+  function pgRingCard(t, opts) {
+    opts = opts || {};
+    const pct = pgPct(t);
+    const small = !!opts.small;
+    return `<div class="pg-ring-card ${t.status} ${small ? 'small' : ''}">
+      ${pgRingSVG(pct, PG_COLORS[t.status], small ? 64 : 92)}
+      <div class="pg-ring-name">${t.name}</div>
+      ${small ? '' : `<div class="pg-badge ${t.status}">${t.status === 'done' ? 'done' : t.status === 'watch' ? 'watch' : 'at risk'}</div>`}
+    </div>`;
+  }
+
+  function pgBurndownSVG(gapTracks) {
+    const W = 560, H = 170, PL = 34, PR = 14, PT = 16, PB = 30;
+    const IW = W - PL - PR, IH = H - PT - PB, DAYS = 29;
+    const day = sprintDay() || 16;
+    const px = d => PL + (d / DAYS) * IW;
+    const py = v => PT + IH - (v / 100) * IH;
+    let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="max-width:${W}px;display:block;">`;
+    for (let v = 0; v <= 100; v += 25) {
+      const y = py(v);
+      svg += `<line x1="${PL}" x2="${W-PR}" y1="${y}" y2="${y}" stroke="rgba(100,120,140,${v===0?'0.2':'0.08'})" stroke-width="0.7"/>
+        <text x="${PL-6}" y="${y+3}" text-anchor="end" font-size="8" fill="rgba(100,120,140,0.55)" font-family="monospace">${v}</text>`;
+    }
+    for (let d = 0; d <= DAYS; d += 7) {
+      svg += `<line x1="${px(d)}" x2="${px(d)}" y1="${PT+IH}" y2="${PT+IH+3}" stroke="rgba(100,120,140,0.3)" stroke-width="0.7"/>
+        <text x="${px(d)}" y="${PT+IH+13}" text-anchor="middle" font-size="8" fill="rgba(100,120,140,0.5)" font-family="monospace">D${d}</text>`;
+    }
+    // Ideal pace line: 0% day1 -> 100% day29
+    svg += `<line x1="${px(0)}" y1="${py(0)}" x2="${px(DAYS)}" y2="${py(100)}" stroke="rgba(100,120,140,0.4)" stroke-width="1.2" stroke-dasharray="5,3"/>`;
+    // Today marker
+    svg += `<line x1="${px(day)}" x2="${px(day)}" y1="${PT}" y2="${PT+IH}" stroke="rgba(100,120,140,0.25)" stroke-width="0.7" stroke-dasharray="2,2"/>
+      <text x="${px(day)}" y="${PT-4}" text-anchor="middle" font-size="8" fill="rgba(100,120,140,0.6)" font-family="monospace">TODAY</text>`;
+    // Actual point per gap track at today
+    gapTracks.forEach(t => {
+      const pct = pgPct(t);
+      svg += `<circle cx="${px(day)}" cy="${py(pct)}" r="4" fill="${PG_COLORS[t.status]}" stroke="var(--surface)" stroke-width="1.5"/>`;
+    });
+    svg += `</svg>`;
+    return svg;
+  }
+
+  function buildProgressTab() {
+    const panel = document.getElementById('tab-progress');
+    if (!panel) return;
+
+    const day = sprintDay();
+    const dayLabel = day ? `Day ${day} / 29` : 'Pre-sprint';
+    const gapTracks = PG_TRACKS.filter(t => t.status === 'risk');
+    const watchTracks = PG_TRACKS.filter(t => t.status === 'watch');
+    const doneTracks = PG_TRACKS.filter(t => t.status === 'done');
+
+    let html = `
+      <div class="pg-hero">
+        <div class="pg-hero-row">
+          <span class="pg-hero-title">Where things actually stand</span>
+          <span class="pg-hero-meta">${dayLabel} · updated ${sprintDateStr(day) || ''}</span>
+        </div>
+        <div class="pg-hero-sub">Build tracks are done. Interview-prep tracks are the live risk — foregrounded below rather than shown at parity with everything else.</div>
+      </div>
+
+      <div class="pg-section-title">Focus — at risk</div>
+      <div class="pg-focus-grid">${gapTracks.map(t => pgRingCard(t)).join('')}</div>
+
+      <div class="pg-section-title">Also open</div>
+      <div class="pg-focus-grid">${watchTracks.map(t => pgRingCard(t)).join('')}</div>
+
+      <div class="pg-section-title">Shipped</div>
+      <div class="pg-all-grid">${doneTracks.map(t => pgRingCard(t, {small:true})).join('')}</div>
+
+      <div class="pg-section-title">Burndown — gap tracks vs. ideal sprint pace</div>
+      <div class="pg-burndown-wrap">
+        <div class="pg-burndown-legend">
+          <span class="pg-burndown-leg-item"><span class="pg-burndown-leg-line" style="background:rgba(100,120,140,0.4);border-top:2px dashed rgba(100,120,140,0.5);"></span>Ideal pace (0% → 100% over 29 days)</span>
+          ${gapTracks.concat(watchTracks).map(t => `<span class="pg-burndown-leg-item"><span class="pg-burndown-leg-dot" style="background:${PG_COLORS[t.status]}"></span>${t.name}</span>`).join('')}
+        </div>
+        ${pgBurndownSVG(gapTracks.concat(watchTracks))}
+      </div>
+
+      <div class="pg-section-title">Activity</div>
+      <div class="pg-feed">
+        ${PG_ACTIVITY.map(a => `<div class="pg-feed-item">
+          <div class="pg-feed-dot ${a.status}"></div>
+          <div class="pg-feed-body">
+            <div class="pg-feed-text">${a.text}</div>
+            <div class="pg-feed-date">${a.date}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+    `;
+    panel.innerHTML = html;
+  }
+
   /* ── INIT ────────────────────────────────────────────── */
   function init() {
     buildSprintHQ();
@@ -965,6 +1109,7 @@
     addJournals();
     buildCalendar();
     if (sprintDay()) buildRhythmToday();
+    buildProgressTab();
   }
 
   document.readyState === 'loading'

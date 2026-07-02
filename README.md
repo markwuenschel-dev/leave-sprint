@@ -2,6 +2,8 @@
 
 Single-file HTML dashboard tracking a 29-day career transition sprint (June 17 – July 15 2026). Open `index.html` in any browser — no build step, no server, no dependencies.
 
+**Status as of Day 16 (July 2):** the workbench build (RAG engine, Java/Spring Boot API, React/TS UI, ETL pipeline, 3-system audit) is fully shipped. The open items are all interview-prep: coding challenges (Tier A–D) and project walkthroughs are the top-priority gaps, SQL/Snowflake and Kotlin are secondary gaps. See the 📈 Progress tab for the live picture.
+
 ---
 
 ## Deploy to Netlify (2 minutes)
@@ -25,6 +27,8 @@ To update: drag a new version onto the same drop URL, or connect a GitHub repo f
 | **Coding Bank & Refs** | Tier A–D problem bank (31 problems), 20-file defense map, applications tracker |
 | **📅 Calendar** | June + July 2026 grid — click any sprint day cell to see the full day detail inline |
 | **📚 Q Bank** | 60 structured interview questions across SWE I, MLE I, DS I, DE I with progressive reveal |
+| **⚖️ Rubric** | Interview rubric coverage tracker with a live burndown against Level I/II requirement slots |
+| **📈 Progress** | At-a-glance status across every track — progress rings, shipped-vs-open badges, a gap-track burndown against ideal sprint pace, and an activity feed. Foregrounds the two live risk items (coding challenges, project walkthroughs) instead of treating all tracks as equal weight. Config-driven (`PG_TRACKS` / `PG_ACTIVITY` in the JS) — add a track or activity entry and it renders automatically, no markup changes needed. |
 
 ---
 
@@ -47,6 +51,8 @@ To update: drag a new version onto the same drop URL, or connect a GitHub repo f
 **Journals** — collapsible textarea at the bottom of each sprint day block. Autosaves 700ms after last keystroke. Mock interview days (21, 26) and retro days (7, 14) have context-specific placeholder text.
 
 **Themes** — 🌙 Dark · ☀️ Light · 💻 System. Preference persists in localStorage. Applies before first paint to prevent flash.
+
+**Progress tab** — the coding-challenges ring pulls its percentage live from the same checkboxes tracked in Coding Bank & Refs (no separate data entry). The other tracks (walkthroughs, SQL/Snowflake, Kotlin, and the five shipped build tracks) are set in the `PG_TRACKS` config array at the top of the Progress-tab JS block — update a `pct`/`status` value there as work happens, or add a new track object and it appears in the right section (focus / watch / shipped) automatically. Same pattern for `PG_ACTIVITY`.
 
 ---
 
