@@ -1040,7 +1040,7 @@
   }
 
   function buildProgressTab() {
-    const panel = document.getElementById('tab-progress');
+    const panel = document.getElementById('pg-tracks');
     if (!panel) return;
 
     const day = sprintDay();
@@ -3553,7 +3553,6 @@ function buildRubric() {
 
   const bar = rEl('div', 'r-bar');
   const VIEWS = [
-    { id: 'progress', label: '\ud83d\udcca Progress' },
     { id: 'log-entry',label: '\uff0b Log Entry'  },
     { id: 'history',  label: '\ud83d\udccb History'   },
     { id: 'reference',label: '\ud83d\udcda Reference' }
@@ -3575,7 +3574,6 @@ function buildRubric() {
     Object.values(btns).forEach(b => b.classList.remove('active'));
     Object.values(panels).forEach(p => p.classList.remove('active'));
     btns[id].classList.add('active'); panels[id].classList.add('active');
-    if (id === 'progress') buildProgress();
     if (id === 'history')  buildHistory();
   }
 
@@ -3684,8 +3682,8 @@ const KGTAG_CLUSTERS = {
   ]
 };
 
-  function buildProgress() {
-    const el = panels['progress']; el.innerHTML = '';
+  function buildProgress(el) {
+    el.innerHTML = '';
     const entries = rLog();
 
     /* Sprint day */
@@ -5434,13 +5432,19 @@ Main reason the next level was not reached: __`));
     layout.appendChild(content); el.appendChild(layout);
   })();
 
-  switchView('progress');
+  window.rubricBuildProgress = buildProgress;
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', buildRubric);
+  document.addEventListener('DOMContentLoaded', () => {
+    buildRubric();
+    const rubricLive = document.getElementById('pg-rubric-live');
+    if (rubricLive && window.rubricBuildProgress) window.rubricBuildProgress(rubricLive);
+  });
 } else {
   buildRubric();
+  const rubricLive = document.getElementById('pg-rubric-live');
+  if (rubricLive && window.rubricBuildProgress) window.rubricBuildProgress(rubricLive);
 }
 
 /* ══════════════════════════════════════════════════════

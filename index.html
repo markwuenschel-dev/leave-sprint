@@ -1462,9 +1462,11 @@
     <div id="cal-detail"></div>
   </div>
 
-  <!-- PROGRESS TAB — built by buildProgressTab() -->
+  <!-- PROGRESS TAB — built by buildProgressTab() (tracks) + window.rubricBuildProgress() (mock-interview analytics, moved out of Rubric) -->
   <div id="tab-progress" class="tab-panel">
-    <!-- built by buildProgressTab() -->
+    <div id="pg-tracks"><!-- built by buildProgressTab() --></div>
+    <div class="pg-section-title" style="margin-top:32px;">Mock interview &amp; rubric coverage</div>
+    <div id="pg-rubric-live" style="max-width:960px;"><!-- built by window.rubricBuildProgress() --></div>
   </div>
 
 </div>
