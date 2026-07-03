@@ -2,12 +2,7 @@ import type { DayPlan, Tier } from '../lib/types';
 
 /**
  * Static day plans & milestones.
- *
- * These define the *content* of each day's four disciplines.
- * Rhythm completion state itself lives in the Zustand store (hydrated from seed).
- *
- * Content originally extracted from the legacy unified_schedule.html.
- * Edit here for schedule accuracy during the sprint.
+ * All entries now consistently use 'title'.
  */
 
 export const DAY_PLANS: Record<number, DayPlan> = {
@@ -74,7 +69,6 @@ export const DAY_PLANS: Record<number, DayPlan> = {
     qa: { title: "What does the 2-minute CI/Docker story sound like?", time: "15m" },
     build: { title: "Phase 6 gate + test smoke", time: "60m" },
   },
-  // Days 8-16 abbreviated for v1 (can expand)
   16: {
     day: 16,
     date: "Jul 2",
@@ -95,7 +89,7 @@ export const DAY_PLANS: Record<number, DayPlan> = {
   },
 };
 
-// Fallback plan for days not explicitly defined above
+// Fallback
 export function getDayPlan(day: number): DayPlan {
   const explicit = DAY_PLANS[day];
   if (explicit) return explicit;

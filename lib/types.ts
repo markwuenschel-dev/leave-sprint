@@ -119,7 +119,7 @@ export interface DayPlan {
   focus: string;
   coding: { title: string; tier: Tier; time: string };
   file: { title: string; time: string };
-  qa: { prompt: string; time: string };
+  qa: { title: string; time: string };
   build: { title: string; time: string };
 }
 
