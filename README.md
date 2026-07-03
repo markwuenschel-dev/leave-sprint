@@ -1,79 +1,168 @@
-# Leave Sprint Dashboard
+# Leave Sprint Twin
 
-Single-file HTML dashboard tracking a 29-day career transition sprint (June 17 – July 15 2026). Open `index.html` in any browser — no build step, no server, no dependencies.
+**High-signal, local-first command center dashboard** for the 29-day leave sprint (June 17 – July 15 2026).
 
-**Status as of Day 16 (July 2):** the workbench build (RAG engine, Java/Spring Boot API, React/TS UI, ETL pipeline, 3-system audit) is fully shipped. The open items are all interview-prep: coding challenges (Tier A–D) and project walkthroughs are the top-priority gaps, SQL/Snowflake and Kotlin are secondary gaps. See the 📈 Progress tab for the live picture.
+A modern Next.js rebuild of the original single-file dashboard. Built for daily use during the final phase of the sprint: interview prep, daily rhythm discipline, stage tracking, and progress visibility.
 
----
+> **Always use pnpm** for this project.
 
-## Deploy to Netlify (2 minutes)
+## Quick Start
 
-1. Rename `unified_schedule.html` → `index.html`
-2. Go to **app.netlify.com/drop**
-3. Drag the file onto the page
-4. Bookmark the URL you get
+```bash
+pnpm install
+pnpm dev      # http://localhost:3000 (Turbopack)
+pnpm build
+```
 
-To update: drag a new version onto the same drop URL, or connect a GitHub repo for auto-deploy on push.
-
----
-
-## Tabs
-
-| Tab | What it does |
-|---|---|
-| **Week by Week** | Full day-by-day leave sprint schedule — 4 weeks, 29 days, all four daily disciplines |
-| **Daily Rhythm** | Time budget, today's session strip (live during sprint), stop rules |
-| **Workbench Modules** | Per-layer build progression across all six project tracks |
-| **Coding Bank & Refs** | Tier A–D problem bank (31 problems), 20-file defense map, applications tracker |
-| **📅 Calendar** | June + July 2026 grid — click any sprint day cell to see the full day detail inline |
-| **📚 Q Bank** | 60 structured interview questions across SWE I, MLE I, DS I, DE I with progressive reveal |
-| **⚖️ Rubric** | Interview rubric coverage tracker with a live burndown against Level I/II requirement slots |
-| **📈 Progress** | At-a-glance status across every track — progress rings, shipped-vs-open badges, a gap-track burndown against ideal sprint pace, and an activity feed. Foregrounds the two live risk items (coding challenges, project walkthroughs) instead of treating all tracks as equal weight. Config-driven (`PG_TRACKS` / `PG_ACTIVITY` in the JS) — add a track or activity entry and it renders automatically, no markup changes needed. |
+**Current status (2026-07-03 ≈ Day 17):** Build work is complete. Focus has shifted fully to consistent daily rhythm (Coding Drill + File Defense + Q&A + Build/Prep), 20-stage completion, problem bank practice, and mock interview readiness. Applications target: Day 22 (July 8). Mock #1: Day 21.
 
 ---
 
-## Features
+## Tech Stack
 
-**Auto-jump to today** — on load, the page opens the current leave week, scrolls to today's day block, and attaches a `← TODAY` label. The `Day N` button in the tab bar re-triggers this at any time.
-
-**Checkboxes** — every task in the 29 sprint day blocks has a checkbox. The three core disciplines (Code · File · Q&A) gate the day-done counter. Build tasks are tracked separately. All state persists across sessions.
-
-**Today card** — compact strip above the tabs showing today's four tasks with synced checkboxes. Same state as the day block — checking one updates the other.
-
-**Sprint dashboard** — days done, problems solved, current streak, days until applications. Milestone bar: Mock #1 (Day 21) · Applications (Day 22) · Mock #2 (Day 26) · Sprint End (Day 29).
-
-**Calendar detail panel** — clicking a sprint day cell (D1–D29) opens a full task panel below the calendar without navigating away. Each task has a synced checkbox and a **↗ Go to day block** button.
-
-**Practice Mode** (Coding Bank tab) — 26 Q&A questions, 20 file defense prompts, and 29 coding prompts extracted live from the schedule. Shuffle, reveal, keyboard navigation.
-
-**Q Bank** (Q Bank tab) — 60 Level I foundation questions across four tracks. Each card has a compressed answer, optional full detail, follow-up question with its own reveal, project tie-in, and trap to avoid. Mark questions mastered or flagged for review.
-
-**Journals** — collapsible textarea at the bottom of each sprint day block. Autosaves 700ms after last keystroke. Mock interview days (21, 26) and retro days (7, 14) have context-specific placeholder text.
-
-**Themes** — 🌙 Dark · ☀️ Light · 💻 System. Preference persists in localStorage. Applies before first paint to prevent flash.
-
-**Progress tab** — the coding-challenges ring pulls its percentage live from the same checkboxes tracked in Coding Bank & Refs (no separate data entry). The other tracks (walkthroughs, SQL/Snowflake, Kotlin, and the five shipped build tracks) are set in the `PG_TRACKS` config array at the top of the Progress-tab JS block — update a `pct`/`status` value there as work happens, or add a new track object and it appears in the right section (focus / watch / shipped) automatically. Same pattern for `PG_ACTIVITY`.
+- **Next.js 16.2.10** (App Router) + React 19.2 + **TypeScript 6.1+** + Tailwind 4 + Turbopack
+- **shadcn/ui** + Radix primitives (planned progressive adoption)
+- **Zustand** + persist middleware (local-first, no backend for v1)
+- **Framer Motion** for micro-interactions
+- **date-fns** for date handling
+- Deploy target: **Netlify** (static export)
 
 ---
 
-## Keyboard shortcuts
+## Key Screens (v1)
+
+| Screen | Description |
+|--------|-------------|
+| **Today / Daily Rhythm** | Prominent progress ring for current day. Synced checklist for the 4 disciplines (Coding Drill, File Defense, Q&A, Build Block). Focus notes, energy selector (low/medium/high), and per-day journal. |
+| **20-Stage Progression** | Beautiful stepper view of the full build + prep stages. One-click "Mark Done" with ISO timestamps. Phase gates clearly visible. |
+| **Interactive Calendar** | July 2026 grid with live color coding: green = full rhythm done, cyan = partial, yellow = at-risk. Click any sprint day for detail panel showing rhythm state + quick actions. |
+| **Problem Bank** | Search + filters (Tier, Status, Pattern). Status tracking: Not Started / Practicing / Solid. All updates persist instantly. |
+| **File Defense Map** | (Core data present; detail views + "Mark Practiced" + notes in progress) |
+
+**Milestones:** Mock #1 (Day 21) · Applications ⭐ (Day 22) · Mock #2 (Day 26) · Sprint End (Day 29)
+
+## Features & Quality Bar
+
+- **Instant persistence**: Every checkbox, status change, note, and journal updates Zustand + localStorage immediately.
+- **Seed + merge**: On first load, state hydrates from `data/app-state.json` (or `data/seed.ts`) and intelligently merges with persisted data.
+- **Fully typed** + accessible + mobile-first (bottom nav on small screens).
+- **Smooth interactions** via Framer Motion.
+- **Easy content edits**: Modify `data/app-state.json` or `data/day-plans.ts` for most schedule and reference data updates.
+
+**LocalStorage key:** `leave-sprint-twin-v1` (different from the legacy single-file `cqw-sprint-v1`).
+
+---
+
+## Keyboard Shortcuts (App)
 
 | Keys | Action |
-|---|---|
-| `Space` | Reveal answer (Practice Mode / Q Bank) |
-| `← →` | Previous / next question |
-| `Enter` | Advance after reveal |
-| `M` | Toggle mastered (Q Bank) |
-| `R` | Toggle review (Q Bank) |
+|------|--------|
+| `T`  | Jump to Today tab |
+| `S`  | Jump to Stages tab |
+
+(Additional shortcuts for future Practice/Quiz modes planned.)
 
 ---
 
-## localStorage keys
+## Data & Persistence
 
-| Key | Stores |
-|---|---|
-| `cqw-sprint-v1` | Task checkboxes, journal text, coding bank solved state |
-| `cqw-qbank-v1` | Q Bank mastered / review status per question |
-| `cqw-theme` | `dark` · `light` · `system` |
+**Seed data lives in:**
 
-State is per-browser and per-device. To transfer between devices, copy the localStorage values via browser devtools (`Application → Local Storage`).
+- `data/app-state.json` — primary editable seed (days, stages, problems, file defense)
+- `data/seed.ts` — TypeScript mirror (used by the store for safe import)
+- `data/day-plans.ts` — static daily rhythm content and milestone definitions
+
+**How it works:**
+1. On first load the app starts from the seed.
+2. Zustand `persist` middleware overlays any saved progress.
+3. `onRehydrateStorage` merges intelligently (your local progress always wins; new seed fields appear).
+4. All mutations are optimistic and write to localStorage under the key `leave-sprint-twin-v1`.
+
+**Editing during the sprint:** Change `data/app-state.json` or `day-plans.ts` → restart dev server (or hard reload) to pick up baseline changes. Your completed work stays in localStorage.
+
+---
+
+## Project Structure
+
+```
+app/
+  layout.tsx
+  page.tsx
+  components/
+    sprint/
+      TodayRhythm.tsx
+      StageProgression.tsx
+      Calendar.tsx
+      ProblemBank.tsx
+lib/
+  store.ts          # Zustand store + persist config
+  types.ts
+  utils.ts
+data/
+  app-state.json    # ← primary content to edit
+  day-plans.ts
+  seed.ts
+```
+
+---
+
+## Development
+
+```bash
+pnpm install
+pnpm dev
+pnpm build
+```
+
+- Uses **Turbopack** (via `--turbopack` flag)
+- TypeScript 6.1+ with modern settings (`verbatimModuleSyntax`, `moduleResolution: bundler`)
+- After changing `package.json` versions, run `pnpm install` to update `pnpm-lock.yaml`
+
+Static export configured for Netlify in `next.config.ts`.
+
+## Deployment (Netlify)
+
+```bash
+pnpm build
+# Deploy the generated `out/` folder
+```
+
+Or connect the GitHub repository — Netlify auto-detects the Next.js project and uses `pnpm build`.
+
+---
+
+## Roadmap / Near-term
+
+- Rich File Defense detail modal + "Quiz me" + practiced tracking
+- At-Risk + Insights panel (velocity, projections, streak, recommendations)
+- Optional LeetCode enrichment helper (slug → title/difficulty)
+- More complete Practice / Quiz modes
+- Theme switcher (dark/light/system) + better shadcn/ui components
+
+---
+
+## Legacy Single-File Version
+
+The original implementation lives alongside:
+
+- `unified_schedule.html` (+ `.js` + `.css`)
+- Old localStorage keys: `cqw-sprint-v1`, `cqw-qbank-v1`
+
+This is kept as a **reference and content source**. The new Next.js app is the active daily driver.
+
+Many day plans, problem descriptions, file defense entries, and Q&A prompts were ported from the legacy version.
+
+---
+
+## Goals & v1 Definition of Done
+
+A beautiful, fast, local-first dashboard usable every day for the remaining sprint days. You should be able to:
+
+- Check off daily rhythm items
+- Advance stages with timestamps
+- Use the calendar + day detail
+- Track Problem Bank and File Defense status
+- See live progress and at-risk signals
+
+All without leaving the browser and with zero backend.
+

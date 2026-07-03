@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+/*
+  Leave Sprint Twin — Design System
+  Dark-first glassmorphism with neon cyan (#00f9ff) + magenta (#ff00aa) accents.
+  High contrast, minimal chrome, scannable.
+*/
+
+:root {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Design tokens - Dark glassmorphism first */
+  --bg: #0a0c10;
+  --bg-elev: #11141a;
+  --surface: #161a22;
+  --surface-2: #1c212c;
+  --border: #2a2f3a;
+  --border-subtle: #222830;
+
+  --text: #e6e8eb;
+  --text-mid: #a1a7b3;
+  --text-dim: #6b7280;
+
+  /* Neon accents */
+  --cyan: #00f9ff;
+  --magenta: #ff00aa;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --orange: #f97316;
+
+  /* Status */
+  --done: #22c55e;
+  --doing: #00f9ff;
+  --at-risk: #eab308;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3f4a #161a22;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a3f4a;
+  border-radius: 3px;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Glass cards */
+.glass {
+  background: rgba(22, 26, 34, 0.85);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.card {
+  @apply rounded-2xl p-5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.card-glass {
+  @apply rounded-2xl p-5;
+  background: rgba(22, 26, 34, 0.75);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(24px);
+}
+
+/* Neon interactive accents */
+.accent-cyan {
+  color: var(--cyan);
+}
+.accent-magenta {
+  color: var(--magenta);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all active:scale-[0.985];
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.btn:hover {
+  border-color: var(--border-subtle);
+  background: #1f242e;
+}
+
+.btn-primary {
+  background: var(--cyan);
+  color: #0a0c10;
+  border-color: var(--cyan);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* Progress ring */
+.progress-ring {
+  transition: stroke-dashoffset 0.35s;
+}
+
+/* Stage rows */
+.stage {
+  @apply flex items-center gap-3 rounded-xl border p-3 transition-all;
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.stage.done {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.stage.next {
+  border-color: rgba(0, 249, 255, 0.35);
+}
+
+.stage-mark {
+  @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs transition-all;
+  border-color: var(--border);
+}
+
+.stage.done .stage-mark {
+  background: var(--done);
+  color: #0a0c10;
+  border-color: var(--done);
+}
+
+/* Rhythm checklist */
+.rhythm-item {
+  @apply flex items-center gap-3 rounded-xl border p-3 transition-colors;
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.rhythm-item.done {
+  border-color: rgba(34, 197, 94, 0.35);
+  opacity: 0.92;
+}
+
+.rhythm-item input[type="checkbox"] {
+  @apply h-4 w-4 accent-[#00f9ff] cursor-pointer;
+}
+
+/* Calendar */
+.cal-day {
+  @apply flex flex-col rounded-lg border p-1.5 text-xs transition-all cursor-pointer select-none;
+  background: var(--surface);
+  border-color: var(--border);
+  min-height: 64px;
+}
+
+.cal-day:hover {
+  border-color: var(--cyan);
+}
+
+.cal-day.full { border-color: rgba(34, 197, 94, 0.5); }
+.cal-day.partial { border-color: var(--cyan); }
+.cal-day.at-risk { border-color: var(--yellow); }
+
+/* Tabs / Nav */
+.nav-link {
+  @apply flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors;
+}
+.nav-link.active, .nav-link:hover {
+  background: var(--surface-2);
+  color: var(--cyan);
+}
+
+/* Detail panel */
+.detail-panel {
+  @apply fixed inset-y-0 right-0 z-50 w-full max-w-md overflow-y-auto border-l p-6;
+  background: var(--bg-elev);
+  border-color: var(--border);
+}
+
+/* Focus notes, energy */
+.energy-btn {
+  @apply rounded-lg border px-3 py-1 text-xs transition-all;
+  border-color: var(--border);
+}
+.energy-btn.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(0, 249, 255, 0.08);
+}
+
+/* Mobile bottom nav */
+@media (max-width: 768px) {
+  .desktop-nav { display: none; }
+}
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+}
+
+/* High signal polish */
+.section-title {
+  @apply mb-3 text-xs font-semibold uppercase tracking-[1.5px] text-[var(--text-dim)];
+}
+
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.status-dot.green { background: var(--green); }
+.status-dot.cyan { background: var(--cyan); }
+.status-dot.yellow { background: var(--yellow); }

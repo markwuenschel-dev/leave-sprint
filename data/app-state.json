@@ -1,0 +1,156 @@
+{
+  "days": {
+    "1": {
+      "rhythm": { "coding": true, "file": true, "qa": true, "build": true },
+      "journal": "Phase 5 gate. Strong start. Focused on CI context.",
+      "energy": "high"
+    },
+    "2": {
+      "rhythm": { "coding": true, "file": true, "qa": false, "build": true }
+    },
+    "3": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "4": { "rhythm": { "coding": true, "file": false, "qa": true, "build": true } },
+    "5": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "6": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "7": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true }, "focusNote": "Phase 6 gate + controller tests" },
+    "8": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "9": { "rhythm": { "coding": false, "file": true, "qa": true, "build": true } },
+    "10": { "rhythm": { "coding": true, "file": true, "qa": true, "build": false } },
+    "11": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "12": { "rhythm": { "coding": true, "file": false, "qa": true, "build": true } },
+    "13": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "14": { "rhythm": { "coding": true, "file": true, "qa": true, "build": true } },
+    "15": { "rhythm": { "coding": false, "file": false, "qa": true, "build": true } },
+    "16": { "rhythm": { "coding": true, "file": true, "qa": false, "build": true }, "focusNote": "Build complete. Interview prep is live risk." }
+  },
+  "stages": {
+    "0": { "done": true, "doneAt": "2026-05-05T10:00:00.000Z" },
+    "1": { "done": true, "doneAt": "2026-05-06T14:20:00.000Z" },
+    "2": { "done": true, "doneAt": "2026-05-07T09:45:00.000Z" },
+    "3": { "done": true, "doneAt": "2026-05-08T11:00:00.000Z" },
+    "4": { "done": true, "doneAt": "2026-05-12T16:30:00.000Z" },
+    "5": { "done": true, "doneAt": "2026-05-14T08:15:00.000Z" },
+    "6": { "done": true, "doneAt": "2026-05-15T17:40:00.000Z" },
+    "7": { "done": true, "doneAt": "2026-05-16T10:05:00.000Z" },
+    "8": { "done": true, "doneAt": "2026-05-17T13:55:00.000Z" },
+    "9": { "done": true, "doneAt": "2026-05-19T15:10:00.000Z" },
+    "10": { "done": true, "doneAt": "2026-05-20T09:00:00.000Z" },
+    "11": { "done": true, "doneAt": "2026-05-21T11:25:00.000Z" },
+    "12": { "done": true, "doneAt": "2026-05-22T14:50:00.000Z" },
+    "13": { "done": true, "doneAt": "2026-05-23T18:00:00.000Z" },
+    "14": { "done": false },
+    "15a": { "done": true, "doneAt": "2026-05-24T10:30:00.000Z" },
+    "15b": { "done": true, "doneAt": "2026-05-24T12:00:00.000Z" },
+    "15c": { "done": true, "doneAt": "2026-05-24T15:45:00.000Z" },
+    "15d": { "done": false },
+    "15e": { "done": false },
+    "15f": { "done": false },
+    "16a": { "done": true, "doneAt": "2026-05-25T08:00:00.000Z" },
+    "16b": { "done": true, "doneAt": "2026-05-25T11:20:00.000Z" },
+    "16c": { "done": true, "doneAt": "2026-05-26T09:40:00.000Z" },
+    "16d": { "done": true, "doneAt": "2026-05-26T14:10:00.000Z" },
+    "17": { "done": true, "doneAt": "2026-05-28T16:00:00.000Z" },
+    "17b": { "done": false },
+    "18a": { "done": true, "doneAt": "2026-06-02T10:00:00.000Z" },
+    "18b": { "done": true, "doneAt": "2026-06-03T13:00:00.000Z" },
+    "18c": { "done": true, "doneAt": "2026-06-04T15:30:00.000Z" },
+    "18d": { "done": true, "doneAt": "2026-06-05T09:15:00.000Z" },
+    "18e": { "done": true, "doneAt": "2026-06-06T12:40:00.000Z" },
+    "18f": { "done": true, "doneAt": "2026-06-07T08:50:00.000Z" },
+    "18g": { "done": false },
+    "19": { "done": false },
+    "20": { "done": false },
+    "21": { "done": false }
+  },
+  "problems": [
+    { "id": "p-two-sum", "title": "Two Sum + Contains Duplicate", "tier": "A", "pattern": "HashMap for value→index lookup; HashSet for seen elements", "status": "solid", "leetcodeSlug": "two-sum" },
+    { "id": "p-valid-anagram", "title": "Valid Anagram + Valid Parentheses", "tier": "A", "pattern": "int[26] char-count; Stack/ArrayDeque", "status": "solid" },
+    { "id": "p-best-time", "title": "Best Time to Buy and Sell Stock + Binary Search", "tier": "A", "pattern": "Single-pass min tracking; loop invariant", "status": "practicing" },
+    { "id": "p-merge-lists", "title": "Merge Two Sorted Lists + FizzBuzz", "tier": "A", "pattern": "Dummy head + two pointers", "status": "solid" },
+    { "id": "p-longest-substr", "title": "Longest Substring Without Repeating Characters", "tier": "B", "pattern": "Sliding window + HashMap last-seen", "status": "practicing", "leetcodeSlug": "longest-substring-without-repeating-characters" },
+    { "id": "p-group-anagrams", "title": "Group Anagrams", "tier": "B", "pattern": "Sorted string canonical key", "status": "not-started" },
+    { "id": "p-top-k", "title": "Top K Frequent Elements", "tier": "B", "pattern": "Min-heap size k or bucket sort", "status": "practicing" },
+    { "id": "p-lru", "title": "LRU Cache", "tier": "B", "pattern": "Doubly-linked list + HashMap O(1)", "status": "practicing", "leetcodeSlug": "lru-cache" },
+    { "id": "p-merge-intervals", "title": "Merge Intervals", "tier": "B", "pattern": "Sort + sweep", "status": "not-started" },
+    { "id": "p-num-islands", "title": "Number of Islands", "tier": "B", "pattern": "Grid DFS in-place", "status": "solid" },
+    { "id": "p-rate-limiter", "title": "Rate Limiter (sliding window)", "tier": "C", "pattern": "Deque timestamps", "status": "not-started" },
+    { "id": "p-cursor-pag", "title": "Cursor Pagination", "tier": "C", "pattern": "Opaque cursor stable key", "status": "not-started" },
+    { "id": "p-metrics", "title": "Precision + Recall + F1 from scratch", "tier": "D", "pattern": "TP/FP/TN/FN derivation", "status": "practicing" },
+    { "id": "p-recall-k", "title": "Recall@k + MRR from scratch", "tier": "D", "pattern": "hit_rate@k + mean reciprocal rank", "status": "practicing" }
+  ],
+  "fileDefense": [
+    {
+      "id": "f-demotoolbar",
+      "title": "DemoToolbar.tsx",
+      "why": "Operator controls: case selector, load, start-over. Not product core — demo tooling that reduces live-demo risk.",
+      "terminology": "Component composition · operator tooling · fixture injection",
+      "interviewLine": "Not product core — demo tooling that reduces live-demo risk. The test fixtures and production concerns stay separate.",
+      "practicedDates": ["2026-06-25", "2026-06-30"],
+      "notes": ""
+    },
+    {
+      "id": "f-democases",
+      "title": "demoCases.ts",
+      "why": "Reusable typed synthetic demo data; prefilled reviewer findings. Keeps demo data outside components.",
+      "terminology": "Separation of concerns · fixtures · synthetic-data boundary",
+      "interviewLine": "Demo data lives outside components so UI logic stays testable and the demo is repeatable without typing.",
+      "practicedDates": ["2026-06-26"],
+      "notes": "Strong signal for repeatable demos."
+    },
+    {
+      "id": "f-reviewapi",
+      "title": "reviewApi.ts",
+      "why": "Transport boundary to Spring; typed AsyncState returns; error mapping; no React state.",
+      "terminology": "API client · DTO · discriminated union",
+      "interviewLine": "Fetch logic should not scatter across presentational components — this boundary prevents that.",
+      "practicedDates": [],
+      "notes": ""
+    },
+    {
+      "id": "f-types",
+      "title": "types.ts",
+      "why": "Shared DTO and UI types; AsyncState<T> discriminated union; ApiError.",
+      "terminology": "Discriminated union · exhaustive switch · impossible states",
+      "interviewLine": "Types make state explicit at compile time; runtime validation still matters at the network boundary.",
+      "practicedDates": ["2026-06-28"],
+      "notes": ""
+    },
+    {
+      "id": "f-ragengineclient",
+      "title": "RagEngineClient (interface)",
+      "why": "Stable Java abstraction for the Python engine. Hides subprocess details.",
+      "terminology": "Polymorphism · dependency inversion · interface",
+      "interviewLine": "Controllers depend on the contract, not subprocess details — swapping to HTTP later doesn't change the controller.",
+      "practicedDates": [],
+      "notes": ""
+    },
+    {
+      "id": "f-pythonprocess",
+      "title": "PythonProcessRagEngineClient",
+      "why": "Subprocess launch, JSON stdin/stdout, exit-code handling, timeout, error envelope parsing.",
+      "terminology": "Adapter pattern · process boundary · error envelope",
+      "interviewLine": "All Java-to-Python integration risk is isolated here.",
+      "practicedDates": ["2026-06-29"],
+      "notes": ""
+    },
+    {
+      "id": "f-globalexc",
+      "title": "GlobalExceptionHandler",
+      "why": "Maps all exceptions to structured ApiErrorResponse with requestId.",
+      "terminology": "Cross-cutting concern · exception mapping · stable error contract",
+      "interviewLine": "Clients need stable error shapes, not stack traces.",
+      "practicedDates": [],
+      "notes": ""
+    },
+    {
+      "id": "f-ingestion",
+      "title": "ingestion.py",
+      "why": "SOP loading, frontmatter parsing, chunking with stable chunk_ids, chunks.jsonl output.",
+      "terminology": "ETL · idempotent ingest · deterministic chunking",
+      "interviewLine": "Ingestion is where silent quality loss begins.",
+      "practicedDates": [],
+      "notes": ""
+    }
+  ],
+  "lastUpdated": "2026-07-02T20:00:00.000Z"
+}
