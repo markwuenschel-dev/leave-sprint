@@ -20,7 +20,7 @@ pnpm build
 
 ## Tech Stack
 
-- **Next.js 16.2.10** (App Router) + React 19.2 + **TypeScript 6.1+** + Tailwind 4 + Turbopack
+- **Next.js 16.2.10** (App Router) + React 19.2 + **TypeScript ^6.0** + Tailwind 4 + Turbopack
 - **shadcn/ui** + Radix primitives (planned progressive adoption)
 - **Zustand** + persist middleware (local-first, no backend for v1)
 - **Framer Motion** for micro-interactions
@@ -115,7 +115,7 @@ pnpm build
 ```
 
 - Uses **Turbopack** (via `--turbopack` flag)
-- TypeScript 6.1+ with modern settings (`verbatimModuleSyntax`, `moduleResolution: bundler`)
+- TypeScript ^6.0 with modern settings (`verbatimModuleSyntax`, `moduleResolution: bundler`)
 - After changing `package.json` versions, run `pnpm install` to update `pnpm-lock.yaml`
 
 Static export configured for Netlify in `next.config.ts`.
