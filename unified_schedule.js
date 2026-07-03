@@ -1088,7 +1088,58 @@
       </div>
     `;
     panel.innerHTML = html;
+    if (window.buildProgressNav) window.buildProgressNav();
   }
+
+  /* ── STICKY JUMP NAV — auto-built from whatever section headers exist,
+     so it stays correct as tracks/sections are added later ── */
+  window.buildProgressNav = function buildProgressNav() {
+    const nav = document.getElementById('pg-nav');
+    if (!nav) return;
+    nav.innerHTML = '';
+    const usedIds = new Set();
+    const groups = [
+      { label: 'Tracks',         root: document.getElementById('pg-tracks'),      selector: '.pg-section-title' },
+      { label: 'Mock Interview', root: document.getElementById('pg-rubric-live'), selector: '.r-section-label' }
+    ];
+    const observed = [];
+    groups.forEach(g => {
+      if (!g.root) return;
+      const headers = [...g.root.querySelectorAll(g.selector)].filter(h => h.textContent.trim());
+      if (!headers.length) return;
+      const gEl = document.createElement('div');
+      gEl.className = 'pg-nav-group';
+      gEl.textContent = g.label;
+      nav.appendChild(gEl);
+      headers.forEach(h => {
+        const raw = h.textContent.trim();
+        let slug = 'pg-' + raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
+        let base = slug, n = 1;
+        while (usedIds.has(slug)) { slug = base + '-' + (++n); }
+        usedIds.add(slug);
+        h.id = slug;
+        h.style.scrollMarginTop = 'calc(var(--sticky-h, 44px) + 12px)';
+        const a = document.createElement('a');
+        a.className = 'pg-nav-link';
+        a.href = '#' + slug;
+        a.textContent = raw.replace(/\s*\([^)]*\)\s*$/, ''); // trim trailing (§17.x) refs for brevity
+        nav.appendChild(a);
+        observed.push(h);
+      });
+    });
+    if (window.__pgNavObserver) window.__pgNavObserver.disconnect();
+    const links = [...nav.querySelectorAll('.pg-nav-link')];
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        links.forEach(a => a.classList.remove('active'));
+        const link = links.find(a => a.getAttribute('href') === '#' + e.target.id);
+        if (link) link.classList.add('active');
+      });
+    }, { rootMargin: '-15% 0px -70% 0px' });
+    observed.forEach(h => obs.observe(h));
+    window.__pgNavObserver = obs;
+  };
 
   /* ── INIT ────────────────────────────────────────────── */
   function init() {
@@ -5440,11 +5491,13 @@ if (document.readyState === 'loading') {
     buildRubric();
     const rubricLive = document.getElementById('pg-rubric-live');
     if (rubricLive && window.rubricBuildProgress) window.rubricBuildProgress(rubricLive);
+    if (window.buildProgressNav) window.buildProgressNav();
   });
 } else {
   buildRubric();
   const rubricLive = document.getElementById('pg-rubric-live');
   if (rubricLive && window.rubricBuildProgress) window.rubricBuildProgress(rubricLive);
+  if (window.buildProgressNav) window.buildProgressNav();
 }
 
 /* ══════════════════════════════════════════════════════
