@@ -167,8 +167,6 @@ export const useSprintStore = create<SprintStore>()(
           lastUpdated: new Date().toISOString(),
         });
       },
-
-      _rehydrated: false,
     }),
     {
       name: 'leave-sprint-twin-v1',
