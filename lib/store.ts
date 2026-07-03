@@ -35,6 +35,7 @@ export const useSprintStore = create<SprintStore>()(
       problems: SEED_STATE.problems || [],
       fileDefense: SEED_STATE.fileDefense || [],
       lastUpdated: SEED_STATE.lastUpdated,
+      selectedDay: 1, // neutral default on load. User clicks "Go to Today" when they want the live day. No auto-jump.
       _rehydrated: false,
 
       // --- Day Rhythm ---
@@ -92,6 +93,11 @@ export const useSprintStore = create<SprintStore>()(
             },
           };
         });
+      },
+
+      setSelectedDay: (day: number) => {
+        const clamped = Math.min(Math.max(day, 1), 29);
+        set({ selectedDay: clamped });
       },
 
       // --- Stages ---
@@ -173,6 +179,7 @@ export const useSprintStore = create<SprintStore>()(
         problems: state.problems,
         fileDefense: state.fileDefense,
         lastUpdated: state.lastUpdated,
+        selectedDay: state.selectedDay,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

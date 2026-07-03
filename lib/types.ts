@@ -90,6 +90,10 @@ export interface SprintStore extends AppState {
   updateFocusNote: (day: number, note: string) => void;
   setEnergy: (day: number, energy: Energy) => void;
 
+  // Selected day for viewing (no more forced auto-jump on load)
+  selectedDay: number;
+  setSelectedDay: (day: number) => void;
+
   // Stages
   markStageDone: (id: StageId) => void;
   unmarkStage: (id: StageId) => void;

@@ -151,18 +151,23 @@ body {
 
 /* Rhythm checklist */
 .rhythm-item {
-  @apply flex items-center gap-3 rounded-xl border p-3 transition-colors;
+  @apply flex items-start gap-3 rounded-2xl border p-4 transition-all;
   background: var(--surface);
   border-color: var(--border);
 }
 
+.rhythm-item:hover {
+  border-color: var(--cyan);
+  transform: translateY(-1px);
+}
+
 .rhythm-item.done {
-  border-color: rgba(34, 197, 94, 0.35);
-  opacity: 0.92;
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.04);
 }
 
 .rhythm-item input[type="checkbox"] {
-  @apply h-4 w-4 accent-[#00f9ff] cursor-pointer;
+  @apply h-5 w-5 accent-[#00f9ff] cursor-pointer mt-0.5;
 }
 
 /* Calendar */

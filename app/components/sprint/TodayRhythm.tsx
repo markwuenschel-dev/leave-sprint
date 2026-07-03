@@ -1,113 +1,136 @@
 "use client";
 
-/**
- * Today / Daily Rhythm Card
- *
- * Highest daily-value component.
- * - Calculates current sprint day relative to June 17 2026
- * - Shows animated progress ring
- * - 4 synced rhythm checkboxes backed by Zustand
- * - Focus note, energy selector, journal
- */
-
 import { useSprintStore, getDayCompletion } from "@/lib/store";
 import { getDayPlan, MILESTONES } from "@/data/day-plans";
-import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { Check, Target, Zap } from "lucide-react";
 import type { RhythmKey } from "@/lib/types";
 
-const RHYTHM_LABELS: Record<RhythmKey, { label: string; icon: React.ReactNode; desc: string }> = {
+const RHYTHM_CONFIG: Record<RhythmKey, { 
+  label: string; 
+  icon: React.ReactNode; 
+  time: string;
+  description: string;
+}> = {
   coding: {
     label: "Coding Drill",
-    icon: <span className="text-lg">🔢</span>,
-    desc: "30m — solve + explain pattern aloud",
+    icon: <span className="text-xl">🔢</span>,
+    time: "30m",
+    description: "Solve + explain pattern aloud",
   },
   file: {
     label: "File Defense",
-    icon: <span className="text-lg">📁</span>,
-    desc: "20m — why it exists + terminology",
+    icon: <span className="text-xl">📁</span>,
+    time: "20m",
+    description: "Why it exists + key terminology",
   },
   qa: {
     label: "Q&A Bank",
-    icon: <span className="text-lg">🎤</span>,
-    desc: "15m — answer aloud without notes",
+    icon: <span className="text-xl">🎤</span>,
+    time: "15m",
+    description: "Answer aloud without notes",
   },
   build: {
     label: "Build Block",
-    icon: <span className="text-lg">🔨</span>,
-    desc: "Catch-up / project walkthrough prep",
+    icon: <span className="text-xl">🔨</span>,
+    time: "45m",
+    description: "Project work or walkthrough prep",
   },
 };
 
-const KEYS: RhythmKey[] = ["coding", "file", "qa", "build"];
+const RHYTHM_KEYS: RhythmKey[] = ["coding", "file", "qa", "build"];
 
 export function TodayRhythm() {
   const {
     days,
+    selectedDay,
+    setSelectedDay,
     updateDayRhythm,
     updateFocusNote,
     setEnergy,
     updateDayJournal,
   } = useSprintStore();
 
-  // Determine current sprint day (July 3 2026 context → ~Day 17)
-  // For demo robustness we compute relative to SPRINT_START
-  const today = new Date(2026, 5, 17); // seed start
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - today.getTime()) / (1000 * 3600 * 24));
-  const currentDay = Math.min(Math.max(diffDays + 1, 1), 29);
+  const getLiveDay = () => {
+    const start = new Date(2026, 5, 17);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
+    return Math.min(Math.max(diff, 1), 29);
+  };
 
-  const plan = getDayPlan(currentDay);
-  const dayState = days[currentDay] || { rhythm: { coding: false, file: false, qa: false, build: false } };
+  const plan = getDayPlan(selectedDay);
+  const dayState = days[selectedDay] || {
+    rhythm: { coding: false, file: false, qa: false, build: false },
+  };
   const completion = getDayCompletion(dayState);
 
-  // Next milestone
-  const nextMilestone = MILESTONES.find((m) => m.day >= currentDay) || MILESTONES[MILESTONES.length - 1];
-  const daysToMs = Math.max(0, nextMilestone.day - currentDay);
+  const nextMilestone = MILESTONES.find((m) => m.day >= selectedDay) || MILESTONES[MILESTONES.length - 1];
+  const daysToMs = Math.max(0, nextMilestone.day - selectedDay);
 
-  const progress = completion;
-  const radius = 42;
+  const radius = 52;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const strokeDashoffset = circumference - (completion / 100) * circumference;
 
   const handleToggle = (key: RhythmKey) => {
     const current = dayState.rhythm[key];
-    updateDayRhythm(currentDay, key, !current);
+    updateDayRhythm(selectedDay, key, !current);
+  };
+
+  const isLiveDay = selectedDay === getLiveDay();
+
+  // Safe display text getter (handles both title and prompt)
+  const getDisplayText = (key: RhythmKey): string => {
+    const item = plan[key as keyof typeof plan];
+    if (!item || typeof item !== "object") return "—";
+
+    if ("title" in item && typeof item.title === "string") return item.title;
+    if ("prompt" in item && typeof item.prompt === "string") return item.prompt;
+
+    return "—";
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="text-4xl font-semibold tracking-tighter">DAY {currentDay}</div>
-            <div className="rounded-full bg-white/5 px-3 py-0.5 text-xs font-mono text-[var(--text-mid)] border border-white/10">
-              {plan.date} · 29
+          <div className="flex items-center gap-4">
+            <div className="text-6xl font-semibold tracking-[-3px] tabular-nums">
+              DAY {selectedDay}
             </div>
+            <div className="rounded-2xl bg-white/5 px-4 py-1.5 text-sm font-mono border border-white/10">
+              {plan.date}
+            </div>
+            {!isLiveDay && (
+              <button
+                onClick={() => setSelectedDay(getLiveDay())}
+                className="flex items-center gap-2 rounded-2xl border border-[var(--cyan)] px-4 py-1.5 text-sm text-[var(--cyan)] hover:bg-[var(--cyan)]/10 active:scale-[0.985] transition-all"
+              >
+                <Target size={16} /> Go to Today
+              </button>
+            )}
           </div>
-          <div className="text-[var(--text-mid)] mt-0.5">{plan.focus}</div>
+          <div className="mt-1 text-xl text-[var(--text-mid)]">{plan.focus}</div>
         </div>
 
         {/* Progress Ring */}
-        <div className="relative flex h-[108px] w-[108px] items-center justify-center">
-          <svg className="h-[108px] w-[108px] -rotate-90" viewBox="0 0 110 110">
+        <div className="relative flex h-[130px] w-[130px] items-center justify-center">
+          <svg className="h-[130px] w-[130px] -rotate-90" viewBox="0 0 130 130">
             <circle
-              cx="55"
-              cy="55"
+              cx="65"
+              cy="65"
               r={radius}
               fill="none"
               stroke="var(--border)"
-              strokeWidth="7"
+              strokeWidth="10"
             />
             <motion.circle
-              cx="55"
-              cy="55"
+              cx="65"
+              cy="65"
               r={radius}
               fill="none"
               stroke="var(--cyan)"
-              strokeWidth="7"
+              strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
@@ -117,36 +140,45 @@ export function TodayRhythm() {
             />
           </svg>
           <div className="absolute text-center">
-            <div className="text-3xl font-semibold tabular-nums">{progress}</div>
-            <div className="text-[10px] tracking-[1px] text-[var(--text-dim)] -mt-1">COMPLETE</div>
+            <div className="text-5xl font-semibold tabular-nums tracking-tighter">{completion}</div>
+            <div className="text-[11px] font-mono tracking-[3px] text-[var(--text-dim)] -mt-1">COMPLETE</div>
           </div>
         </div>
       </div>
 
       {/* Next Milestone */}
-      <div className="glass rounded-2xl border border-white/10 px-4 py-3 flex items-center gap-3 text-sm">
+      <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-5 py-3 text-sm">
         <Target className="h-4 w-4 text-[var(--cyan)]" />
         <span className="font-medium text-[var(--cyan)]">{nextMilestone.label}</span>
         <span className="text-[var(--text-mid)]">
-          {daysToMs === 0 ? "TODAY" : `in ${daysToMs}d`}
+          {daysToMs === 0 ? "• TODAY" : `in ${daysToMs} day${daysToMs > 1 ? "s" : ""}`}
         </span>
       </div>
 
-      {/* Rhythm Checklist */}
+      {/* Daily Rhythm */}
       <div>
-        <div className="section-title mb-2">DAILY RHYTHM — TODAY</div>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="section-title">DAILY RHYTHM</div>
+          <div className="text-xs text-[var(--text-dim)] font-mono">
+            {Object.values(dayState.rhythm).filter(Boolean).length}/4 complete
+          </div>
+        </div>
+
         <div className="space-y-2">
-          {KEYS.map((key) => {
-            const item = RHYTHM_LABELS[key];
+          {RHYTHM_KEYS.map((key) => {
+            const config = RHYTHM_CONFIG[key];
             const checked = dayState.rhythm[key];
-            const title = key === "coding" ? plan.coding.title : key === "file" ? plan.file.title : key === "qa" ? plan.qa.title : plan.build.title;
+            const displayText = getDisplayText(key);
 
             return (
-              <motion.div
-                whileTap={{ scale: 0.985 }}
+              <div
                 key={key}
                 onClick={() => handleToggle(key)}
-                className={`rhythm-item flex cursor-pointer items-start gap-3 ${checked ? "done" : ""}`}
+                className={`group flex cursor-pointer items-start gap-4 rounded-3xl border p-5 transition-all active:scale-[0.985] ${
+                  checked 
+                    ? "border-[var(--done)]/40 bg-[var(--done)]/5" 
+                    : "border-white/10 hover:border-white/20 bg-[#161a22]"
+                }`}
               >
                 <div className="pt-0.5">
                   <input
@@ -154,78 +186,87 @@ export function TodayRhythm() {
                     checked={checked}
                     onChange={() => handleToggle(key)}
                     onClick={(e) => e.stopPropagation()}
-                    className="h-[18px] w-[18px] accent-[var(--cyan)]"
-                    aria-label={`Toggle ${item.label}`}
+                    className="h-5 w-5 accent-[var(--cyan)] cursor-pointer"
                   />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {item.icon}
-                    <div className="font-medium">{item.label}</div>
-                    <div className="ml-auto text-[10px] font-mono px-2 py-px rounded bg-white/5 text-[var(--text-dim)]">{key === "coding" ? plan.coding.time : key === "file" ? plan.file.time : key === "qa" ? plan.qa.time : plan.build.time}</div>
+                  <div className="flex items-center gap-3">
+                    {config.icon}
+                    <div className="font-semibold text-lg tracking-tight">{config.label}</div>
+                    <div className="ml-auto rounded-full bg-white/5 px-3 py-0.5 text-xs font-mono text-[var(--text-dim)]">
+                      {config.time}
+                    </div>
                   </div>
-                  <div className="text-sm text-[var(--text-mid)] leading-snug mt-0.5 pr-2">
-                    {title}
+
+                  <div className="mt-1 text-[15px] text-[var(--text-mid)] leading-snug pr-4">
+                    {displayText}
                   </div>
-                  <div className="text-[10px] text-[var(--text-dim)] mt-px">{item.desc}</div>
+
+                  <div className="mt-0.5 text-xs text-[var(--text-dim)]">
+                    {config.description}
+                  </div>
                 </div>
 
                 {checked && (
-                  <Check className="mt-1 h-4 w-4 text-[var(--done)]" />
+                  <Check className="mt-1 h-5 w-5 text-[var(--done)]" />
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* Focus + Energy + Journal */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Focus note */}
+      {/* Focus + Energy */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Focus Note */}
         <div className="card-glass">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest mb-2 text-[var(--text-dim)]">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[2px] mb-3 text-[var(--text-dim)]">
             <Zap className="h-3.5 w-3.5" /> FOCUS NOTE
           </div>
           <textarea
             value={dayState.focusNote || ""}
-            onChange={(e) => updateFocusNote(currentDay, e.target.value)}
-            placeholder="One sentence intention for today's session..."
-            className="w-full bg-transparent text-sm resize-y min-h-[60px] placeholder:text-[var(--text-dim)] focus:outline-none"
+            onChange={(e) => updateFocusNote(selectedDay, e.target.value)}
+            placeholder="What's the single most important thing today?"
+            className="w-full bg-transparent text-[15px] resize-y min-h-[72px] placeholder:text-[var(--text-dim)] focus:outline-none leading-relaxed"
           />
         </div>
 
-        {/* Energy selector */}
+        {/* Energy */}
         <div className="card-glass">
-          <div className="text-xs uppercase tracking-widest mb-2 text-[var(--text-dim)]">ENERGY</div>
+          <div className="text-xs uppercase tracking-[2px] mb-3 text-[var(--text-dim)]">ENERGY LEVEL</div>
           <div className="flex gap-2">
-            {(["low", "medium", "high"] as const).map((e) => (
+            {(["low", "medium", "high"] as const).map((level) => (
               <button
-                key={e}
-                onClick={() => setEnergy(currentDay, e)}
-                className={`energy-btn flex-1 capitalize ${dayState.energy === e ? "active" : ""}`}
+                key={level}
+                onClick={() => setEnergy(selectedDay, level)}
+                className={`flex-1 rounded-2xl border py-3 text-sm font-medium capitalize transition-all ${
+                  dayState.energy === level 
+                    ? "border-[var(--cyan)] bg-[var(--cyan)]/10 text-[var(--cyan)]" 
+                    : "border-white/10 hover:bg-white/5"
+                }`}
               >
-                {e}
+                {level}
               </button>
             ))}
           </div>
-          <div className="text-[10px] text-[var(--text-dim)] mt-2">
-            Track honestly. Helps surface patterns over the remaining days.
+          <div className="text-[10px] text-[var(--text-dim)] mt-3">
+            Honest tracking helps surface patterns over the remaining days.
           </div>
         </div>
       </div>
 
       {/* Journal */}
       <div className="card">
-        <div className="flex justify-between items-center mb-2">
-          <div className="text-xs uppercase tracking-[1.5px] text-[var(--text-dim)]">JOURNAL — DAY {currentDay}</div>
-          <div className="text-[10px] text-[var(--text-dim)]">autosaves</div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-xs uppercase tracking-[2px] text-[var(--text-dim)]">JOURNAL</div>
+          <div className="text-[10px] text-[var(--text-dim)]">Autosaves locally</div>
         </div>
         <textarea
           value={dayState.journal || ""}
-          onChange={(e) => updateDayJournal(currentDay, e.target.value)}
-          placeholder="What went well? What blocked you? Key realizations..."
-          className="w-full min-h-[92px] bg-[#0f131a] border border-white/10 rounded-xl p-3 text-sm focus:outline-none placeholder:text-[var(--text-dim)]"
+          onChange={(e) => updateDayJournal(selectedDay, e.target.value)}
+          placeholder="What went well? What blocked you? Key realizations or decisions..."
+          className="w-full min-h-[110px] bg-[#0f131a] border border-white/10 rounded-2xl p-4 text-[15px] focus:outline-none placeholder:text-[var(--text-dim)] leading-relaxed"
         />
       </div>
     </div>
