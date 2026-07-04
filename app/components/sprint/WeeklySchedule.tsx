@@ -58,7 +58,7 @@ export function WeeklySchedule() {
                     ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10"
                     : state === "past"
                       ? "border-[var(--done)]/40 text-[var(--done)]"
-                      : "border-white/10 text-[var(--text-dim)]"
+                      : "border-[var(--hairline)] text-[var(--text-dim)]"
                 }`}
               >
                 <span className="font-mono text-xs mr-1.5">D{m.day}</span>
@@ -77,14 +77,14 @@ export function WeeklySchedule() {
           return r && r.coding && r.file && r.qa;
         }).length;
         return (
-          <div key={week.label} className="rounded-3xl border border-white/10 bg-[#12151c] overflow-hidden">
-            <button onClick={() => toggleWeek(week.label)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors">
+          <div key={week.label} className="rounded-3xl border border-[var(--hairline)] bg-[var(--surface-2)] overflow-hidden">
+            <button onClick={() => toggleWeek(week.label)} className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--fill-subtle)] transition-colors">
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-lg">{week.label}</span>
                 <span className="text-xs text-[var(--text-dim)] font-mono">
                   Day {week.days[0]}–{week.days[week.days.length - 1]}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[var(--text-dim)]">{fullDays} full days</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--fill-subtle)] border border-[var(--hairline)] text-[var(--text-dim)]">{fullDays} full days</span>
               </div>
               <ChevronDown size={18} className={`text-[var(--text-dim)] transition-transform ${open ? "rotate-180" : ""}`} />
             </button>
@@ -95,12 +95,12 @@ export function WeeklySchedule() {
                   const plan = getDayPlan(day);
                   const isToday = day === today;
                   return (
-                    <div key={day} className={`rounded-2xl border p-4 ${isToday ? "border-[var(--cyan)]/40 bg-[var(--cyan)]/5" : "border-white/10 bg-[#161a22]"}`}>
+                    <div key={day} className={`rounded-2xl border p-4 ${isToday ? "border-[var(--cyan)]/40 bg-[var(--cyan)]/5" : "border-[var(--hairline)] bg-[var(--surface)]"}`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-baseline gap-2">
                           <span className="font-semibold">Day {day}</span>
                           <span className="text-xs text-[var(--text-dim)]">{plan.date}</span>
-                          {isToday && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--cyan)] text-[#0a0c10] font-semibold">TODAY</span>}
+                          {isToday && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--cyan)] text-[var(--bg)] font-semibold">TODAY</span>}
                         </div>
                         <span className="text-xs text-[var(--text-mid)]">{plan.focus}</span>
                       </div>
@@ -113,10 +113,10 @@ export function WeeklySchedule() {
                               key={disc.key}
                               onClick={() => updateDayRhythm(day, disc.key, !done)}
                               className={`flex items-start gap-2.5 rounded-xl border p-2.5 text-left transition-all ${
-                                done ? "border-[var(--done)]/40 bg-[var(--done)]/5" : "border-white/10 hover:border-white/25"
+                                done ? "border-[var(--done)]/40 bg-[var(--done)]/5" : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"
                               }`}
                             >
-                              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs ${done ? "bg-[var(--done)] border-[var(--done)] text-[#0a0c10]" : "border-white/20"}`}>
+                              <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs ${done ? "bg-[var(--done)] border-[var(--done)] text-[var(--bg)]" : "border-[var(--hairline-strong)]"}`}>
                                 {done ? <Check size={12} /> : disc.icon}
                               </span>
                               <span className="min-w-0">

@@ -2,15 +2,18 @@
 
 /*
   Leave Sprint Twin — Design System
-  Dark-first glassmorphism with neon cyan (#00f9ff) + magenta (#ff00aa) accents.
-  High contrast, minimal chrome, scannable.
+  Two themes: dark (default, neon cyan/magenta cyberpunk) and light (warm parchment).
+  Only the base palette differs per theme; the semantic layer (--hairline, --fill-*,
+  --tint-*, verdict/status) is defined once via color-mix and follows the palette.
+  Theme is selected by `data-theme` on <html> (set pre-paint in layout.tsx).
 */
 
-:root {
+:root,
+:root[data-theme="dark"] {
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
-  /* Design tokens */
+  /* Base palette — dark */
   --bg: #0a0c10;
   --bg-elev: #11141a;
   --surface: #161a22;
@@ -31,17 +34,57 @@
   --violet: #a78bfa;
   --slate: #94a3b8;
   --blue: #60a5fa;
+}
 
-  /* Status */
-  --done: #22c55e;
-  --doing: #00f9ff;
-  --at-risk: #eab308;
+/* Warm paper / parchment — light */
+:root[data-theme="light"] {
+  --bg: #f5f1e8;
+  --bg-elev: #efe7d6;
+  --surface: #fbf8f1;
+  --surface-2: #f2ecdf;
+  --border: #e0d6c2;
+  --border-subtle: #e9e1d1;
 
-  /* Rubric verdict bands */
-  --verdict-exceptional: #22c55e;
-  --verdict-pass: #00f9ff;
-  --verdict-border: #eab308;
-  --verdict-fail: #f97316;
+  --text: #211d17;
+  --text-mid: #5c5344;
+  --text-dim: #8a7f6c;
+
+  /* Warmer accents that read on parchment */
+  --cyan: #0f766e;   /* teal (primary accent) */
+  --magenta: #9d4d7c; /* plum */
+  --green: #3f7d4e;
+  --yellow: #b8860b;
+  --orange: #c2632b;
+  --violet: #7c5cd6;
+  --slate: #6b7280;
+  --blue: #2563eb;
+}
+
+/* Semantic layer — defined once, follows the active palette via color-mix */
+:root {
+  /* Status / verdict — reference accents so they flip with the theme */
+  --done: var(--green);
+  --doing: var(--cyan);
+  --at-risk: var(--yellow);
+  --verdict-exceptional: var(--green);
+  --verdict-pass: var(--cyan);
+  --verdict-border: var(--yellow);
+  --verdict-fail: var(--orange);
+
+  /* Chrome: hairlines + fills derived from text so they invert with the theme */
+  --hairline: color-mix(in srgb, var(--text) 10%, transparent);
+  --hairline-strong: color-mix(in srgb, var(--text) 20%, transparent);
+  --fill-subtle: color-mix(in srgb, var(--text) 5%, transparent);
+  --fill-strong: color-mix(in srgb, var(--text) 10%, transparent);
+  --overlay: color-mix(in srgb, var(--bg) 95%, transparent);
+
+  /* Accent tints for state backgrounds */
+  --tint-cyan: color-mix(in srgb, var(--cyan) 10%, transparent);
+  --tint-green: color-mix(in srgb, var(--green) 12%, transparent);
+  --tint-yellow: color-mix(in srgb, var(--yellow) 12%, transparent);
+  --tint-orange: color-mix(in srgb, var(--orange) 12%, transparent);
+  --tint-violet: color-mix(in srgb, var(--violet) 12%, transparent);
+  --tint-magenta: color-mix(in srgb, var(--magenta) 12%, transparent);
 }
 
 /* Rubric verdict text colors (score bands) */
@@ -50,11 +93,9 @@
 .verdict-border { color: var(--verdict-border); }
 .verdict-fail { color: var(--verdict-fail); }
 
-/* Rest of your existing CSS remains unchanged */
-
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3a3f4a #161a22;
+  scrollbar-color: var(--border) var(--surface);
 }
 
 ::-webkit-scrollbar {
@@ -62,7 +103,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3a3f4a;
+  background: var(--border);
   border-radius: 3px;
 }
 
@@ -76,7 +117,7 @@ body {
 
 /* Glass cards */
 .glass {
-  background: rgba(22, 26, 34, 0.85);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
   border: 1px solid var(--border);
   backdrop-filter: blur(20px);
 }
@@ -89,7 +130,7 @@ body {
 
 .card-glass {
   @apply rounded-2xl p-5;
-  background: rgba(22, 26, 34, 0.75);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
   border: 1px solid var(--border-subtle);
   backdrop-filter: blur(24px);
 }
@@ -110,12 +151,12 @@ body {
 
 .btn:hover {
   border-color: var(--border-subtle);
-  background: #1f242e;
+  background: color-mix(in srgb, var(--surface-2) 92%, var(--text) 8%);
 }
 
 .btn-primary {
   background: var(--cyan);
-  color: #0a0c10;
+  color: var(--bg);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -147,12 +188,12 @@ body {
 }
 
 .stage.done {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.06);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: var(--tint-green);
 }
 
 .stage.next {
-  border-color: rgba(0, 249, 255, 0.35);
+  border-color: color-mix(in srgb, var(--cyan) 35%, transparent);
 }
 
 .stage-mark {
@@ -162,7 +203,7 @@ body {
 
 .stage.done .stage-mark {
   background: var(--done);
-  color: #0a0c10;
+  color: var(--bg);
   border-color: var(--done);
 }
 
@@ -179,12 +220,13 @@ body {
 }
 
 .rhythm-item.done {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.04);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: var(--tint-green);
 }
 
 .rhythm-item input[type="checkbox"] {
-  @apply h-5 w-5 accent-[#00f9ff] cursor-pointer mt-0.5;
+  @apply h-5 w-5 cursor-pointer mt-0.5;
+  accent-color: var(--cyan);
 }
 
 /* Calendar */
@@ -199,7 +241,7 @@ body {
   border-color: var(--cyan);
 }
 
-.cal-day.full { border-color: rgba(34, 197, 94, 0.5); }
+.cal-day.full { border-color: color-mix(in srgb, var(--green) 50%, transparent); }
 .cal-day.partial { border-color: var(--cyan); }
 .cal-day.at-risk { border-color: var(--yellow); }
 
@@ -227,7 +269,7 @@ body {
 .energy-btn.active {
   border-color: var(--cyan);
   color: var(--cyan);
-  background: rgba(0, 249, 255, 0.08);
+  background: var(--tint-cyan);
 }
 
 /* Mobile bottom nav */

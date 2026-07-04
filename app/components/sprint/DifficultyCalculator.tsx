@@ -63,7 +63,7 @@ export function DifficultyCalculator({ onResult }: DifficultyCalculatorProps = {
 
       <div className="space-y-4">
         {DIMENSIONS.map((dim) => (
-          <div key={dim.id} className="rounded-2xl border border-white/10 bg-[#161a22] p-5">
+          <div key={dim.id} className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
             <div className="font-medium mb-3">{dim.label}</div>
             <div className="flex flex-wrap gap-2">
               {dim.options.map((opt, score) => (
@@ -73,7 +73,7 @@ export function DifficultyCalculator({ onResult }: DifficultyCalculatorProps = {
                   className={`px-4 py-2 rounded-xl text-sm border transition-all flex-1 min-w-[140px] text-left ${
                     scores[dim.id] === score
                       ? "border-[var(--cyan)] bg-[var(--cyan)]/10 text-[var(--cyan)]"
-                      : "border-white/10 hover:border-white/30"
+                      : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"
                   }`}
                 >
                   <span className="font-mono text-xs mr-2 text-[var(--text-dim)]">{score}</span>

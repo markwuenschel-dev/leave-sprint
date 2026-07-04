@@ -53,9 +53,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0c10] text-[var(--text-dim)]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--text-dim)]">
         <div className="flex items-center gap-3 text-sm">
-          <span className="inline-block h-4 w-4 rounded-full border-2 border-white/20 border-t-[var(--cyan)] animate-spin" />
+          <span className="inline-block h-4 w-4 rounded-full border-2 border-[var(--hairline-strong)] border-t-[var(--cyan)] animate-spin" />
           Loading your sprint…
         </div>
       </div>

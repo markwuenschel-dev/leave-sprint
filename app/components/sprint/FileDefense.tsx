@@ -18,7 +18,7 @@ export function FileDefense() {
       </div>
 
       {fileDefense.map((f) => (
-        <div key={f.id} className="rounded-3xl border border-white/10 bg-[#161a22] p-5">
+        <div key={f.id} className="rounded-3xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="font-mono font-semibold text-[15px] text-[var(--cyan)]">{f.title}</div>
@@ -34,11 +34,11 @@ export function FileDefense() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            <div className="rounded-xl bg-[#11141a] border border-white/10 p-3">
+            <div className="rounded-xl bg-[var(--bg-elev)] border border-[var(--hairline)] p-3">
               <div className="text-[10px] uppercase tracking-widest text-[var(--text-dim)] mb-1">Terminology</div>
               <div className="text-sm text-[var(--text-mid)]">{f.terminology}</div>
             </div>
-            <div className="rounded-xl bg-[#11141a] border border-white/10 p-3">
+            <div className="rounded-xl bg-[var(--bg-elev)] border border-[var(--hairline)] p-3">
               <div className="text-[10px] uppercase tracking-widest text-[var(--text-dim)] mb-1">Interview line</div>
               <div className="text-sm text-[var(--text-mid)] italic">“{f.interviewLine}”</div>
             </div>
@@ -55,7 +55,7 @@ export function FileDefense() {
             value={f.notes ?? ""}
             onChange={(e) => updateFileNotes(f.id, e.target.value)}
             placeholder="Notes…"
-            className="w-full mt-3 rounded-xl bg-[#11141a] border border-white/10 px-3 py-2 text-sm focus:outline-none focus:border-[var(--cyan)]"
+            className="w-full mt-3 rounded-xl bg-[var(--bg-elev)] border border-[var(--hairline)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--cyan)]"
           />
         </div>
       ))}

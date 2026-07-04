@@ -25,10 +25,10 @@ interface FlashcardProps {
 }
 
 const toneStyles: Record<NonNullable<FlashcardLayer["tone"]>, string> = {
-  default: "border-l-[var(--cyan)] bg-[#161a22]",
+  default: "border-l-[var(--cyan)] bg-[var(--surface)]",
   accent: "border-l-[var(--magenta)] bg-[var(--magenta)]/5",
   warn: "border-l-[var(--orange)] bg-[var(--orange)]/5",
-  muted: "border-l-[var(--border)] bg-[#11141a]",
+  muted: "border-l-[var(--border)] bg-[var(--bg-elev)]",
 };
 
 export function Flashcard({ question, meta, layers, revealed, onToggle, footer }: FlashcardProps) {
@@ -48,7 +48,7 @@ export function Flashcard({ question, meta, layers, revealed, onToggle, footer }
             ) : (
               <button
                 onClick={() => onToggle(i)}
-                className="w-full text-left rounded-2xl border border-dashed border-white/10 px-4 py-2.5 text-xs text-[var(--text-dim)] hover:border-[var(--cyan)]/40 hover:text-[var(--text-mid)] transition-all"
+                className="w-full text-left rounded-2xl border border-dashed border-[var(--hairline)] px-4 py-2.5 text-xs text-[var(--text-dim)] hover:border-[var(--cyan)]/40 hover:text-[var(--text-mid)] transition-all"
               >
                 Reveal {layer.label} →
               </button>

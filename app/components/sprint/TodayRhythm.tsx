@@ -98,7 +98,7 @@ export function TodayRhythm() {
             <div className="text-6xl font-semibold tracking-[-3px] tabular-nums">
               DAY {selectedDay}
             </div>
-            <div className="rounded-2xl bg-white/5 px-4 py-1.5 text-sm font-mono border border-white/10">
+            <div className="rounded-2xl bg-[var(--fill-subtle)] px-4 py-1.5 text-sm font-mono border border-[var(--hairline)]">
               {plan.date}
             </div>
             {!isLiveDay && (
@@ -147,7 +147,7 @@ export function TodayRhythm() {
       </div>
 
       {/* Next Milestone */}
-      <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-5 py-3 text-sm">
+      <div className="flex items-center gap-3 rounded-3xl border border-[var(--hairline)] bg-[var(--fill-subtle)] px-5 py-3 text-sm">
         <Target className="h-4 w-4 text-[var(--cyan)]" />
         <span className="font-medium text-[var(--cyan)]">{nextMilestone.label}</span>
         <span className="text-[var(--text-mid)]">
@@ -177,7 +177,7 @@ export function TodayRhythm() {
                 className={`group flex cursor-pointer items-start gap-4 rounded-3xl border p-5 transition-all active:scale-[0.985] ${
                   checked 
                     ? "border-[var(--done)]/40 bg-[var(--done)]/5" 
-                    : "border-white/10 hover:border-white/20 bg-[#161a22]"
+                    : "border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface)]"
                 }`}
               >
                 <div className="pt-0.5">
@@ -194,7 +194,7 @@ export function TodayRhythm() {
                   <div className="flex items-center gap-3">
                     {config.icon}
                     <div className="font-semibold text-lg tracking-tight">{config.label}</div>
-                    <div className="ml-auto rounded-full bg-white/5 px-3 py-0.5 text-xs font-mono text-[var(--text-dim)]">
+                    <div className="ml-auto rounded-full bg-[var(--fill-subtle)] px-3 py-0.5 text-xs font-mono text-[var(--text-dim)]">
                       {config.time}
                     </div>
                   </div>
@@ -243,7 +243,7 @@ export function TodayRhythm() {
                 className={`flex-1 rounded-2xl border py-3 text-sm font-medium capitalize transition-all ${
                   dayState.energy === level 
                     ? "border-[var(--cyan)] bg-[var(--cyan)]/10 text-[var(--cyan)]" 
-                    : "border-white/10 hover:bg-white/5"
+                    : "border-[var(--hairline)] hover:bg-[var(--fill-subtle)]"
                 }`}
               >
                 {level}
@@ -266,7 +266,7 @@ export function TodayRhythm() {
           value={dayState.journal || ""}
           onChange={(e) => updateDayJournal(selectedDay, e.target.value)}
           placeholder="What went well? What blocked you? Key realizations or decisions..."
-          className="w-full min-h-[110px] bg-[#0f131a] border border-white/10 rounded-2xl p-4 text-[15px] focus:outline-none placeholder:text-[var(--text-dim)] leading-relaxed"
+          className="w-full min-h-[110px] bg-[var(--bg-elev)] border border-[var(--hairline)] rounded-2xl p-4 text-[15px] focus:outline-none placeholder:text-[var(--text-dim)] leading-relaxed"
         />
       </div>
     </div>

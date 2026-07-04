@@ -51,7 +51,7 @@ export function QuickLogModal({ task, track, onClose, onLogged }: QuickLogModalP
       <div className="card-glass p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div className="section-title !mb-0">⚖️ Log to Rubric</div>
-          <button onClick={onClose} className="text-[var(--text-dim)] hover:text-white">
+          <button onClick={onClose} className="text-[var(--text-dim)] hover:text-[var(--text)]">
             <X size={18} />
           </button>
         </div>
@@ -64,7 +64,7 @@ export function QuickLogModal({ task, track, onClose, onLogged }: QuickLogModalP
         {/* Score */}
         <label className="block text-xs text-[var(--text-dim)] mb-1">SELF-SCORE (0–100)</label>
         <div className="flex items-center gap-3 mb-4">
-          <input type="range" min={0} max={100} value={score} onChange={(e) => setScore(Number(e.target.value))} className="flex-1 accent-[#00f9ff]" />
+          <input type="range" min={0} max={100} value={score} onChange={(e) => setScore(Number(e.target.value))} className="flex-1 accent-[var(--cyan)]" />
           <span className={`font-mono text-2xl font-semibold tabular-nums ${band.cls}`}>{score}</span>
         </div>
         <div className={`text-xs mb-5 ${band.cls}`}>{band.verdict}</div>
@@ -78,7 +78,7 @@ export function QuickLogModal({ task, track, onClose, onLogged }: QuickLogModalP
               onClick={() => setAssist(a.lvl)}
               title={a.desc}
               className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
-                assist === a.lvl ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10" : "border-white/10 text-[var(--text-dim)] hover:border-white/30"
+                assist === a.lvl ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10" : "border-[var(--hairline)] text-[var(--text-dim)] hover:border-[var(--hairline-strong)]"
               }`}
             >
               A{a.lvl}

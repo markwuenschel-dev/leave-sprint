@@ -47,7 +47,7 @@ export function History() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <select value={filter} onChange={(e) => setFilter(e.target.value as "all" | TaskType)} className="rounded-xl border border-white/10 bg-[#11141a] px-4 py-2 text-sm">
+        <select value={filter} onChange={(e) => setFilter(e.target.value as "all" | TaskType)} className="rounded-xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-2 text-sm">
           <option value="all">All task types ({rubricEntries.length})</option>
           {RD.taskTypes.map((t) => (
             <option key={t.id} value={t.id}>
@@ -79,29 +79,52 @@ export function History() {
   );
 }
 
+const GATE_COLORS: Record<string, string> = {
+  Pass: "border-[var(--done)] text-[var(--done)]",
+  Partial: "border-[var(--yellow)] text-[var(--yellow)]",
+  Fail: "border-[var(--orange)] text-[var(--orange)]",
+};
+
+function LevelChip({ lvl, score }: { lvl: string; score: number | null }) {
+  const cls = score === null ? "text-[var(--text-dim)]" : scoreBand(score).cls;
+  return (
+    <div className="flex flex-col items-center px-1.5">
+      <div className="text-[9px] text-[var(--text-dim)]">{lvl}</div>
+      <div className={`font-mono text-sm font-semibold tabular-nums ${cls}`}>{score ?? "—"}</div>
+    </div>
+  );
+}
+
 function EntryCard({ entry, open, onToggle, onDelete }: { entry: RubricEntry; open: boolean; onToggle: () => void; onDelete: () => void }) {
-  const band = scoreBand(entry.finalScore);
   const pcts = subPct(entry.universalSubScores);
   const hasSubs = entry.universalSubScores && pcts.some((p) => p !== null);
+  const qual = entry.qualifyingDemonstratedLevel || entry.answerLevel || "";
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#161a22] overflow-hidden">
-      <button onClick={onToggle} className="w-full flex items-center gap-4 p-5 text-left hover:bg-white/5 transition-colors">
-        <div className={`font-mono text-3xl font-bold tabular-nums w-16 shrink-0 ${band.cls}`}>{entry.finalScore}</div>
+    <div className="rounded-3xl border border-[var(--hairline)] bg-[var(--surface)] overflow-hidden">
+      <button onClick={onToggle} className="w-full flex items-center gap-4 p-5 text-left hover:bg-[var(--fill-subtle)] transition-colors">
+        <div className="shrink-0 w-16 text-center">
+          <div className="text-[9px] text-[var(--text-dim)]">QUALIFYING</div>
+          <div className={`font-mono text-2xl font-bold ${qual ? "text-[var(--cyan)]" : "text-[var(--text-dim)]"}`}>{qual || "—"}</div>
+        </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-[15px] truncate">{entry.task || "(untitled)"}</div>
           <div className="text-xs text-[var(--text-dim)] mt-0.5 font-mono">
             {entry.date} · {taskLabel(entry.taskType)} · D{entry.difficulty} · A{entry.assistanceLevel}
-            {entry.domain ? ` · ${entry.domain}` : ""}
+            {entry.problemLevel ? ` · problem ${entry.problemLevel}` : ""}
             {entry.quickLog ? " · quick" : ""}
           </div>
         </div>
-        <span className={`text-xs ${band.cls} shrink-0`}>{band.verdict}</span>
+        <div className="hidden sm:flex items-center gap-1 shrink-0 rounded-xl border border-[var(--hairline)] px-1 py-1">
+          <LevelChip lvl="L1" score={entry.levelScores.L1} />
+          <LevelChip lvl="L2" score={entry.levelScores.L2} />
+          <LevelChip lvl="L3" score={entry.levelScores.L3} />
+        </div>
         <ChevronDown size={16} className={`text-[var(--text-dim)] shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="border-t border-white/10 p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="border-t border-[var(--hairline)] p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             {hasSubs ? (
               <Radar labels={RD.universalDims.map((d) => d.short)} values={pcts} size={220} />
@@ -114,17 +137,25 @@ function EntryCard({ entry, open, onToggle, onDelete }: { entry: RubricEntry; op
               RD.universalDims.map((d, i) => (
                 <div key={d.id} className="flex items-center gap-3">
                   <div className="w-32 text-xs text-[var(--text-mid)]">{d.short}</div>
-                  <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div className="flex-1 h-2 rounded-full bg-[var(--fill-subtle)] overflow-hidden">
                     <div className="h-full rounded-full bg-[var(--cyan)]" style={{ width: `${pcts[i] ?? 0}%` }} />
                   </div>
                   <div className="w-10 text-right font-mono text-xs">{pcts[i] ?? "—"}%</div>
                 </div>
               ))}
 
+            {entry.demonstratedLevel && (
+              <div className="text-sm">
+                <span className="text-[var(--text-dim)]">Demonstrated: </span>
+                <span className="text-[var(--text)] font-medium">{entry.demonstratedLevel}</span>
+                {entry.answerLevel && <span className="text-[var(--text-dim)]"> · answer {entry.answerLevel}</span>}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+              <Meta k="Final (support)" v={entry.finalScore} />
               <Meta k="Universal" v={entry.universalScore} />
               <Meta k="Task-specific" v={entry.taskSpecificScore} />
-              <Meta k="Raw" v={entry.rawScore} />
               <Meta k="Penalties" v={entry.penalties} />
               {entry.primaryRole && <Meta k="Role" v={entry.primaryRole} />}
               {entry.evidenceClass && <Meta k="Evidence" v={entry.evidenceClass} />}
@@ -132,9 +163,9 @@ function EntryCard({ entry, open, onToggle, onDelete }: { entry: RubricEntry; op
 
             {Object.keys(entry.gates).length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {Object.entries(entry.gates).map(([g, pass]) => (
-                  <span key={g} className={`text-[10px] px-2 py-0.5 rounded border ${pass ? "border-[var(--done)] text-[var(--done)]" : "border-[var(--orange)] text-[var(--orange)]"}`}>
-                    {g}
+                {Object.entries(entry.gates).map(([g, verdict]) => (
+                  <span key={g} className={`text-[10px] px-2 py-0.5 rounded border ${GATE_COLORS[verdict as string] ?? "border-[var(--hairline)] text-[var(--text-dim)]"}`}>
+                    {g}: {verdict}
                   </span>
                 ))}
               </div>
@@ -143,7 +174,7 @@ function EntryCard({ entry, open, onToggle, onDelete }: { entry: RubricEntry; op
             {entry.weaknessTags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {entry.weaknessTags.map((t) => (
-                  <span key={t} className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--text-dim)]">
+                  <span key={t} className="text-[10px] px-2 py-0.5 rounded bg-[var(--fill-subtle)] border border-[var(--hairline)] text-[var(--text-dim)]">
                     {t}
                   </span>
                 ))}
@@ -164,7 +195,7 @@ function EntryCard({ entry, open, onToggle, onDelete }: { entry: RubricEntry; op
 
 function Meta({ k, v }: { k: string; v: string | number }) {
   return (
-    <div className="flex justify-between border-b border-white/5 pb-1">
+    <div className="flex justify-between border-b border-[var(--hairline)] pb-1">
       <span className="text-[var(--text-dim)]">{k}</span>
       <span className="font-mono text-[var(--text)]">{v}</span>
     </div>

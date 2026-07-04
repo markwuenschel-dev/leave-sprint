@@ -147,7 +147,7 @@ export function SprintVelocityChart() {
           cy={yScale(currentCompleted)}
           r="5"
           fill="var(--cyan)"
-          stroke="#0a0c10"
+          stroke="var(--bg)"
           strokeWidth="2"
         />
       </svg>

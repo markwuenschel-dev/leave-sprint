@@ -13,7 +13,7 @@ interface StatTileProps {
 
 export function StatTile({ label, value, sub, accent = "var(--text)" }: StatTileProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#161a22] p-4">
+    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4">
       <div className="text-[10px] uppercase tracking-widest text-[var(--text-dim)]">{label}</div>
       <div className="font-mono text-2xl font-semibold tabular-nums mt-1" style={{ color: accent }}>
         {value}

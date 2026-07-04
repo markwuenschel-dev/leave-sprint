@@ -183,7 +183,7 @@ export function RubricAnalytics() {
             <div className="section-title">KNOWLEDGE-GAP CLUSTERS</div>
             <div className="flex flex-wrap gap-2">
               {clusters.map(([name, count]) => (
-                <div key={name} className="px-3 py-1.5 rounded-2xl bg-white/5 border border-white/10 text-sm flex items-center gap-2">
+                <div key={name} className="px-3 py-1.5 rounded-2xl bg-[var(--fill-subtle)] border border-[var(--hairline)] text-sm flex items-center gap-2">
                   {name}
                   <span className="font-mono text-xs text-[var(--magenta)]">{count}</span>
                 </div>
@@ -206,10 +206,10 @@ function PromoCard({ lvl, entries }: { lvl: LevelId; entries: RubricEntry[] }) {
   const reqs = countPromoEvidence(entries, lvl);
   const metCount = reqs.filter((r) => r.met).length;
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#161a22] p-5">
+    <div className="rounded-3xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="font-semibold text-lg">{lvl}</div>
-        <div className={`text-xs font-mono px-2 py-0.5 rounded-full border ${metCount === reqs.length ? "border-[var(--done)] text-[var(--done)]" : "border-white/10 text-[var(--text-dim)]"}`}>
+        <div className={`text-xs font-mono px-2 py-0.5 rounded-full border ${metCount === reqs.length ? "border-[var(--done)] text-[var(--done)]" : "border-[var(--hairline)] text-[var(--text-dim)]"}`}>
           {metCount}/{reqs.length} met
         </div>
       </div>
@@ -226,7 +226,7 @@ function PromoCard({ lvl, entries }: { lvl: LevelId; entries: RubricEntry[] }) {
                 {r.count}/{r.min}
               </span>
             </div>
-            <div className="h-1.5 rounded-full bg-white/5 overflow-hidden mt-1">
+            <div className="h-1.5 rounded-full bg-[var(--fill-subtle)] overflow-hidden mt-1">
               <div className={`h-full rounded-full ${r.met ? "bg-[var(--done)]" : "bg-[var(--cyan)]"}`} style={{ width: `${Math.min(100, (r.count / r.min) * 100)}%` }} />
             </div>
             {r.reasons.length > 0 && <div className="text-[10px] text-[var(--text-dim)] mt-0.5">{r.reasons.join(" · ")}</div>}
