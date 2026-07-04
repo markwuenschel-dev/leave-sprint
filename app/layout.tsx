@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,7 +17,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Leave Sprint Twin — Mark Wuenschel",
-  description: "High-signal, local-first Next.js command center for the 29-day leave sprint (June 17 – July 15 2026). Daily rhythm, stage tracking, problem bank, and progress.",
+  description: "High-signal Next.js command center for the 29-day leave sprint (June 17 – July 15 2026). Daily rhythm, stage tracking, problem bank, competency grading, and progress — Postgres-backed.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -30,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="bg-[#0a0c10] text-[#e6e8eb] antialiased">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

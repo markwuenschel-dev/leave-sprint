@@ -5,6 +5,7 @@ import type { RubricEntry } from './rubric/types';
 import type { QBankStatus, TrackKey } from './qbank/types';
 import { normaliseEntry } from './rubric/normalize';
 import { mergeEntries } from './rubric/io';
+import { serverStorage } from './persist/serverStorage';
 import { SEED as seed } from '../data/seed';
 
 const SEED_STATE: AppState = JSON.parse(JSON.stringify(seed)) as AppState;
@@ -261,7 +262,11 @@ export const useSprintStore = create<SprintStore>()(
     }),
     {
       name: 'leave-sprint-twin-v1',
-      storage: createJSONStorage(() => localStorage),
+      // Persist to the server (Postgres via /api/state) instead of localStorage.
+      storage: createJSONStorage(() => serverStorage),
+      // Async/remote storage: don't hydrate during SSR; the client provider calls
+      // useSprintStore.persist.rehydrate() after mount.
+      skipHydration: true,
       version: 2,
       partialize: (state) => ({
         days: state.days,
@@ -285,35 +290,15 @@ export const useSprintStore = create<SprintStore>()(
         }
         return p;
       },
+      // Server is authoritative: the DB already holds the full state (seeded on an
+      // empty DB via /api/state). We no longer re-merge SEED here — that would
+      // resurrect server-side deletions. Just default any missing slice.
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-
-        const seedStages = SEED_STATE.stages || {};
-        const mergedStages: Record<StageId, StageState> = { ...seedStages };
-        Object.keys(state.stages || {}).forEach((k) => {
-          mergedStages[k] = state.stages[k];
-        });
-
-        const seedProblems = SEED_STATE.problems || [];
-        const problemMap = new Map(seedProblems.map((p) => [p.id, { ...p }]));
-        (state.problems || []).forEach((pp) => {
-          if (problemMap.has(pp.id)) {
-            problemMap.set(pp.id, { ...problemMap.get(pp.id)!, status: pp.status });
-          } else {
-            problemMap.set(pp.id, pp);
-          }
-        });
-
-        const mergedFileDefense = (SEED_STATE.fileDefense || []).map((f) => {
-          const persisted = (state.fileDefense || []).find((pf) => pf.id === f.id);
-          return persisted ? { ...f, ...persisted } : f;
-        });
-
-        state.days = { ...(SEED_STATE.days || {}), ...(state.days || {}) };
-        state.stages = mergedStages;
-        state.problems = Array.from(problemMap.values());
-        state.fileDefense = mergedFileDefense;
-        // Preserve migrated/persisted new slices; only default when truly absent.
+        state.days = state.days || {};
+        state.stages = state.stages || {};
+        state.problems = state.problems || [];
+        state.fileDefense = state.fileDefense || [];
         state.rubricEntries = state.rubricEntries || [];
         state.qbankStatus = state.qbankStatus || {};
         state.qbankPos = state.qbankPos || { track: 'swe', idx: 0 };

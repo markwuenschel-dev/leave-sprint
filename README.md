@@ -22,10 +22,11 @@ pnpm build
 
 - **Next.js 16.2.10** (App Router) + React 19.2 + **TypeScript ^6.0** + Tailwind 4 + Turbopack
 - **shadcn/ui** + Radix primitives (planned progressive adoption)
-- **Zustand** + persist middleware (local-first, no backend for v1)
+- **Zustand** + persist middleware (persists to Postgres via `/api/state`)
+- **Drizzle ORM** + Postgres (postgres.js in prod, embedded PGlite for local dev)
 - **Framer Motion** for micro-interactions
 - **date-fns** for date handling
-- Deploy target: **Netlify** (static export)
+- Deploy target: **Railway** (Node server + Postgres), token-gated
 
 ---
 
@@ -118,16 +119,29 @@ pnpm build
 - TypeScript ^6.0 with modern settings (`verbatimModuleSyntax`, `moduleResolution: bundler`)
 - After changing `package.json` versions, run `pnpm install` to update `pnpm-lock.yaml`
 
-Static export configured for Netlify in `next.config.ts`.
+## Persistence & deployment (Railway + Postgres)
 
-## Deployment (Netlify)
+State is stored **server-side in Postgres** (durable across devices), via a single
+`/api/state` endpoint. The Zustand store persists to the server instead of `localStorage`
+through a custom storage adapter, so it still feels instant/optimistic. The whole site is
+gated by a shared `APP_TOKEN` (single user, no accounts).
+
+**Local dev (zero setup):** when `DATABASE_URL` is unset, the app uses an embedded
+[PGlite](https://github.com/electric-sql/pglite) database at `./.pglite`.
 
 ```bash
-pnpm build
-# Deploy the generated `out/` folder
+pnpm db:migrate   # create tables (PGlite locally, or your DATABASE_URL)
+pnpm dev
 ```
 
-Or connect the GitHub repository — Netlify auto-detects the Next.js project and uses `pnpm build`.
+**Railway:**
+1. Create a service from this repo + add the **Postgres** plugin (provides `DATABASE_URL`).
+2. Set env vars: `DATABASE_URL` (from the plugin) and `APP_TOKEN` (a strong secret).
+3. Build `pnpm build`; start `pnpm start` (runs `db:migrate` then `next start`, binding `$PORT`).
+4. Visit `https://<app>/?token=<APP_TOKEN>` once to set the access cookie.
+
+Migrations live in `drizzle/` (generate with `pnpm db:generate`) and are applied at start by
+`lib/db/migrate.ts`. See `.env.example`. (Netlify/static-export is no longer used.)
 
 ---
 

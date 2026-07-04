@@ -40,3 +40,6 @@ next-env.d.ts
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Local dev database (PGlite)
+.pglite/
