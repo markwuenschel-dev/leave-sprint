@@ -62,7 +62,8 @@ export function DataExport() {
     reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target?.result as string);
-        store.importState(imported);
+        // Accept a full backup object OR a bare array of rubric records.
+        store.importState(Array.isArray(imported) ? { rubricEntries: imported } : imported);
         setImportStatus("✅ Imported successfully");
         setTimeout(() => setImportStatus(""), 3000);
       } catch {
