@@ -1,12 +1,12 @@
 "use client";
 
 import { useSprintStore } from "@/lib/store";
-import { motion } from "framer-motion";
+import { TOTAL_STAGES } from "@/data/stages";
 
 export function SprintVelocityChart() {
   const { stages } = useSprintStore();
 
-  const totalStages = 20; // from your STAGES array
+  const totalStages = TOTAL_STAGES;
   const sprintDays = 29;
 
   // Calculate cumulative completed stages by day
