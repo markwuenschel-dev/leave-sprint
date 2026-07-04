@@ -1,0 +1,1829 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "progress_tracker_record_schema_v1_11.json",
+  "title": "Technical Competency Progress Tracker Record v1.11",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "assessmentId",
+    "date",
+    "task",
+    "taskType",
+    "difficulty",
+    "assistanceLevel",
+    "levelScores",
+    "answerLevel",
+    "qualifyingDemonstratedLevel",
+    "gates"
+  ],
+  "properties": {
+    "assessmentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sessionId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "parentAssessmentId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "attemptGroupId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "attemptNumber": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "attemptType": {
+      "type": "string",
+      "enum": [
+        "initial",
+        "retry",
+        "assisted_retry",
+        "post_coaching_retry",
+        "final_retry",
+        "retention_retest",
+        "session_parent",
+        "rollup"
+      ]
+    },
+    "priorAssessmentId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourceFile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourceItemId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "coverageStatus": {
+      "type": "string",
+      "enum": [
+        "included",
+        "excluded",
+        "suspected_missing",
+        "duplicate_linked",
+        "rollup_only"
+      ]
+    },
+    "date": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string",
+      "minLength": 1
+    },
+    "taskType": {
+      "type": "string",
+      "enum": [
+        "coding",
+        "debugging",
+        "knowledge",
+        "sysdesign",
+        "prodeng",
+        "walkthrough",
+        "behavioral",
+        "analyticsCase"
+      ]
+    },
+    "secondaryTaskSignals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "problemName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "platform": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "codingPattern": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "primaryDataStructure": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "compileStatus": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "compiles",
+        "does not compile",
+        "not applicable",
+        "not checked",
+        "unknown",
+        null
+      ]
+    },
+    "testStatus": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "passed",
+        "failed",
+        "not run",
+        "not applicable",
+        "unknown",
+        null
+      ]
+    },
+    "difficulty": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "assistanceLevel": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "problemLevel": {
+      "type": "string",
+      "enum": [
+        "L1",
+        "L2",
+        "L3",
+        "Level I",
+        "Level II",
+        "Level III"
+      ]
+    },
+    "levelScores": {
+      "type": "object",
+      "required": [
+        "L1",
+        "L2",
+        "L3"
+      ],
+      "properties": {
+        "L1": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "L2": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "L3": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "required": [
+        "Correctness",
+        "Relevance",
+        "Independent explanation",
+        "Evidence",
+        "Safety and integrity",
+        "Completion"
+      ],
+      "properties": {
+        "Correctness": {
+          "type": "string",
+          "enum": [
+            "Pass",
+            "Partial",
+            "Fail"
+          ]
+        },
+        "Relevance": {
+          "type": "string",
+          "enum": [
+            "Pass",
+            "Partial",
+            "Fail"
+          ]
+        },
+        "Independent explanation": {
+          "type": "string",
+          "enum": [
+            "Pass",
+            "Partial",
+            "Fail"
+          ]
+        },
+        "Evidence": {
+          "type": "string",
+          "enum": [
+            "Pass",
+            "Partial",
+            "Fail"
+          ]
+        },
+        "Safety and integrity": {
+          "type": "string",
+          "enum": [
+            "Pass",
+            "Partial",
+            "Fail"
+          ]
+        },
+        "Completion": {
+          "type": "string",
+          "enum": [
+            "Pass",
+            "Partial",
+            "Fail"
+          ]
+        }
+      }
+    },
+    "weaknessTags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Mechanism gap",
+          "Thin tradeoff analysis",
+          "Incomplete execution",
+          "Insufficient evidence",
+          "Incorrect reasoning",
+          "Confident false claim",
+          "Terminology imprecision",
+          "Scope boundary missed",
+          "Failure handling gap",
+          "Validation gap",
+          "Edge-case gap",
+          "Complexity analysis missing",
+          "Overprompted answer",
+          "Ownership unclear",
+          "Application gap",
+          "Interview phrasing gap",
+          "Definition gap",
+          "Implementation detail gap"
+        ]
+      }
+    },
+    "knowledgeGapTags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Variable versus value versus type distinction",
+          "Static versus dynamic typing",
+          "Runtime validation versus static type checking",
+          "Function versus method distinction",
+          "Input/output contract",
+          "Single responsibility and cohesion",
+          "Class versus object distinction",
+          "Data record versus behavior-heavy class",
+          "Encapsulation and invariant protection",
+          "Setter versus domain operation boundary",
+          "Inheritance versus composition tradeoff",
+          "Interface contract versus implementation detail",
+          "Premature abstraction with interfaces",
+          "List/set/map/stack/queue operation selection",
+          "Hash-based lookup memory tradeoff",
+          "Big-O growth versus runtime benchmark",
+          "I/O cost versus algorithmic complexity",
+          "Exception translation boundary",
+          "Retryable versus permanent failure distinction",
+          "Unit test isolation and determinism",
+          "Behavior testing versus implementation-coupled testing",
+          "HTTP request-response lifecycle",
+          "HTTP status code semantics",
+          "REST resource modeling and statelessness",
+          "Workflow endpoint versus CRUD endpoint",
+          "Database transaction atomicity and rollback",
+          "External API inside transaction risk",
+          "Git branch and pull request workflow",
+          "Systematic debugging loop",
+          "Dependency-chain inspection",
+          "Java String immutability",
+          "String.replaceFirst argument and return behavior",
+          "Regex semantics in string replacement",
+          "Frequency-count invariant for anagrams",
+          "Single-pass min-price invariant",
+          "Greedy stock-profit state update",
+          "Ordering constraint for buy before sell",
+          "O(1) state tracking",
+          "Odd-length two-pointer loop termination",
+          "In-place reversal invariant",
+          "In-place prefix sum transformation",
+          "Space optimization using input mutation",
+          "Complexity claim for implemented algorithm",
+          "Representative edge-case tests for coding",
+          "Rules-based versus learned pattern boundary",
+          "Deterministic guardrails versus probabilistic predictions",
+          "Learned parameters versus explicit rules",
+          "Hard policy constraints",
+          "Supervised labels versus unsupervised structure",
+          "Training versus inference distinction",
+          "Model objective versus business objective",
+          "Cluster validity versus operational usefulness",
+          "Feature versus label distinction",
+          "Prediction-time feature availability",
+          "Data leakage through future information",
+          "Train/validation/test split ownership",
+          "Temporal leakage",
+          "Group leakage",
+          "Duplicate-record leakage",
+          "Overfitting versus underfitting pattern",
+          "Classification versus regression framing",
+          "Precision versus recall tradeoff",
+          "F1 limitation under business-cost asymmetry",
+          "Baseline model comparison",
+          "Keyword baseline versus embedding retrieval",
+          "Preprocessing pipeline ownership",
+          "Cross-validation fold independence",
+          "Time-series cross-validation",
+          "Model serving contract",
+          "Inference-time missing feature handling",
+          "Data drift versus concept drift",
+          "RAG versus fine-tuning boundary",
+          "RAG hallucination despite correct corpus",
+          "Retrieval intent versus corpus vocabulary mapping",
+          "RAG evaluation hit_rate@k versus MRR",
+          "LLM boundary versus deterministic policy",
+          "Human-in-the-loop validation boundary",
+          "Experiment reproducibility lineage",
+          "Business decision to analytical question translation",
+          "Metric denominator and timeframe definition",
+          "Baseline and population definition",
+          "Population versus sample distinction",
+          "Review-selection bias",
+          "Mean median mode distribution choice",
+          "Median versus tail-percentile interpretation",
+          "Variance and standard deviation interpretation",
+          "Control limits versus specification limits",
+          "Correlation versus causation distinction",
+          "Confounder and causal language boundary",
+          "Hypothesis test p-value interpretation",
+          "Statistical significance versus practical significance",
+          "Confidence interval interpretation",
+          "Missingness mechanism classification",
+          "Informative missingness",
+          "Outlier removal versus rare valid signal",
+          "EDA structural data-quality checks",
+          "Visualization choice by analytical question",
+          "SQL aggregation grain and denominator",
+          "Join cardinality before aggregation",
+          "A/B test randomization and eligibility",
+          "Before-after comparison confounding",
+          "Stakeholder result communication",
+          "Pipeline versus one-off script distinction",
+          "Pipeline input/output contract",
+          "ETL versus ELT transformation boundary",
+          "Immutable raw layer",
+          "Curated layer as analyst-facing contract",
+          "Lineage, replay, and backfill",
+          "Batch versus streaming boundary",
+          "Micro-batch latency tradeoff",
+          "Streaming bounded versus unbounded data",
+          "Event time versus processing time",
+          "Watermarks and late-arriving data",
+          "Backpressure",
+          "Source-to-target mapping contract",
+          "Controlled vocabulary drift",
+          "Operational database versus warehouse versus lake",
+          "Fact table grain definition",
+          "Dimension table context role",
+          "Primary key uniqueness and stability",
+          "Foreign key referential integrity",
+          "Data-quality dimensions",
+          "Blocking versus warning data-quality checks",
+          "Pipeline idempotency",
+          "Content-hash deduplication",
+          "Incremental load watermark safety",
+          "Late-arriving data overlap window",
+          "Orchestration versus transformation logic",
+          "Cron versus orchestrator boundary",
+          "Partitioning versus indexing",
+          "Schema evolution compatibility",
+          "Pipeline failure classification",
+          "Preserve-last-good extract staleness",
+          "Backfill partitioning and source-load control",
+          "Pipeline production-readiness criteria",
+          "React state ownership",
+          "Nearest common ancestor state placement",
+          "Single source of truth for shared UI state",
+          "Local state versus context versus state library",
+          "Render-scope and rerender tradeoffs",
+          "Controlled versus uncontrolled input behavior",
+          "React value versus defaultValue lifecycle",
+          "useEffect external synchronization boundary",
+          "Effect cleanup lifecycle",
+          "Effect dependency and stale closure behavior",
+          "useReducer state-transition model",
+          "Reducer immutability and side-effect boundary",
+          "State machine versus boolean flags",
+          "useMemo versus useCallback distinction",
+          "Memoization as performance hint not correctness guarantee",
+          "React profiling before memoization",
+          "TypeScript discriminated union state modeling",
+          "TypeScript narrowing",
+          "Exhaustive union handling with never",
+          "Runtime API validation boundary",
+          "Type assertion versus runtime validation",
+          "Frontend-backend contract evolution",
+          "API request loading success error states",
+          "Duplicate submit prevention",
+          "Optimistic update rollback",
+          "Idempotency key and stale version handling",
+          "Large form field-level subscription strategy",
+          "Primary key uniqueness and stability",
+          "Composite key design",
+          "Surrogate key versus natural key",
+          "Integer key versus UUID tradeoff",
+          "Key locality and index behavior",
+          "Normalization versus denormalization tradeoffs",
+          "Update insert delete anomalies",
+          "Read/write model consistency",
+          "Foreign key constraint versus ID column",
+          "Many-to-many join table modeling",
+          "Database-enforced versus application-enforced integrity",
+          "Database index read-write tradeoff",
+          "Composite index column order",
+          "EXPLAIN plan interpretation",
+          "Inner join versus left join row preservation",
+          "Left join filter placement",
+          "Join duplicate row diagnosis",
+          "GROUP BY output grain",
+          "WHERE versus HAVING distinction",
+          "Window function versus GROUP BY",
+          "Deterministic latest-row selection",
+          "Transaction rollback and atomicity",
+          "Optimistic locking version check",
+          "Valid state transitions under concurrency",
+          "Continuous integration practice definition",
+          "Configured CI gates versus business correctness",
+          "CI coverage limitations",
+          "Merge-blocking versus deployment checks",
+          "Pull request versus git pull distinction",
+          "Polyglot monorepo affected-change detection",
+          "Docker image versus running container",
+          "Container runtime isolation boundary",
+          "Host kernel sharing",
+          "Docker Compose versus production orchestration",
+          "Dockerfile versus docker-compose.yml",
+          "Compose service discovery",
+          "Compose build versus run responsibilities",
+          "Host port versus container port",
+          "Docker internal DNS",
+          "Runtime configuration ownership",
+          "Environment variables as runtime configuration",
+          "Secure container image construction",
+          "Container health checks and restart diagnosis",
+          "Infrastructure as code versus setup script",
+          "Infrastructure drift detection",
+          "Environment module and state separation",
+          "Secret rotation and revocation",
+          "CI secret exposure boundary",
+          "Health check liveness versus readiness",
+          "Dependency outage health-check cascade risk",
+          "Deployment rollback artifact versus rebuild",
+          "Backward-compatible schema rollout",
+          "Canary versus blue-green deployment",
+          "Progressive delivery rollback threshold",
+          "Logs metrics traces distinction",
+          "Correlation ID versus trace ID",
+          "MDC logging context",
+          "OpenTelemetry trace/span model",
+          "RAG observability dimensions",
+          "Spring controller-service-client boundaries",
+          "DTO validation versus domain invariants",
+          "Java-Python bridge contract",
+          "HTTP error translation",
+          "Spring controller-advice registration",
+          "Spring API boundary versus framework-owned concept",
+          "Subprocess stdout/stderr capture",
+          "Subprocess envelope/environment propagation",
+          "React-visible error correlation ID",
+          "OpenAPI contract documentation",
+          "Semantic layer versus raw query modeling",
+          "Measure versus dimension distinction",
+          "Dashboard versus ad hoc analysis boundary",
+          "Aggregate versus row-level calculation in BI tools",
+          "Executive-level insight summarization",
+          "Ambiguous stakeholder ask scoping",
+          "Metric ownership and single-source-of-truth definition",
+          "Self-serve dashboard versus analyst-gated report boundary"
+        ]
+      }
+    },
+    "gapTypes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Conceptual gap",
+          "Mechanism gap",
+          "Application gap",
+          "Tradeoff gap",
+          "Verification gap",
+          "Autonomy gap",
+          "Communication gap",
+          "Recall gap",
+          "Scope gap",
+          "Evidence quality gap",
+          "Requirements translation gap"
+        ]
+      }
+    },
+    "labelSetVersion": {
+      "type": "string"
+    },
+    "proposedNewTags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "tagClass",
+          "proposedTag",
+          "reason"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "tagClass": {
+            "type": "string",
+            "enum": [
+              "weaknessTags",
+              "knowledgeGapTags",
+              "gapTypes"
+            ]
+          },
+          "proposedTag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nearestExistingTag": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "assessmentOutcome": {
+      "type": "string",
+      "enum": [
+        "Demonstrated",
+        "Partial discovery",
+        "Concept discovery"
+      ]
+    },
+    "conceptDiscovery": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "conceptKnownBeforeAnswer": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "vocabularyKnown": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reasoningAttempted": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "firstPrinciplesSignal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "None",
+            "Weak",
+            "Moderate",
+            "Strong",
+            "Unknown",
+            null
+          ]
+        },
+        "underlyingModelSignal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Absent",
+            "Partial",
+            "Present",
+            "Unknown",
+            null
+          ]
+        },
+        "teachingNeed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "None",
+            "Vocabulary mapping",
+            "Mechanism refinement",
+            "Full concept teach",
+            "Retest under probing",
+            "Unknown",
+            null
+          ]
+        },
+        "candidateFraming": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "calibrationAnchors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "calibrationAnchorId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string",
+            "enum": [
+              "coding",
+              "debugging",
+              "knowledge",
+              "sysdesign",
+              "prodeng",
+              "walkthrough",
+              "behavioral",
+              "analyticsCase"
+            ]
+          },
+          "problemLevel": {
+            "type": "string",
+            "enum": [
+              "L1",
+              "L2",
+              "L3",
+              "Level I",
+              "Level II",
+              "Level III"
+            ]
+          },
+          "difficulty": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "expectedLevelScores": {
+            "type": "object",
+            "properties": {
+              "L1": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "L2": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "L3": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          },
+          "anchorReason": {
+            "type": "string"
+          },
+          "matchQuality": {
+            "type": "string",
+            "enum": [
+              "Weak",
+              "Partial",
+              "Strong"
+            ]
+          }
+        }
+      }
+    },
+    "scoreUncertainty": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "confidenceLimiters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "gapRecurrence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "isRecurring": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "priorOccurrences": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "lastOccurrenceDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "worsening": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pattern": {
+          "type": "string"
+        }
+      }
+    },
+    "transferSignal": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "sourceConcept": {
+          "type": "string"
+        },
+        "transferredTo": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "transferQuality": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Weak",
+            "Partial",
+            "Strong"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "retestQueue": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "dueNow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dueSoon": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blockedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "assessmentQuality": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "promptClarity": {
+          "type": "string",
+          "enum": [
+            "Low",
+            "Medium",
+            "High"
+          ]
+        },
+        "expectedElementsDefinedBeforeAnswer": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "gradingConfidenceLimitedByPrompt": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "roleReadinessEvidenceFloor": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "targetRole": {
+          "type": "string"
+        },
+        "minimumEvidenceRequired": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "currentEvidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "evidenceFloorMet": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "recoveryBehavior": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "acknowledgedUncertainty": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reasonedFromFirstPrinciples": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "askedClarifyingQuestion": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "avoidedFabrication": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "recoveryQuality": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Weak",
+            "Partial",
+            "Strong"
+          ]
+        }
+      }
+    },
+    "scoreLiftActions": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "toPassNextLevel": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "estimatedLift": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "trackerHealth": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "recordsWithMissingLevelScores": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "recordsWithNoncanonicalTags": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "recordsMissingAssessmentOutcome": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "recordsMissingProblemLevel": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "coverageDefects": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "overallHealth": {
+          "type": "string",
+          "enum": [
+            "Good",
+            "Warning",
+            "Critical",
+            "Unknown"
+          ]
+        }
+      }
+    },
+    "loggingMode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "fast",
+        "full",
+        null
+      ],
+      "description": "fast = three level scores + gates + weaknessTags/knowledgeGapTags only. full = complete diagnostic layer. Default assumed 'full' if omitted for backward compatibility with pre-v1.11 records."
+    },
+    "expectedElements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "presentElements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missingElements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "elementSource": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "Predefined",
+        "Rubric-derived",
+        "Retrospective evaluator-derived",
+        "Role-requirement-derived",
+        null
+      ]
+    },
+    "probeReadiness": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "firstAnswer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Pass",
+            "Uncertain",
+            "Fail",
+            null
+          ]
+        },
+        "oneFollowUp": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Pass",
+            "Uncertain",
+            "Fail",
+            null
+          ]
+        },
+        "deepFollowUp": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Pass",
+            "Uncertain",
+            "Fail",
+            null
+          ]
+        },
+        "likelyFailurePoint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "evidenceSource": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "verbal answer",
+        "written answer",
+        "live coding",
+        "take-home coding",
+        "repo code",
+        "test results",
+        "debugging transcript",
+        "project walkthrough",
+        "mock interview",
+        "real interview feedback",
+        "commit history",
+        "README or design doc",
+        "production artifact",
+        "metric or dashboard",
+        "human evaluator feedback",
+        null
+      ]
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "firstAttemptDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastAttemptDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retestDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daysSinceLastAttempt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "attemptNumber": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "priorScore": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "currentScore": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "retestScoreDelta": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "reproducedWithoutNotes": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reproducedUnderTimeLimit": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "llmIndependence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "llmUsed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "llmUseType": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "none",
+              "concept explanation",
+              "error interpretation",
+              "approach exploration",
+              "logic review",
+              "code generation",
+              "test generation",
+              "answer drafting",
+              "README or documentation drafting",
+              "refactoring suggestion",
+              "debugging suggestion"
+            ]
+          }
+        },
+        "implementationGeneratedByLLM": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "testsGeneratedByLLM": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "answerDraftedByLLM": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reproducedWithoutLLM": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "explainedWithoutLLM": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "fivePassStatus": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "buildPass": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "rewritePass": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "testPass": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "explainPass": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "documentPass": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "roleRequirementCoverage": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "targetRole": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requirementsHit": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requirementsMissing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requirementsPartial": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coverageScore": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "artifactReadiness": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "artifact": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "artifactType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "portfolio project",
+            "repo feature",
+            "README",
+            "design doc",
+            "demo script",
+            "runbook",
+            "dashboard",
+            "ETL pipeline",
+            "RAG workflow",
+            "Spring Boot service",
+            "React UI",
+            "modeling notebook",
+            "data pipeline",
+            "behavioral story",
+            null
+          ]
+        },
+        "readinessStage": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "idea",
+            "in-progress",
+            "works locally",
+            "tested",
+            "documented",
+            "demo-ready",
+            "portfolio-ready",
+            "interview-defensible",
+            "production-shaped",
+            "production-deployed",
+            null
+          ]
+        },
+        "proofItems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missingProofItems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "portfolioReady": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "staleness": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "lastPracticed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daysSincePractice": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "stalenessRisk": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            "Unknown",
+            null
+          ]
+        },
+        "refreshNeeded": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "gapClosureStatus": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "open",
+            "in progress",
+            "closed",
+            "reopened",
+            "not applicable",
+            null
+          ]
+        },
+        "openedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closedDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "closureEvidence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retestRequired": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "priority": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "severity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            "Critical",
+            null
+          ]
+        },
+        "urgency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            null
+          ]
+        },
+        "roleImpact": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            null
+          ]
+        },
+        "roleWeightTier": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Primary",
+            "Secondary",
+            "Tertiary",
+            null
+          ]
+        },
+        "nextActionType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "study",
+            "rebuild",
+            "retest",
+            "mock interview",
+            "project work",
+            "documentation",
+            "ignore for now",
+            null
+          ]
+        },
+        "recommendedAction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "gapImpact": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "isBlocking": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "blocksRoles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocksLevel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "L1",
+            "L2",
+            "L3",
+            "None",
+            null
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "assessmentMode": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "mode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "written",
+            "verbal",
+            "live coding",
+            "debugging session",
+            "project walkthrough",
+            "mock interview",
+            "real interview",
+            null
+          ]
+        },
+        "timeLimitMinutes": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "notesAllowed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "followUpsAsked": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "pressureLevel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            null
+          ]
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "evaluatorType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "self",
+            "AI grader",
+            "peer",
+            "senior engineer",
+            "recruiter",
+            "hiring manager",
+            "real interviewer",
+            null
+          ]
+        },
+        "humanReviewed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "realInterviewSignal": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "calibrationConfidence": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Low",
+            "Medium",
+            "High",
+            null
+          ]
+        }
+      }
+    },
+    "focusAreas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "taskType": {
+            "const": "coding"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "problemName"
+        ],
+        "properties": {
+          "problemName": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "attemptType": {
+            "enum": [
+              "retry",
+              "assisted_retry",
+              "post_coaching_retry",
+              "final_retry",
+              "retention_retest"
+            ]
+          }
+        },
+        "required": [
+          "attemptType"
+        ]
+      },
+      "then": {
+        "required": [
+          "attemptGroupId",
+          "attemptNumber"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "coverageStatus": {
+            "const": "included"
+          },
+          "attemptType": {
+            "not": {
+              "enum": [
+                "session_parent",
+                "rollup"
+              ]
+            }
+          }
+        },
+        "required": [
+          "coverageStatus",
+          "attemptType"
+        ]
+      },
+      "then": {
+        "required": [
+          "assessmentOutcome"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "assessmentOutcome": {
+            "enum": [
+              "Partial discovery",
+              "Concept discovery"
+            ]
+          }
+        },
+        "required": [
+          "assessmentOutcome"
+        ]
+      },
+      "then": {
+        "required": [
+          "conceptDiscovery"
+        ]
+      }
+    }
+  ]
+}

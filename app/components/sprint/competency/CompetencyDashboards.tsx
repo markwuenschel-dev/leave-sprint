@@ -237,6 +237,7 @@ function GapsDashboard({ entries }: { entries: ReturnType<typeof useSprintStore.
             <StatTile label="Tracker health" value={tr.trackerHealth ?? "—"} />
             <StatTile label="Overclaim risk High" value={tr.overclaimHigh} accent={tr.overclaimHigh ? "var(--orange)" : "var(--text)"} />
             <StatTile label="LLM-dependency High" value={tr.llmRiskHigh} accent={tr.llmRiskHigh ? "var(--orange)" : "var(--text)"} />
+            <StatTile label="Fast-logged" value={`${tr.logging.fastPct}%`} sub={`${tr.logging.fast} fast · ${tr.logging.full} full`} accent={tr.logging.fastPct > 70 ? "var(--yellow)" : "var(--text)"} />
           </div>
           {tr.calibrationMix.length > 0 && (
             <div className="mt-3">

@@ -12,7 +12,9 @@
 import { RUBRIC_VERSION } from './referenceData';
 import { computeRaw, computeFinal, subTotal } from './scoring';
 import { deriveAnswerLevel, deriveQualifyingLevel, deriveDemonstratedLevel } from './derive';
+import { normalizeTags } from './aliases';
 import type { RubricEntry, Gates, LevelScores, LevelVerdicts } from './types';
+import type { LoggingMode } from './diagnostics';
 
 function intOr(value: unknown, fallback: number): number {
   const n = parseInt(String(value), 10);
@@ -35,7 +37,7 @@ const KNOWN_KEYS = new Set<string>([
   'levelScores', 'levelVerdicts',
   'universalScore', 'taskSpecificScore', 'rawScore', 'cap', 'penalties', 'finalScore', 'universalSubScores',
   'demonstratedLevel', 'confidence', 'qualifyingEvidenceNote', 'mainReasonNextLevelNotReached', 'surviveProbing',
-  'gates', 'weaknessTags', 'knowledgeGapTags', 'gapTypes', 'strengths', 'weaknesses', 'nextTarget', 'quickLog',
+  'gates', 'weaknessTags', 'knowledgeGapTags', 'gapTypes', 'focusAreas', 'strengths', 'weaknesses', 'nextTarget', 'quickLog', 'loggingMode',
   'expectedElements', 'presentElements', 'missingElements', 'elementSource',
   'problemName', 'platform', 'codingPattern', 'primaryDataStructure', 'compileStatus', 'testStatus', 'edgeCasesCovered', 'edgeCasesMissed',
   'sessionId', 'parentAssessmentId', 'attemptGroupId', 'attemptNumber', 'attemptType', 'priorAssessmentId',
@@ -108,6 +110,10 @@ export function normaliseEntry(input: Partial<RubricEntry> | RawEntry): RubricEn
   let demonstratedLevel = str(raw.demonstratedLevel) as RubricEntry['demonstratedLevel'];
   if (!demonstratedLevel) demonstratedLevel = deriveDemonstratedLevel(levelScores, qualifyingDemonstratedLevel);
 
+  // v1.11: loggingMode supersedes quickLog. Prefer explicit loggingMode; else map
+  // quickLog:true→'fast', quickLog:false/absent→'full' (backward compatible).
+  const loggingMode: LoggingMode = raw.loggingMode === 'fast' || raw.loggingMode === 'full' ? raw.loggingMode : raw.quickLog === true ? 'fast' : 'full';
+
   const priorExtra = (raw.extra as Record<string, unknown>) || {};
   const extra: Record<string, unknown> = { ...priorExtra };
   for (const key of Object.keys(raw)) {
@@ -158,12 +164,14 @@ export function normaliseEntry(input: Partial<RubricEntry> | RawEntry): RubricEn
     surviveProbing: str(raw.surviveProbing),
 
     gates,
-    weaknessTags: arr(raw.weaknessTags),
-    knowledgeGapTags: arr(raw.knowledgeGapTags),
-    gapTypes: arr(raw.gapTypes),
+    weaknessTags: normalizeTags(raw.weaknessTags, 'weaknessTags'),
+    knowledgeGapTags: normalizeTags(raw.knowledgeGapTags, 'knowledgeGapTags'),
+    gapTypes: normalizeTags(raw.gapTypes, 'gapTypes'),
+    focusAreas: arr(raw.focusAreas),
     strengths: str(raw.strengths),
     weaknesses: str(raw.weaknesses),
     nextTarget: str(raw.nextTarget),
+    loggingMode,
     quickLog: Boolean(raw.quickLog),
 
     expectedElements: arr(raw.expectedElements),

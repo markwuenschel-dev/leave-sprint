@@ -10,7 +10,8 @@
  * Pure static data — no behavior.
  */
 
-export const RUBRIC_VERSION = '1.10';
+export const RUBRIC_VERSION = '1.11';
+export const LABEL_SET_VERSION = '1.11-labels.2026-07-03';
 
 export const RD = {
   taskTypes: [
@@ -21,6 +22,7 @@ export const RD = {
     { id: 'prodeng', label: 'Production Engineering', color: 'var(--slate)' },
     { id: 'walkthrough', label: 'Project Walkthrough', color: 'var(--yellow)' },
     { id: 'behavioral', label: 'Behavioral Technical', color: 'var(--orange)' },
+    { id: 'analyticsCase', label: 'Analytics Case', color: 'var(--blue)' },
   ],
 
   /* §7 Universal competency dimensions */
@@ -205,6 +207,19 @@ export const RD = {
       { name: 'Results, evidence, and measurable impact', weight: 10 },
       { name: 'Reflection, learning, and recurrence prevention', weight: 10 },
     ], note: 'Scored on whether the candidate establishes what happened, separates personal ownership, explains technical and interpersonal decisions, supports results with evidence, and shows learning. Not scored as presentation polish or generic likability.' },
+    {
+      id: 'analyticsCase', label: 'Analytics Case',
+      categories: [
+        { name: 'Metric definition', weight: 20 },
+        { name: 'Denominator / population / grain', weight: 15 },
+        { name: 'Baseline / comparison point', weight: 10 },
+        { name: 'Confounder / bias risk', weight: 15 },
+        { name: 'SQL / analysis logic', weight: 20 },
+        { name: 'Stakeholder recommendation', weight: 15 },
+        { name: 'Limitation / caveat', weight: 5 },
+      ],
+      note: 'App-local category set (v1.11 §8 defines no analyticsCase task-specific rubric); derived from the §17.3 expectedElements template. Scoping and stakeholder framing are the point of the task type, not decoration around the query.',
+    },
   ],
 
   /* §9 Domain and role evidence model */
@@ -231,6 +246,8 @@ export const RD = {
     { id: 'MLE', label: 'MLE', weights: 'Software engineering 20; ML implementation 15; Data/feature pipelines 15; Evaluation 15; Serving 10; Reliability/monitoring 10; Reproducibility 10; Communication 5' },
     { id: 'DS', label: 'DS', weights: 'Problem formulation 15; Statistical reasoning 20; Data preparation/EDA 15; Modeling 15; Validation/error analysis 15; Experimentation/metrics 10; Communication/business interpretation 10' },
     { id: 'DE', label: 'DE', weights: 'Data modeling/grain 15; Pipeline implementation 20; Data quality 15; SQL/query reasoning 15; Reliability/idempotency 15; Orchestration/operations 10; Scale/performance 5; Communication 5' },
+    { id: 'BIE', label: 'BIE', weights: 'SQL/query reasoning 25; Dashboard/semantic layer modeling 20; Data modeling/grain 15; Data quality 10; Pipeline/ETL literacy 10; Stakeholder communication/requirements translation 15; Business context/metric definition 5' },
+    { id: 'BIA', label: 'BIA', weights: 'SQL/query reasoning 25; Business context/metric definition 20; Stakeholder communication/requirements translation 20; Dashboard/semantic layer modeling 15; Statistical reasoning (descriptive) 10; Data quality 10' },
   ],
 
   domainContributionWeights: [

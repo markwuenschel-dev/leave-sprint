@@ -267,7 +267,7 @@ export const useSprintStore = create<SprintStore>()(
       // Async/remote storage: don't hydrate during SSR; the client provider calls
       // useSprintStore.persist.rehydrate() after mount.
       skipHydration: true,
-      version: 3,
+      version: 4,
       partialize: (state) => ({
         days: state.days,
         stages: state.stages,
@@ -281,10 +281,10 @@ export const useSprintStore = create<SprintStore>()(
       }),
       migrate: (persisted, fromVersion) => {
         const p = (persisted || {}) as Record<string, unknown>;
-        if (fromVersion < 3) {
-          // v1→v2: simplified rubric shape; v2→v3: boolean gates + pre-v1.10 fields.
-          // Re-running normaliseEntry upgrades gates to Pass/Partial/Fail, mirrors
-          // assessmentId, and fills derived level fields.
+        if (fromVersion < 4) {
+          // v1→v2 simplified shape; v2→v3 boolean gates/pre-v1.10; v3→v4 v1.11
+          // (quickLog→loggingMode, tag alias normalization). Re-running normaliseEntry
+          // upgrades gates, mirrors assessmentId, fills derived levels, and applies v1.11.
           const old = Array.isArray(p.rubricEntries) ? p.rubricEntries : [];
           p.rubricEntries = old.map((e) => normaliseEntry(e as Record<string, unknown>));
           p.qbankStatus = p.qbankStatus || {};
