@@ -7,9 +7,10 @@ import { computeRaw, computeFinal, subTotal, scoreBand } from "@/lib/rubric/scor
 import { parseImport } from "@/lib/rubric/io";
 import type { RubricEntryInput, TaskType, Role, EvidenceClass, UniversalDimId } from "@/lib/rubric/types";
 import { DifficultyCalculator } from "../DifficultyCalculator";
+import { GradeForm } from "./GradeForm";
 import { SlidersHorizontal } from "lucide-react";
 
-type Mode = "quick" | "json";
+type Mode = "quick" | "form" | "json";
 
 const emptySubs = (): Record<UniversalDimId, number> =>
   Object.fromEntries(RD.universalDims.map((d) => [d.id, 0])) as Record<UniversalDimId, number>;
@@ -97,16 +98,21 @@ export function LogEntry() {
   return (
     <div className="space-y-6">
       {/* Mode toggle */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button onClick={() => setMode("quick")} className={mode === "quick" ? "btn-primary px-5" : "btn px-5"}>
           Quick Log
+        </button>
+        <button onClick={() => setMode("form")} className={mode === "form" ? "btn-primary px-5" : "btn px-5"}>
+          Full Grade
         </button>
         <button onClick={() => setMode("json")} className={mode === "json" ? "btn-primary px-5" : "btn px-5"}>
           Paste JSON
         </button>
       </div>
 
-      {mode === "json" ? (
+      {mode === "form" ? (
+        <GradeForm />
+      ) : mode === "json" ? (
         <div className="card-glass p-6 space-y-3">
           <div className="section-title">IMPORT RUBRIC RECORDS</div>
           <p className="text-xs text-[var(--text-mid)]">
@@ -116,7 +122,7 @@ export function LogEntry() {
             value={json}
             onChange={(e) => setJson(e.target.value)}
             placeholder='[{ "task": "...", "taskType": "coding", "finalScore": 82, ... }]'
-            className="w-full h-48 rounded-xl bg-[#11141a] border border-white/10 p-3 text-sm font-mono focus:outline-none focus:border-[var(--cyan)]"
+            className="w-full h-48 rounded-xl bg-[var(--bg-elev)] border border-[var(--hairline)] p-3 text-sm font-mono focus:outline-none focus:border-[var(--cyan)]"
           />
           <div className="flex items-center gap-3">
             <button onClick={doImport} className="btn-primary px-6" disabled={!json.trim()}>
@@ -178,7 +184,7 @@ export function LogEntry() {
                       key={d}
                       onClick={() => setDifficulty(d as 1 | 2 | 3 | 4 | 5)}
                       className={`px-3 py-1.5 rounded-xl text-sm border transition-all ${
-                        difficulty === d ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10" : "border-white/10 text-[var(--text-dim)] hover:border-white/30"
+                        difficulty === d ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10" : "border-[var(--hairline)] text-[var(--text-dim)] hover:border-[var(--hairline-strong)]"
                       }`}
                     >
                       D{d}
@@ -204,7 +210,7 @@ export function LogEntry() {
                       onClick={() => setAssist(a.lvl)}
                       title={a.desc}
                       className={`px-3 py-1.5 rounded-xl text-xs border transition-all ${
-                        assist === a.lvl ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10" : "border-white/10 text-[var(--text-dim)] hover:border-white/30"
+                        assist === a.lvl ? "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10" : "border-[var(--hairline)] text-[var(--text-dim)] hover:border-[var(--hairline-strong)]"
                       }`}
                     >
                       A{a.lvl}
@@ -236,7 +242,7 @@ export function LogEntry() {
                     max={d.max}
                     value={subs[d.id]}
                     onChange={(e) => setSubs((prev) => ({ ...prev, [d.id]: Number(e.target.value) }))}
-                    className="flex-1 accent-[#00f9ff]"
+                    className="flex-1 accent-[var(--cyan)]"
                   />
                   <div className="w-14 text-right font-mono text-sm tabular-nums">
                     {subs[d.id]}
@@ -244,9 +250,9 @@ export function LogEntry() {
                   </div>
                 </div>
               ))}
-              <div className="flex items-center gap-3 pt-2 border-t border-white/10">
+              <div className="flex items-center gap-3 pt-2 border-t border-[var(--hairline)]">
                 <div className="w-44 text-sm text-[var(--text-mid)]">Task-specific score</div>
-                <input type="range" min={0} max={100} value={taskScore} onChange={(e) => setTaskScore(Number(e.target.value))} className="flex-1 accent-[#ff00aa]" />
+                <input type="range" min={0} max={100} value={taskScore} onChange={(e) => setTaskScore(Number(e.target.value))} className="flex-1 accent-[var(--magenta)]" />
                 <div className="w-14 text-right font-mono text-sm tabular-nums">{taskScore}</div>
               </div>
             </div>
@@ -269,7 +275,7 @@ export function LogEntry() {
                         })
                       }
                       className={`px-2.5 py-1 rounded-lg text-xs border transition-all ${
-                        on ? "border-[var(--orange)] text-[var(--orange)] bg-[var(--orange)]/10" : "border-white/10 text-[var(--text-dim)] hover:border-white/30"
+                        on ? "border-[var(--orange)] text-[var(--orange)] bg-[var(--orange)]/10" : "border-[var(--hairline)] text-[var(--text-dim)] hover:border-[var(--hairline-strong)]"
                       }`}
                     >
                       {t}
@@ -288,7 +294,7 @@ export function LogEntry() {
                 <div className={`text-6xl font-bold tracking-tighter ${band.cls}`}>{final}</div>
                 <div className={`text-sm mt-1 ${band.cls}`}>{band.verdict}</div>
               </div>
-              <div className="space-y-1.5 text-xs text-[var(--text-mid)] font-mono border-t border-white/10 pt-3">
+              <div className="space-y-1.5 text-xs text-[var(--text-mid)] font-mono border-t border-[var(--hairline)] pt-3">
                 <Row k="Universal (×0.6)" v={universal} />
                 <Row k="Task-specific (×0.4)" v={taskScore} />
                 <Row k="Raw" v={raw} />
@@ -310,7 +316,7 @@ export function LogEntry() {
 }
 
 const inputCls =
-  "w-full rounded-xl bg-[#11141a] border border-white/10 px-3 py-2 text-sm focus:outline-none focus:border-[var(--cyan)]";
+  "w-full rounded-xl bg-[var(--bg-elev)] border border-[var(--hairline)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--cyan)]";
 
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (

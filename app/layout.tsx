@@ -30,7 +30,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`} suppressHydrationWarning>
-      <body className="bg-[#0a0c10] text-[#e6e8eb] antialiased">
+      <head>
+        {/* Set the theme before first paint to avoid a flash. Reads localStorage
+            ('ls-theme': dark|light|system) or the OS preference. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('ls-theme');var d=(t&&t!=='system')?t:((window.matchMedia&&window.matchMedia('(prefers-color-scheme:light)').matches)?'light':'dark');document.documentElement.setAttribute('data-theme',d);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
+          }}
+        />
+      </head>
+      <body className="bg-[var(--bg)] text-[var(--text)] antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

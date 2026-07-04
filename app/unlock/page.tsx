@@ -30,7 +30,7 @@ export default function UnlockPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0c10] text-[#e6e8eb] px-6">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--text)] px-6">
       <form onSubmit={submit} className="card-glass p-8 w-full max-w-sm">
         <div className="text-2xl font-semibold tracking-[-1px]">Leave Sprint Twin</div>
         <div className="text-sm text-[var(--text-mid)] mt-1 mb-6">Enter your access token to continue.</div>
@@ -40,7 +40,7 @@ export default function UnlockPage() {
           onChange={(e) => setToken(e.target.value)}
           placeholder="Access token"
           autoFocus
-          className="w-full rounded-xl bg-[#11141a] border border-white/10 px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--cyan)]"
+          className="w-full rounded-xl bg-[var(--bg-elev)] border border-[var(--hairline)] px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--cyan)]"
         />
         {err && <div className="text-sm text-[var(--orange)] mt-2">{err}</div>}
         <button type="submit" disabled={busy || !token} className="btn-primary w-full mt-4 disabled:opacity-50">

@@ -7,13 +7,14 @@ import { Calendar } from "./components/sprint/Calendar";
 import { ProblemBank } from "./components/sprint/ProblemBank";
 import { SprintVelocityChart } from "./components/sprint/SprintVelocityChart";
 import { Rubric } from "./components/sprint/Rubric";
-import { RubricAnalytics } from "./components/sprint/RubricAnalytics";
+import { CompetencyDashboards } from "./components/sprint/competency/CompetencyDashboards";
 import { WeeklySchedule } from "./components/sprint/WeeklySchedule";
 import { WorkbenchModules } from "./components/sprint/WorkbenchModules";
 import { CodingBankTiers } from "./components/sprint/CodingBankTiers";
 import { FileDefense } from "./components/sprint/FileDefense";
 import { DataExport } from "./components/sprint/DataExport";
 import { QBank } from "./components/sprint/QBank";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { useSprintStore } from "@/lib/store";
 import { Target, TrendingUp, Calendar as CalendarIcon, BookOpen, BarChart3, SquareEqual, Gauge, CalendarRange, Wrench } from "lucide-react";
 
@@ -76,16 +77,17 @@ export default function LeaveSprintTwin() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[#0a0c10] text-[#e6e8eb]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       {/* Header */}
-      <div className="border-b border-white/10 bg-[#0a0c10]/95 backdrop-blur-xl sticky top-0 z-50">
+      <div className="border-b border-[var(--hairline)] bg-[var(--overlay)] backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div>
             <div className="font-semibold text-3xl tracking-[-2px]">Leave Sprint Twin</div>
             <div className="text-xs text-[var(--text-dim)] -mt-1">Day {selectedDay} of 29 • Local-first</div>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
+            <ThemeToggle />
             <div className="flex items-center gap-8 text-sm">
         {/* Overall Progress */}
         <div>
@@ -121,7 +123,7 @@ export default function LeaveSprintTwin() {
         </div>
 
         {/* Tabs */}
-        <div className="border-t border-white/10">
+        <div className="border-t border-[var(--hairline)]">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-1 h-12">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -132,8 +134,8 @@ export default function LeaveSprintTwin() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-5 py-2 rounded-2xl text-sm font-medium transition-all ${
                     isActive 
-                      ? "bg-white/5 text-white border border-white/10" 
-                      : "text-[var(--text-mid)] hover:text-white hover:bg-white/5"
+                      ? "bg-[var(--fill-subtle)] text-[var(--text)] border border-[var(--hairline)]" 
+                      : "text-[var(--text-mid)] hover:text-[var(--text)] hover:bg-[var(--fill-subtle)]"
                   }`}
                 >
                   <Icon size={16} />
@@ -151,7 +153,7 @@ export default function LeaveSprintTwin() {
         {activeTab === "schedule" && <WeeklySchedule />}
         {activeTab === "stages" && <StageProgression />}
         {activeTab === "analytics" && <SprintVelocityChart />}
-        {activeTab === "competency" && <RubricAnalytics />}
+        {activeTab === "competency" && <CompetencyDashboards />}
         {activeTab === "rubric" && <Rubric />}
         {activeTab === "qbank" && <QBank />}
         {activeTab === "calendar" && <Calendar />}

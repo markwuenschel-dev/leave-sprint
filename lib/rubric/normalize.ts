@@ -1,77 +1,113 @@
 /**
- * normaliseEntry — the single ingest path for every rubric record (Quick Log,
- * the Q-Bank "mastered" bridge, and JSON import). Ported from rNormaliseEntry.
+ * normaliseEntry — the single ingest path for every rubric record (manual form,
+ * Quick Log, the Q-Bank bridge, and JSON import). Produces the full v1.10 shape.
  *
- * Fixes the original's NaN bugs: `parseInt(x) ?? 0` never catches NaN and
- * `parseInt(x) || 0` collapses a legitimate 0. We use explicit guards here.
- *
- * Unknown keys on the raw record are preserved under `extra` so imported
- * old-format records round-trip losslessly.
+ * - Accepts `assessmentId` OR legacy `id` (mirrors both).
+ * - Migrates legacy boolean gates → Pass/Fail; passes through Pass/Partial/Fail.
+ * - Fills answerLevel / qualifyingDemonstratedLevel / demonstratedLevel from
+ *   derive.ts ONLY when the grader didn't supply them.
+ * - Preserves any unrecognised keys under `extra` for lossless round-trip.
  */
 
 import { RUBRIC_VERSION } from './referenceData';
 import { computeRaw, computeFinal, subTotal } from './scoring';
-import type { RubricEntry } from './types';
+import { deriveAnswerLevel, deriveQualifyingLevel, deriveDemonstratedLevel } from './derive';
+import type { RubricEntry, Gates, LevelScores, LevelVerdicts } from './types';
 
 function intOr(value: unknown, fallback: number): number {
   const n = parseInt(String(value), 10);
   return Number.isNaN(n) ? fallback : n;
 }
-
-function floatOrNull(value: unknown): number | null {
+function num(value: unknown): number | null {
   if (value === '' || value === null || value === undefined) return null;
-  const n = parseFloat(String(value));
+  const n = Number(value);
   return Number.isNaN(n) ? null : n;
 }
-
 function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-/** Every field name we model explicitly — anything else lands in `extra`. */
 const KNOWN_KEYS = new Set<string>([
-  'id', 'rubricVersion', 'date', 'task', 'taskType', 'domain',
-  'problemLevel', 'targetLevel', 'answerLevel', 'difficulty', 'difficultyAssignment', 'difficultyAttributeScore',
+  'id', 'assessmentId', 'rubricVersion', 'date', 'task', 'taskType', 'domain',
+  'problemLevel', 'targetLevel', 'answerLevel', 'qualifyingDemonstratedLevel', 'difficulty', 'difficultyAssignment', 'difficultyAttributeScore',
   'evidenceClass', 'autonomyConfidence', 'assistanceLevel',
   'primaryDomain', 'secondaryDomains', 'primaryRole', 'secondaryRoles',
-  'universalScore', 'taskSpecificScore', 'rawScore', 'cap', 'penalties', 'finalScore',
-  'universalSubScores', 'levelScores',
-  'demonstratedLevel', 'qualifyingEvidenceNote', 'mainReasonNextLevelNotReached', 'surviveProbing', 'confidence',
-  'gates', 'weaknessTags', 'strengths', 'weaknesses', 'nextTarget', 'quickLog',
-  'knowledgeGapTags', 'gapTypes', 'expectedElements', 'presentElements', 'missingElements', 'elementSource',
-  'probeReadiness', 'evidenceSource', 'retention', 'llmIndependence', 'roleRequirementCoverage',
-  'artifactReadiness', 'staleness', 'gapClosureStatus', 'priority', 'gapImpact', 'assessmentMode',
-  'calibration', 'retestPlan', 'roleReadinessRollup', 'proofStrength', 'antiInflationChecks',
-  'assessmentOutcome', 'conceptDiscovery',
+  'levelScores', 'levelVerdicts',
+  'universalScore', 'taskSpecificScore', 'rawScore', 'cap', 'penalties', 'finalScore', 'universalSubScores',
+  'demonstratedLevel', 'confidence', 'qualifyingEvidenceNote', 'mainReasonNextLevelNotReached', 'surviveProbing',
+  'gates', 'weaknessTags', 'knowledgeGapTags', 'gapTypes', 'strengths', 'weaknesses', 'nextTarget', 'quickLog',
+  'expectedElements', 'presentElements', 'missingElements', 'elementSource',
+  'problemName', 'platform', 'codingPattern', 'primaryDataStructure', 'compileStatus', 'testStatus', 'edgeCasesCovered', 'edgeCasesMissed',
   'sessionId', 'parentAssessmentId', 'attemptGroupId', 'attemptNumber', 'attemptType', 'priorAssessmentId',
-  'sourceFile', 'sourceItemId', 'coverageStatus', 'secondaryTaskSignals', 'problemName', 'platform',
-  'codingPattern', 'primaryDataStructure', 'compileStatus', 'testStatus', 'labelSetVersion', 'proposedNewTags',
-  'calibrationAnchors', 'scoreUncertainty', 'gapRecurrence', 'transferSignal', 'retestQueue',
-  'assessmentQuality', 'roleReadinessEvidenceFloor', 'recoveryBehavior', 'scoreLiftActions', 'trackerHealth',
+  'sourceFile', 'sourceItemId', 'coverageStatus', 'coverageNotes', 'secondaryTaskSignals', 'labelSetVersion',
+  'assessmentOutcome', 'conceptDiscovery', 'probeReadiness', 'evidenceSource', 'retention', 'llmIndependence',
+  'roleRequirementCoverage', 'artifactReadiness', 'staleness', 'gapClosureStatus', 'priority', 'gapImpact',
+  'assessmentMode', 'calibration', 'retestPlan', 'roleReadinessRollup', 'proofStrength', 'antiInflationChecks',
+  'calibrationAnchors', 'scoreUncertainty', 'gapRecurrence', 'transferSignal', 'retestQueue', 'assessmentQuality',
+  'roleReadinessEvidenceFloor', 'recoveryBehavior', 'scoreLiftActions', 'trackerHealth', 'proposedNewTags',
   'extra',
 ]);
 
 type RawEntry = Record<string, unknown>;
 
+function migrateGates(raw: unknown): Gates {
+  const out: Gates = {};
+  if (raw && typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      if (v === true) out[k as keyof Gates] = 'Pass';
+      else if (v === false) out[k as keyof Gates] = 'Fail';
+      else if (v === 'Pass' || v === 'Partial' || v === 'Fail') out[k as keyof Gates] = v;
+    }
+  }
+  return out;
+}
+
+function readLevelScores(raw: unknown): LevelScores {
+  const r = (raw as Record<string, unknown>) || {};
+  return { L1: num(r.L1), L2: num(r.L2), L3: num(r.L3) };
+}
+function readLevelVerdicts(raw: unknown): LevelVerdicts {
+  const r = (raw as Record<string, unknown>) || {};
+  const v = (x: unknown) => (x === 'Pass' || x === 'Borderline' || x === 'Fail' ? x : null);
+  return { L1: v(r.L1), L2: v(r.L2), L3: v(r.L3) };
+}
+
 export function normaliseEntry(input: Partial<RubricEntry> | RawEntry): RubricEntry {
   const raw = input as RawEntry;
+  const str = (v: unknown, f = ''): string => (v === undefined || v === null ? f : String(v));
+  const arr = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : []);
+  const obj = <T>(v: unknown): T | null => (v && typeof v === 'object' ? (v as T) : null);
+
+  const aid = str(raw.assessmentId) || str(raw.id) || genId();
 
   const subs = (raw.universalSubScores as RubricEntry['universalSubScores']) || null;
   const subsTotal = subs ? subTotal(subs) : null;
-  const uParsed = parseFloat(String(raw.universalScore));
-  const u = !Number.isNaN(uParsed) ? uParsed : subsTotal !== null ? subsTotal : 0;
-  const tParsed = parseFloat(String(raw.taskSpecificScore));
-  const t = !Number.isNaN(tParsed) ? tParsed : 0;
-
+  const uParsed = Number(raw.universalScore);
+  const universalScore = !Number.isNaN(uParsed) && raw.universalScore !== undefined && raw.universalScore !== null
+    ? uParsed
+    : subsTotal ?? 0;
+  const taskSpecificScore = num(raw.taskSpecificScore) ?? 0;
   const cap = raw.cap !== undefined && raw.cap !== null ? Number(raw.cap) : null;
   const penalties = Number(raw.penalties) || 0;
-  const rawScore = raw.rawScore !== undefined ? Number(raw.rawScore) : computeRaw(u, t);
+  const rawScore = raw.rawScore !== undefined ? Number(raw.rawScore) : computeRaw(universalScore, taskSpecificScore);
   const finalScore = raw.finalScore !== undefined ? Number(raw.finalScore) : computeFinal(rawScore, cap, penalties);
 
-  const str = (v: unknown, fallback = ''): string => (v === undefined || v === null ? fallback : String(v));
-  const arr = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : []);
+  const levelScores = readLevelScores(raw.levelScores);
+  const gates = migrateGates(raw.gates);
+  const difficulty = intOr(raw.difficulty, 0) as RubricEntry['difficulty'];
+  const assistanceLevel = intOr(raw.assistanceLevel, 0) as RubricEntry['assistanceLevel'];
+  const problemLevel = (str(raw.problemLevel) || str(raw.targetLevel)) as RubricEntry['problemLevel'];
 
-  // Collect any unrecognized keys for lossless round-trip.
+  // Prefer grader-supplied; else derive (§3.3/§14).
+  let answerLevel = str(raw.answerLevel) as RubricEntry['answerLevel'];
+  if (!answerLevel) answerLevel = deriveAnswerLevel(levelScores, gates, subs);
+  let qualifyingDemonstratedLevel = str(raw.qualifyingDemonstratedLevel) as RubricEntry['qualifyingDemonstratedLevel'];
+  if (!qualifyingDemonstratedLevel) {
+    qualifyingDemonstratedLevel = deriveQualifyingLevel(answerLevel, problemLevel, difficulty, assistanceLevel);
+  }
+  let demonstratedLevel = str(raw.demonstratedLevel) as RubricEntry['demonstratedLevel'];
+  if (!demonstratedLevel) demonstratedLevel = deriveDemonstratedLevel(levelScores, qualifyingDemonstratedLevel);
+
   const priorExtra = (raw.extra as Record<string, unknown>) || {};
   const extra: Record<string, unknown> = { ...priorExtra };
   for (const key of Object.keys(raw)) {
@@ -79,128 +115,120 @@ export function normaliseEntry(input: Partial<RubricEntry> | RawEntry): RubricEn
   }
 
   const entry: RubricEntry = {
-    /* Core */
-    id: str(raw.id) || genId(),
+    id: aid,
+    assessmentId: aid,
     rubricVersion: str(raw.rubricVersion) || RUBRIC_VERSION,
     date: str(raw.date) || new Date().toISOString().slice(0, 10),
     task: str(raw.task),
     taskType: str(raw.taskType) as RubricEntry['taskType'],
     domain: str(raw.domain),
 
-    /* Classification */
-    problemLevel: (str(raw.problemLevel) || str(raw.targetLevel)) as RubricEntry['problemLevel'],
-    targetLevel: (str(raw.targetLevel) || str(raw.problemLevel)) as RubricEntry['targetLevel'],
-    answerLevel: str(raw.answerLevel) as RubricEntry['answerLevel'],
-    difficulty: intOr(raw.difficulty, 0) as RubricEntry['difficulty'],
+    problemLevel,
+    targetLevel: (str(raw.targetLevel) || problemLevel) as RubricEntry['targetLevel'],
+    answerLevel,
+    qualifyingDemonstratedLevel,
+    difficulty,
     difficultyAssignment: str(raw.difficultyAssignment),
-    difficultyAttributeScore: floatOrNull(raw.difficultyAttributeScore),
+    difficultyAttributeScore: num(raw.difficultyAttributeScore),
 
-    /* Evidence class */
     evidenceClass: (str(raw.evidenceClass) || 'prospective') as RubricEntry['evidenceClass'],
     autonomyConfidence: str(raw.autonomyConfidence),
-    assistanceLevel: intOr(raw.assistanceLevel, 0) as RubricEntry['assistanceLevel'],
+    assistanceLevel,
 
-    /* Domains and roles */
     primaryDomain: str(raw.primaryDomain) || str(raw.domain),
     secondaryDomains: arr(raw.secondaryDomains),
     primaryRole: str(raw.primaryRole) as RubricEntry['primaryRole'],
     secondaryRoles: arr(raw.secondaryRoles) as RubricEntry['secondaryRoles'],
 
-    /* Scores */
-    universalScore: u,
-    taskSpecificScore: t,
+    levelScores,
+    levelVerdicts: readLevelVerdicts(raw.levelVerdicts),
+
+    universalScore,
+    taskSpecificScore,
     rawScore,
     cap,
     penalties,
     finalScore,
     universalSubScores: subs,
-    levelScores: (raw.levelScores as RubricEntry['levelScores']) || { L1: null, L2: null, L3: null },
 
-    /* Verdict */
-    demonstratedLevel: str(raw.demonstratedLevel),
+    demonstratedLevel,
+    confidence: str(raw.confidence) as RubricEntry['confidence'],
     qualifyingEvidenceNote: str(raw.qualifyingEvidenceNote),
     mainReasonNextLevelNotReached: str(raw.mainReasonNextLevelNotReached),
     surviveProbing: str(raw.surviveProbing),
-    confidence: str(raw.confidence),
 
-    /* Gates and tags */
-    gates: (raw.gates as RubricEntry['gates']) || {},
+    gates,
     weaknessTags: arr(raw.weaknessTags),
+    knowledgeGapTags: arr(raw.knowledgeGapTags),
+    gapTypes: arr(raw.gapTypes),
     strengths: str(raw.strengths),
     weaknesses: str(raw.weaknesses),
     nextTarget: str(raw.nextTarget),
     quickLog: Boolean(raw.quickLog),
 
-    /* §17 Diagnostic Progress Model — v1.9 */
-    knowledgeGapTags: arr(raw.knowledgeGapTags),
-    gapTypes: arr(raw.gapTypes),
     expectedElements: arr(raw.expectedElements),
     presentElements: arr(raw.presentElements),
     missingElements: arr(raw.missingElements),
     elementSource: str(raw.elementSource),
-    probeReadiness: raw.probeReadiness ?? null,
-    evidenceSource: Array.isArray(raw.evidenceSource)
-      ? (raw.evidenceSource as string[])
-      : raw.evidenceSource
-        ? [String(raw.evidenceSource)]
-        : [],
-    retention: raw.retention ?? null,
-    llmIndependence: raw.llmIndependence ?? null,
-    roleRequirementCoverage: raw.roleRequirementCoverage ?? null,
-    artifactReadiness: raw.artifactReadiness ?? null,
-    staleness: raw.staleness ?? null,
-    gapClosureStatus: raw.gapClosureStatus ?? null,
-    priority: raw.priority ?? null,
-    gapImpact: raw.gapImpact ?? null,
-    assessmentMode: raw.assessmentMode ?? null,
-    calibration: raw.calibration ?? null,
-    retestPlan: raw.retestPlan ?? null,
-    roleReadinessRollup: raw.roleReadinessRollup ?? null,
-    proofStrength: raw.proofStrength ?? null,
-    antiInflationChecks: raw.antiInflationChecks ?? null,
 
-    /* §17 Diagnostic Progress Model — v1.9.x */
-    assessmentOutcome: raw.assessmentOutcome ?? null,
-    conceptDiscovery: raw.conceptDiscovery ?? null,
-
-    /* §16 Attempt tracking — v1.9.3+ */
-    sessionId: (raw.sessionId as string) ?? null,
-    parentAssessmentId: (raw.parentAssessmentId as string) ?? null,
-    attemptGroupId: (raw.attemptGroupId as string) ?? null,
-    attemptNumber: raw.attemptNumber != null ? Number(raw.attemptNumber) : null,
-    attemptType: str(raw.attemptType) || 'initial',
-    priorAssessmentId: (raw.priorAssessmentId as string) ?? null,
-    sourceFile: (raw.sourceFile as string) ?? null,
-    sourceItemId: (raw.sourceItemId as string) ?? null,
-    coverageStatus: (raw.coverageStatus as string) ?? null,
-    secondaryTaskSignals: arr(raw.secondaryTaskSignals),
     problemName: (raw.problemName as string) ?? null,
     platform: (raw.platform as string) ?? null,
     codingPattern: (raw.codingPattern as string) ?? null,
     primaryDataStructure: (raw.primaryDataStructure as string) ?? null,
-    compileStatus: (raw.compileStatus as string) ?? null,
-    testStatus: (raw.testStatus as string) ?? null,
-    labelSetVersion: (raw.labelSetVersion as string) ?? null,
-    proposedNewTags: arr(raw.proposedNewTags),
+    compileStatus: (raw.compileStatus as RubricEntry['compileStatus']) ?? null,
+    testStatus: (raw.testStatus as RubricEntry['testStatus']) ?? null,
+    edgeCasesCovered: arr(raw.edgeCasesCovered),
+    edgeCasesMissed: arr(raw.edgeCasesMissed),
 
-    /* §17 Decision quality — v1.10 */
-    calibrationAnchors: arr(raw.calibrationAnchors),
-    scoreUncertainty: raw.scoreUncertainty ?? null,
-    gapRecurrence: raw.gapRecurrence ?? null,
-    transferSignal: raw.transferSignal ?? null,
-    retestQueue: raw.retestQueue ?? null,
-    assessmentQuality: raw.assessmentQuality ?? null,
-    roleReadinessEvidenceFloor: raw.roleReadinessEvidenceFloor ?? null,
-    recoveryBehavior: raw.recoveryBehavior ?? null,
-    scoreLiftActions: raw.scoreLiftActions ?? null,
-    trackerHealth: raw.trackerHealth ?? null,
+    sessionId: (raw.sessionId as string) ?? null,
+    parentAssessmentId: (raw.parentAssessmentId as string) ?? null,
+    attemptGroupId: (raw.attemptGroupId as string) ?? null,
+    attemptNumber: raw.attemptNumber != null ? Number(raw.attemptNumber) : null,
+    attemptType: (str(raw.attemptType) || 'initial') as RubricEntry['attemptType'],
+    priorAssessmentId: (raw.priorAssessmentId as string) ?? null,
+    sourceFile: (raw.sourceFile as string) ?? null,
+    sourceItemId: (raw.sourceItemId as string) ?? null,
+    coverageStatus: (str(raw.coverageStatus) || 'included') as RubricEntry['coverageStatus'],
+    coverageNotes: str(raw.coverageNotes),
+    secondaryTaskSignals: arr(raw.secondaryTaskSignals),
+    labelSetVersion: (raw.labelSetVersion as string) ?? null,
+
+    assessmentOutcome: (raw.assessmentOutcome as RubricEntry['assessmentOutcome']) ?? null,
+    conceptDiscovery: obj(raw.conceptDiscovery),
+    probeReadiness: obj(raw.probeReadiness),
+    evidenceSource: arr(raw.evidenceSource),
+    retention: obj(raw.retention),
+    llmIndependence: obj(raw.llmIndependence),
+    roleRequirementCoverage: obj(raw.roleRequirementCoverage),
+    artifactReadiness: obj(raw.artifactReadiness),
+    staleness: obj(raw.staleness),
+    gapClosureStatus: obj(raw.gapClosureStatus),
+    priority: obj(raw.priority),
+    gapImpact: obj(raw.gapImpact),
+    assessmentMode: obj(raw.assessmentMode),
+    calibration: obj(raw.calibration),
+    retestPlan: obj(raw.retestPlan),
+    roleReadinessRollup: obj(raw.roleReadinessRollup),
+    proofStrength: obj(raw.proofStrength),
+    antiInflationChecks: obj(raw.antiInflationChecks),
+    calibrationAnchors: Array.isArray(raw.calibrationAnchors) ? (raw.calibrationAnchors as RubricEntry['calibrationAnchors']) : [],
+    scoreUncertainty: obj(raw.scoreUncertainty),
+    gapRecurrence: obj(raw.gapRecurrence),
+    transferSignal: obj(raw.transferSignal),
+    retestQueue: obj(raw.retestQueue),
+    assessmentQuality: obj(raw.assessmentQuality),
+    roleReadinessEvidenceFloor: obj(raw.roleReadinessEvidenceFloor),
+    recoveryBehavior: obj(raw.recoveryBehavior),
+    scoreLiftActions: obj(raw.scoreLiftActions),
+    trackerHealth: obj(raw.trackerHealth),
+    proposedNewTags: Array.isArray(raw.proposedNewTags) ? (raw.proposedNewTags as RubricEntry['proposedNewTags']) : [],
   };
 
   if (Object.keys(extra).length) entry.extra = extra;
   return entry;
 }
 
-/** Flatten `extra` back to top level so an exported record matches the old schema. */
+/** Flatten `extra` back to top level so an exported record matches the schema. */
 export function flattenForExport(entry: RubricEntry): Record<string, unknown> {
   const { extra, ...rest } = entry;
   return { ...rest, ...(extra || {}) };

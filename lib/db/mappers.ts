@@ -24,7 +24,7 @@ export function rubricEntryToRow(e: RubricEntry): RubricRow {
     if (!(PROMOTED as readonly string[]).includes(k)) diagnostic[k] = v;
   }
   return {
-    id: e.id,
+    id: e.assessmentId || e.id,
     rubricVersion: e.rubricVersion ?? null,
     date: e.date,
     task: e.task ?? null,

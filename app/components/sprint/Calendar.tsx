@@ -60,7 +60,7 @@ export function Calendar() {
               onClick={() => setSelectedDay(day)}
               className={`
                 group relative flex flex-col rounded-2xl border p-3 text-left transition-all min-h-[92px]
-                ${isSelected ? "ring-1 ring-[var(--cyan)] border-[var(--cyan)]/50" : "border-white/10 hover:border-white/30"}
+                ${isSelected ? "ring-1 ring-[var(--cyan)] border-[var(--cyan)]/50" : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"}
                 ${status === "full" ? "bg-[var(--done)]/5 border-[var(--done)]/30" : ""}
                 ${status === "partial" ? "bg-[var(--cyan)]/5 border-[var(--cyan)]/30" : ""}
                 ${status === "at-risk" ? "bg-[var(--yellow)]/5 border-[var(--yellow)]/30" : ""}
@@ -86,7 +86,7 @@ export function Calendar() {
                       className={`h-1.5 w-1.5 rounded-full transition-all ${
                         dayData?.rhythm[key] 
                           ? "bg-[var(--done)]" 
-                          : "bg-white/20 group-hover:bg-white/40"
+                          : "bg-[var(--fill-strong)] group-hover:bg-[var(--fill-strong)]"
                       }`}
                     />
                   ))}
@@ -118,7 +118,7 @@ export function Calendar() {
 
               <button
                 onClick={() => setSelectedDay(null)}
-                className="text-[var(--text-dim)] hover:text-white p-1"
+                className="text-[var(--text-dim)] hover:text-[var(--text)] p-1"
               >
                 <X size={18} />
               </button>
@@ -137,7 +137,7 @@ export function Calendar() {
                       className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm transition-all ${
                         checked 
                           ? "border-[var(--done)]/40 bg-[var(--done)]/5" 
-                          : "border-white/10 hover:border-white/30"
+                          : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function Calendar() {
                       {checked ? (
                         <Check className="h-4 w-4 text-[var(--done)]" />
                       ) : (
-                        <div className="h-4 w-4 rounded border border-white/30" />
+                        <div className="h-4 w-4 rounded border border-[var(--hairline-strong)]" />
                       )}
                     </button>
                   );
@@ -158,7 +158,7 @@ export function Calendar() {
             {selected.focusNote && (
               <div className="mb-6">
                 <div className="text-xs uppercase tracking-widest text-[var(--text-dim)] mb-2">FOCUS NOTE</div>
-                <div className="text-sm text-[var(--text-mid)] bg-white/5 rounded-2xl p-4">
+                <div className="text-sm text-[var(--text-mid)] bg-[var(--fill-subtle)] rounded-2xl p-4">
                   {selected.focusNote}
                 </div>
               </div>

@@ -21,7 +21,7 @@ function Table({ headers, rows }: { headers: string[]; rows: (string | number)[]
         </thead>
         <tbody className="align-top">
           {rows.map((r, i) => (
-            <tr key={i} className="border-t border-white/5">
+            <tr key={i} className="border-t border-[var(--hairline)]">
               {r.map((c, j) => (
                 <td key={j} className={`py-2 pr-4 ${j === 0 ? "text-[var(--text)] font-medium whitespace-nowrap" : "text-[var(--text-mid)]"}`}>
                   {c}

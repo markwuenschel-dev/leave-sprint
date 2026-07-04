@@ -145,7 +145,7 @@ export function QBank() {
                 key={t}
                 onClick={() => setQbankPos(t, 0)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl text-xs font-medium border transition-all ${
-                  active ? "border-white/20 bg-white/5 text-white" : "border-white/10 text-[var(--text-dim)] hover:text-white"
+                  active ? "border-[var(--hairline-strong)] bg-[var(--fill-subtle)] text-[var(--text)]" : "border-[var(--hairline)] text-[var(--text-dim)] hover:text-[var(--text)]"
                 }`}
                 style={active ? { color: TRACK_COLOR[t] } : undefined}
               >
@@ -168,7 +168,7 @@ export function QBank() {
           <span className="text-[10px] font-mono text-[var(--text-mid)]">{Math.round((counts(track).mastered / counts(track).total) * 100)}%</span>
         </ProgressRing>
         <div className="text-sm text-[var(--text-mid)]">
-          <span className="font-semibold text-white">{QBANK[track].label}</span> — question {idx + 1} of {questions.length}
+          <span className="font-semibold text-[var(--text)]">{QBANK[track].label}</span> — question {idx + 1} of {questions.length}
         </div>
       </div>
 

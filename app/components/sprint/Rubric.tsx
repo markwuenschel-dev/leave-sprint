@@ -29,7 +29,7 @@ export function Rubric() {
             {count} assessment{count === 1 ? "" : "s"} logged · {passes} passing (≥70)
           </div>
         </div>
-        <div className="flex gap-1 bg-[#11141a] rounded-2xl p-1 border border-white/10">
+        <div className="flex gap-1 bg-[var(--bg-elev)] rounded-2xl p-1 border border-[var(--hairline)]">
           {SUBTABS.map((t) => {
             const Icon = t.icon;
             const active = sub === t.id;
@@ -38,7 +38,7 @@ export function Rubric() {
                 key={t.id}
                 onClick={() => setSub(t.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  active ? "bg-white/5 text-white" : "text-[var(--text-dim)] hover:text-white"
+                  active ? "bg-[var(--fill-subtle)] text-[var(--text)]" : "text-[var(--text-dim)] hover:text-[var(--text)]"
                 }`}
               >
                 <Icon size={15} />

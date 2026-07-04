@@ -10,7 +10,20 @@ import type { LevelId, RubricEntry, TaskType } from './types';
 import { SPRINT_START, getDateForDay } from '../types';
 
 const SPRINT_DAYS = 29;
-const PASS = 70;
+
+const RANK: Record<LevelId, number> = { L1: 1, L2: 2, L3: 3 };
+
+/**
+ * An entry provides qualifying evidence at `lvl` when its qualifying demonstrated
+ * level reaches `lvl` (§3.3) and its Correctness gate is not a Fail. This replaces
+ * the old finalScore≥70 heuristic with the real three-score model.
+ */
+function qualifiesAt(e: RubricEntry, lvl: LevelId): boolean {
+  const q = e.qualifyingDemonstratedLevel;
+  if (!q || !(q in RANK)) return false;
+  if (RANK[q as LevelId] < RANK[lvl]) return false;
+  return e.gates?.Correctness !== 'Fail';
+}
 
 /** Total required qualifying evidence slots for a level. */
 export function requiredSlots(lvl: LevelId): number {
@@ -35,7 +48,7 @@ export function evidenceBurndown(entries: RubricEntry[], lvl: LevelId): (number 
         (e) =>
           e.date <= cutoff &&
           e.taskType === req.type &&
-          e.finalScore >= PASS &&
+          qualifiesAt(e, lvl) &&
           (req.maxAssist === undefined || e.assistanceLevel <= req.maxAssist) &&
           (req.minDiff === undefined || e.difficulty >= req.minDiff),
       ).length;
@@ -76,19 +89,19 @@ export function countPromoEvidence(entries: RubricEntry[], lvl: LevelId): PromoR
     const all = entries.filter((e) => e.taskType === req.type);
     const q = all.filter(
       (e) =>
-        e.finalScore >= PASS &&
+        qualifiesAt(e, lvl) &&
         (req.maxAssist === undefined || e.assistanceLevel <= req.maxAssist) &&
         (req.minDiff === undefined || e.difficulty >= req.minDiff),
     );
     const reasons: string[] = [];
-    const below70 = all.filter((e) => e.finalScore < PASS).length;
+    const notQualifying = all.filter((e) => !qualifiesAt(e, lvl)).length;
     const highAssist = req.maxAssist !== undefined
-      ? all.filter((e) => e.finalScore >= PASS && e.assistanceLevel > req.maxAssist!).length
+      ? all.filter((e) => qualifiesAt(e, lvl) && e.assistanceLevel > req.maxAssist!).length
       : 0;
     const lowDiff = req.minDiff !== undefined
-      ? all.filter((e) => e.finalScore >= PASS && e.difficulty < req.minDiff!).length
+      ? all.filter((e) => qualifiesAt(e, lvl) && e.difficulty < req.minDiff!).length
       : 0;
-    if (below70) reasons.push(`${below70} below 70`);
+    if (notQualifying) reasons.push(`${notQualifying} not yet ${lvl}`);
     if (highAssist) reasons.push(`${highAssist} A>${req.maxAssist}`);
     if (lowDiff) reasons.push(`${lowDiff} D<${req.minDiff}`);
     return { ...req, count: q.length, total: all.length, met: q.length >= req.min, reasons };
@@ -129,7 +142,7 @@ export function nextRecommended(entries: RubricEntry[], today: Date = new Date()
       const q = entries.filter(
         (e) =>
           e.taskType === req.type &&
-          e.finalScore >= PASS &&
+          qualifiesAt(e, lvl) &&
           (req.maxAssist === undefined || (e.assistanceLevel ?? 0) <= req.maxAssist) &&
           (req.minDiff === undefined || (e.difficulty ?? 0) >= req.minDiff),
       ).length;
@@ -141,7 +154,7 @@ export function nextRecommended(entries: RubricEntry[], today: Date = new Date()
         remaining,
         paceNeeded: remaining / daysLeft,
         totalForType: entries.filter((e) => e.taskType === req.type).length,
-        failedForType: entries.filter((e) => e.taskType === req.type && e.finalScore < PASS).length,
+        failedForType: entries.filter((e) => e.taskType === req.type && !qualifiesAt(e, lvl)).length,
       });
     });
   });
@@ -165,13 +178,13 @@ export function nextRecommended(entries: RubricEntry[], today: Date = new Date()
   let action: string;
   let reason: string;
   if (top.failedForType > 0 && top.totalForType > 0) {
-    action = `Score ≥70 on ${top.remaining} more ${label} attempt${plural}${constraintStr}`;
-    reason = `You have ${top.failedForType} ${label} attempt${top.failedForType > 1 ? 's' : ''} below 70.`;
+    action = `Reach qualifying ${top.lvl} on ${top.remaining} more ${label} attempt${plural}${constraintStr}`;
+    reason = `${top.failedForType} ${label} attempt${top.failedForType > 1 ? 's' : ''} not yet at ${top.lvl}.`;
   } else if (top.totalForType === 0) {
-    action = `Log ${top.remaining} ${label} attempt${plural}${constraintStr} scoring ≥70`;
+    action = `Log ${top.remaining} ${top.lvl}-qualifying ${label} attempt${plural}${constraintStr}`;
     reason = `No ${label} attempts logged yet.`;
   } else {
-    action = `Log ${top.remaining} more passing ${label} attempt${plural}${constraintStr}`;
+    action = `Log ${top.remaining} more ${top.lvl}-qualifying ${label} attempt${plural}${constraintStr}`;
     reason = `${top.totalForType - top.failedForType} qualifying so far, need ${req.min}.`;
   }
 

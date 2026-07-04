@@ -69,7 +69,7 @@ export function ProblemBank() {
   }, [problems, search, tierFilter, statusFilter]);
 
   const statusColors: Record<ProblemStatus, string> = {
-    "not-started": "border-white/20 text-[var(--text-dim)]",
+    "not-started": "border-[var(--hairline-strong)] text-[var(--text-dim)]",
     practicing: "border-[var(--cyan)] text-[var(--cyan)] bg-[var(--cyan)]/10",
     solid: "border-[var(--done)] text-[var(--done)] bg-[var(--done)]/10",
   };
@@ -92,11 +92,11 @@ export function ProblemBank() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Semantic search (patterns, titles, concepts)..."
-            className="w-full rounded-2xl border border-white/10 bg-[#11141a] pl-11 py-3 text-sm placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--cyan)]/50"
+            className="w-full rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] pl-11 py-3 text-sm placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--cyan)]/50"
           />
         </div>
 
-        <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value as any)} className="rounded-2xl border border-white/10 bg-[#11141a] px-4 text-sm">
+        <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value as any)} className="rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 text-sm">
           <option value="all">All Tiers</option>
           <option value="A">Tier A</option>
           <option value="B">Tier B</option>
@@ -104,7 +104,7 @@ export function ProblemBank() {
           <option value="D">Tier D</option>
         </select>
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="rounded-2xl border border-white/10 bg-[#11141a] px-4 text-sm">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 text-sm">
           <option value="all">All Status</option>
           <option value="not-started">Not Started</option>
           <option value="practicing">Practicing</option>
@@ -124,10 +124,10 @@ export function ProblemBank() {
           const score = (problem as any)._score;
 
           return (
-            <div key={problem.id} className="group flex items-center justify-between gap-4 rounded-3xl border border-white/10 bg-[#161a22] p-5 hover:border-white/20 transition-all">
+            <div key={problem.id} className="group flex items-center justify-between gap-4 rounded-3xl border border-[var(--hairline)] bg-[var(--surface)] p-5 hover:border-[var(--hairline-strong)] transition-all">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3">
-                  <div className="font-mono text-xs px-2.5 py-0.5 rounded bg-white/5 text-[var(--text-dim)] border border-white/10">
+                  <div className="font-mono text-xs px-2.5 py-0.5 rounded bg-[var(--fill-subtle)] text-[var(--text-dim)] border border-[var(--hairline)]">
                     {problem.tier}
                   </div>
                   <div className="font-semibold text-[15px] tracking-tight">
@@ -155,7 +155,7 @@ export function ProblemBank() {
                       key={status}
                       onClick={() => updateProblemStatus(problem.id, status)}
                       className={`px-3 py-1.5 rounded-2xl text-xs border transition-all ${
-                        problem.status === status ? "border-[var(--cyan)] text-[var(--cyan)]" : "border-white/10 text-[var(--text-dim)] hover:border-white/30"
+                        problem.status === status ? "border-[var(--cyan)] text-[var(--cyan)]" : "border-[var(--hairline)] text-[var(--text-dim)] hover:border-[var(--hairline-strong)]"
                       }`}
                     >
                       {status === "not-started" ? "NS" : status === "practicing" ? "PR" : "SOLID"}

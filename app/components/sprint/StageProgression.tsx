@@ -51,7 +51,7 @@ export function StageProgression() {
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-3">
                   <div className="font-semibold text-lg tracking-tight">{phase}</div>
-                  <div className="text-xs px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[var(--text-dim)]">
+                  <div className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--fill-subtle)] border border-[var(--hairline)] text-[var(--text-dim)]">
                     {phaseDone} / {phaseStages.length}
                   </div>
                 </div>
@@ -68,7 +68,7 @@ export function StageProgression() {
                       className={`group flex items-center justify-between gap-4 rounded-3xl border p-5 transition-all ${
                         isDone 
                           ? "border-[var(--done)]/30 bg-[var(--done)]/5" 
-                          : "border-white/10 hover:border-white/20 bg-[#161a22]"
+                          : "border-[var(--hairline)] hover:border-[var(--hairline-strong)] bg-[var(--surface)]"
                       }`}
                     >
                       <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -76,8 +76,8 @@ export function StageProgression() {
                           onClick={() => (isDone ? unmarkStage(stage.id) : markStageDone(stage.id))}
                           className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm transition-all ${
                             isDone 
-                              ? "bg-[var(--done)] text-[#0a0c10] border-[var(--done)]" 
-                              : "border-white/20 hover:border-[var(--cyan)] hover:text-[var(--cyan)]"
+                              ? "bg-[var(--done)] text-[var(--bg)] border-[var(--done)]" 
+                              : "border-[var(--hairline-strong)] hover:border-[var(--cyan)] hover:text-[var(--cyan)]"
                           }`}
                         >
                           {isDone ? <Check size={14} /> : <span className="font-mono text-xs">{stage.id}</span>}
@@ -92,7 +92,7 @@ export function StageProgression() {
                               {stage.tags.map((tag) => (
                                 <span 
                                   key={tag} 
-                                  className="text-[10px] px-2 py-px rounded bg-white/5 text-[var(--text-dim)] border border-white/10"
+                                  className="text-[10px] px-2 py-px rounded bg-[var(--fill-subtle)] text-[var(--text-dim)] border border-[var(--hairline)]"
                                 >
                                   {tag}
                                 </span>
@@ -115,7 +115,7 @@ export function StageProgression() {
                           className={`rounded-2xl px-4 py-2 text-xs font-medium border transition-all ${
                             isDone 
                               ? "border-[var(--done)] text-[var(--done)] hover:bg-[var(--done)]/10" 
-                              : "border-white/10 hover:border-[var(--cyan)] hover:text-[var(--cyan)]"
+                              : "border-[var(--hairline)] hover:border-[var(--cyan)] hover:text-[var(--cyan)]"
                           }`}
                         >
                           {isDone ? "DONE" : "MARK DONE"}
