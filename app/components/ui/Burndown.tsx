@@ -13,6 +13,12 @@ export interface BurndownSeries {
   label?: string;
 }
 
+export interface BurndownMarker {
+  index: number;
+  label: string;
+  color?: string;
+}
+
 interface BurndownProps {
   series: BurndownSeries[];
   maxY: number;
@@ -20,9 +26,10 @@ interface BurndownProps {
   height?: number;
   todayIndex?: number;
   xLabels?: string[];
+  markers?: BurndownMarker[];
 }
 
-export function Burndown({ series, maxY, width = 620, height = 200, todayIndex, xLabels }: BurndownProps) {
+export function Burndown({ series, maxY, width = 620, height = 200, todayIndex, xLabels, markers }: BurndownProps) {
   const pad = { top: 16, right: 16, bottom: 26, left: 32 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
@@ -61,6 +68,15 @@ export function Burndown({ series, maxY, width = 620, height = 200, todayIndex, 
       {todayIndex !== undefined && todayIndex >= 0 && (
         <line x1={x(todayIndex)} y1={pad.top} x2={x(todayIndex)} y2={pad.top + plotH} stroke="var(--magenta)" strokeWidth={1} strokeDasharray="3 3" opacity={0.7} />
       )}
+
+      {markers?.map((m, i) => (
+        <g key={`m${i}`}>
+          <line x1={x(m.index)} y1={pad.top} x2={x(m.index)} y2={pad.top + plotH} stroke={m.color ?? "var(--text-dim)"} strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
+          <text x={x(m.index)} y={pad.top - 4} textAnchor="middle" fontSize={8} fill={m.color ?? "var(--text-dim)"} className="font-mono">
+            {m.label}
+          </text>
+        </g>
+      ))}
 
       {series.map((s, i) => (
         <path key={i} d={pathFor(s.points)} fill="none" stroke={s.color} strokeWidth={2} strokeDasharray={s.dashed ? "5 4" : undefined} strokeLinejoin="round" strokeLinecap="round" />

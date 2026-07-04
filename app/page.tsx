@@ -5,7 +5,8 @@ import { TodayRhythm } from "./components/sprint/TodayRhythm";
 import { StageProgression } from "./components/sprint/StageProgression";
 import { Calendar } from "./components/sprint/Calendar";
 import { ProblemBank } from "./components/sprint/ProblemBank";
-import { SprintVelocityChart } from "./components/sprint/SprintVelocityChart";
+import { VelocityDashboard } from "./components/sprint/velocity/VelocityDashboard";
+import { clampedSprintDay } from "@/lib/velocity";
 import { Rubric } from "./components/sprint/Rubric";
 import { CompetencyDashboards } from "./components/sprint/competency/CompetencyDashboards";
 import { WeeklySchedule } from "./components/sprint/WeeklySchedule";
@@ -115,7 +116,7 @@ export default function LeaveSprintTwin() {
         <div>
           <div className="text-[10px] text-[var(--text-dim)]">VELOCITY</div>
           <div className="font-mono text-xl font-semibold tabular-nums text-[var(--cyan)]">
-            {(daysDone / Math.max(1, new Date().getDate() - 16)).toFixed(1)} <span className="text-xs text-[var(--text-dim)]">/day</span>
+            {(daysDone / clampedSprintDay()).toFixed(1)} <span className="text-xs text-[var(--text-dim)]">/day</span>
           </div>
         </div>
       </div>
@@ -152,7 +153,7 @@ export default function LeaveSprintTwin() {
         {activeTab === "today" && <TodayRhythm />}
         {activeTab === "schedule" && <WeeklySchedule />}
         {activeTab === "stages" && <StageProgression />}
-        {activeTab === "analytics" && <SprintVelocityChart />}
+        {activeTab === "analytics" && <VelocityDashboard />}
         {activeTab === "competency" && <CompetencyDashboards />}
         {activeTab === "rubric" && <Rubric />}
         {activeTab === "qbank" && <QBank />}

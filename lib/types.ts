@@ -165,6 +165,7 @@ export interface DayPlan {
 }
 
 export const SPRINT_START = new Date(2026, 5, 17);
+export const SPRINT_DAYS = 29;
 
 export function getDateForDay(day: number): Date {
   const d = new Date(SPRINT_START);

@@ -7,9 +7,7 @@
 
 import { RD } from './referenceData';
 import type { LevelId, RubricEntry, TaskType } from './types';
-import { SPRINT_START, getDateForDay } from '../types';
-
-const SPRINT_DAYS = 29;
+import { SPRINT_START, SPRINT_DAYS, getDateForDay } from '../types';
 
 const RANK: Record<LevelId, number> = { L1: 1, L2: 2, L3: 3 };
 
