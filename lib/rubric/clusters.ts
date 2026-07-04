@@ -101,6 +101,11 @@ export const KGTAG_CLUSTERS: Record<string, string[]> = {
     'In-place reversal invariant', 'In-place prefix sum transformation', 'Space optimization using input mutation',
     'Complexity claim for implemented algorithm', 'Representative edge-case tests for coding',
   ],
+  'BI / analytics communication': [
+    'Semantic layer versus raw query modeling', 'Measure versus dimension distinction', 'Dashboard versus ad hoc analysis boundary',
+    'Aggregate versus row-level calculation in BI tools', 'Executive-level insight summarization', 'Ambiguous stakeholder ask scoping',
+    'Metric ownership and single-source-of-truth definition', 'Self-serve dashboard versus analyst-gated report boundary',
+  ],
 };
 
 /** Assign an atomic tag to its display cluster (or "Other" if unclassified). */

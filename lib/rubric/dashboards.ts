@@ -5,6 +5,7 @@
 
 import { RD } from './referenceData';
 import { clusterForTag } from './clusters';
+import { roleTier, ROLE_TIER_WEIGHT } from './diagnostics';
 import type { RubricEntry, TaskType, LevelId } from './types';
 
 const byDateAsc = (a: RubricEntry, b: RubricEntry) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
@@ -125,6 +126,9 @@ export function retestSchedule(entries: RubricEntry[], today = new Date()): Rete
     else if (e.gapClosureStatus?.retestRequired || e.staleness?.refreshNeeded) bucket = 'due-soon';
 
     const severity = e.priority?.severity ?? null;
+    // v1.11 §17.34: weight severity by the active role's tier (Primary 1.0 / Secondary 0.7 / Tertiary 0.4).
+    const tier = e.priority?.roleWeightTier ?? roleTier(e.roleReadinessRollup?.targetRole);
+    const tierW = ROLE_TIER_WEIGHT[tier];
     items.push({
       id: e.id,
       task: e.task,
@@ -133,7 +137,7 @@ export function retestSchedule(entries: RubricEntry[], today = new Date()): Rete
       stalenessRisk: staleRisk,
       severity,
       action: e.priority?.recommendedAction || e.retestPlan?.retestPrompt || e.nextTarget || 'Retest',
-      score: (SEV_RANK[severity ?? ''] ?? 0) * 10 + (bucket === 'due-now' ? 5 : bucket === 'due-soon' ? 3 : 1),
+      score: (SEV_RANK[severity ?? ''] ?? 0) * 10 * tierW + (bucket === 'due-now' ? 5 : bucket === 'due-soon' ? 3 : 1),
     });
   });
 
@@ -179,6 +183,8 @@ export interface TrustView {
   llmRiskHigh: number;
   calibrationMix: { type: string; count: number }[];
   trackerHealth: string | null;
+  /** v1.11 §17.35 fast/full logging distribution — drift toward all-fast is a health signal. */
+  logging: { fast: number; full: number; fastPct: number };
 }
 
 export function trust(entries: RubricEntry[]): TrustView {
@@ -190,7 +196,10 @@ export function trust(entries: RubricEntry[]): TrustView {
   entries.forEach((e) => { const t = e.calibration?.evaluatorType; if (t) calMap.set(t, (calMap.get(t) ?? 0) + 1); });
   const calibrationMix = [...calMap.entries()].map(([type, count]) => ({ type, count }));
   const lastHealth = [...entries].sort(byDateAsc).map((e) => e.trackerHealth?.overallHealth).filter(Boolean).pop() ?? null;
-  return { avgProof, overclaimHigh, llmRiskHigh, calibrationMix, trackerHealth: lastHealth ?? null };
+  const fast = entries.filter((e) => e.loggingMode === 'fast').length;
+  const full = entries.length - fast;
+  const logging = { fast, full, fastPct: entries.length ? Math.round((fast / entries.length) * 100) : 0 };
+  return { avgProof, overclaimHigh, llmRiskHigh, calibrationMix, trackerHealth: lastHealth ?? null, logging };
 }
 
 export { RANK as LEVEL_RANK };

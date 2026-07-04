@@ -109,6 +109,11 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
   const [qualifyingManual, setQualifyingManual] = useState<LevelId | "">("");
   const [flash, setFlash] = useState("");
 
+  // v1.11 §17.35: fast = three scores + gates + tags; full = complete diagnostics.
+  const [mode, setMode] = useState<DG.LoggingMode>("full");
+  const [roleWeightTier, setRoleWeightTier] = useState<DG.RoleWeightTier | "">("");
+  const [focusAreas, setFocusAreas] = useState("");
+
   const numOrNull = (s: string): number | null => (s === "" || Number.isNaN(Number(s)) ? null : Number(s));
   const levelScores: LevelScores = { L1: numOrNull(ls.L1), L2: numOrNull(ls.L2), L3: numOrNull(ls.L3) };
   const monotonicOk = validateMonotonic(levelScores);
@@ -149,23 +154,35 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
 
   const submit = () => {
     if (!task.trim()) { setFlash("Add a task first."); setTimeout(() => setFlash(""), 2500); return; }
+    const full = mode === "full";
     const payload: RubricEntryInput = {
       date, task: task.trim(), taskType, problemLevel, targetLevel: problemLevel, difficulty: difficulty as RubricEntryInput["difficulty"],
       assistanceLevel: assist as RubricEntryInput["assistanceLevel"], evidenceClass, domain, primaryDomain: domain, primaryRole,
       levelScores, levelVerdicts: lv, gates,
-      universalScore: universal, taskSpecificScore: taskScore, universalSubScores: subs, cap: cap === "" ? null : Number(cap), penalties,
       answerLevel: answerLevel || "", qualifyingDemonstratedLevel: qualifying || "", demonstratedLevel: demonstrated,
       weaknessTags: Array.from(weakTags), gapTypes: Array.from(gapTypes), knowledgeGapTags: kgTags,
       proposedNewTags: proposedTags.map((t) => ({ tagClass: "knowledgeGapTags" as const, proposedTag: t, reason: "Non-canonical tag entered in grade form" })),
-      strengths, weaknesses, nextTarget,
+      nextTarget,
+      loggingMode: mode,
+      // problemName is schema-required for coding even in fast mode.
       ...(taskType === "coding" ? { problemName, platform, codingPattern, primaryDataStructure: dataStructure, compileStatus: compileStatus || null, testStatus: testStatus || null } : {}),
-      ...(outcome ? { assessmentOutcome: outcome } : {}),
-      ...(probe.firstAnswer || probe.oneFollowUp || probe.deepFollowUp ? { probeReadiness: probe as never } : {}),
-      ...(severity || nextActionType || recommendedAction ? { priority: { severity: severity || undefined, nextActionType: nextActionType || undefined, recommendedAction: recommendedAction || undefined } as never } : {}),
-      ...(closureStatus || retestDate ? { gapClosureStatus: { status: closureStatus || undefined, retestRequired: !!retestDate } as never } : {}),
-      ...(retestDate ? { retestPlan: { retestDate } } : {}),
-      ...(targetRole || readiness ? { roleReadinessRollup: { targetRole: targetRole || undefined, readiness: (readiness || undefined) as never, recommendedNextMilestone: nextTarget || undefined } } : {}),
-      ...(proofScore ? { proofStrength: { score: Number(proofScore) } } : {}),
+      // Full diagnostic layer only in full mode (§17.35).
+      ...(full
+        ? {
+            universalScore: universal, taskSpecificScore: taskScore, universalSubScores: subs, cap: cap === "" ? null : Number(cap), penalties,
+            strengths, weaknesses,
+            focusAreas: focusAreas.split(",").map((s) => s.trim()).filter(Boolean),
+            ...(outcome ? { assessmentOutcome: outcome } : {}),
+            ...(probe.firstAnswer || probe.oneFollowUp || probe.deepFollowUp ? { probeReadiness: probe as never } : {}),
+            ...(severity || nextActionType || recommendedAction || roleWeightTier
+              ? { priority: { severity: severity || undefined, roleWeightTier: roleWeightTier || undefined, nextActionType: nextActionType || undefined, recommendedAction: recommendedAction || undefined } as never }
+              : {}),
+            ...(closureStatus || retestDate ? { gapClosureStatus: { status: closureStatus || undefined, retestRequired: !!retestDate } as never } : {}),
+            ...(retestDate ? { retestPlan: { retestDate } } : {}),
+            ...(targetRole || readiness ? { roleReadinessRollup: { targetRole: targetRole || undefined, readiness: (readiness || undefined) as never, recommendedNextMilestone: nextTarget || undefined } } : {}),
+            ...(proofScore ? { proofStrength: { score: Number(proofScore) } } : {}),
+          }
+        : {}),
     };
     logRubricEntry(payload);
     reset();
@@ -177,6 +194,19 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-5">
+        {/* Logging mode (v1.11 §17.35) */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs uppercase tracking-wider text-[var(--text-dim)]">Logging mode</span>
+          <div className="flex gap-1 rounded-xl border border-[var(--hairline)] bg-[var(--bg-elev)] p-0.5">
+            {DG.LOGGING_MODES.map((m) => (
+              <button key={m} type="button" onClick={() => setMode(m)} className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${mode === m ? "bg-[var(--fill-strong)] text-[var(--cyan)]" : "text-[var(--text-dim)] hover:text-[var(--text)]"}`}>
+                {m}
+              </button>
+            ))}
+          </div>
+          <span className="text-[11px] text-[var(--text-dim)]">{mode === "fast" ? "three scores + gates + tags" : "complete diagnostic layer"}</span>
+        </div>
+
         {/* Classification */}
         <div className="card-glass p-6 space-y-4">
           <div className="section-title !mb-1">CLASSIFICATION</div>
@@ -239,7 +269,7 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
           ))}
         </div>
 
-        <Accordion title="Universal & task-specific sub-scores">
+        {mode === "full" && (<Accordion title="Universal & task-specific sub-scores">
           <div className="space-y-2">
             {RD.universalDims.map((d) => (
               <div key={d.id} className="flex items-center gap-3">
@@ -259,7 +289,7 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
               <Field label="Penalties"><input type="number" value={penalties} onChange={(e) => setPenalties(Number(e.target.value) || 0)} className={`${inputCls} w-28`} /></Field>
             </div>
           </div>
-        </Accordion>
+        </Accordion>)}
 
         <Accordion title="Tags (weakness · gap type · knowledge gap)">
           <div className="space-y-3">
@@ -302,7 +332,7 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
           </Accordion>
         )}
 
-        <Accordion title="Diagnostics (outcome · probe · priority · retest · role · proof)">
+        {mode === "full" && (<Accordion title="Diagnostics (outcome · probe · priority · retest · role · proof)">
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="Assessment outcome"><select value={outcome} onChange={(e) => setOutcome(e.target.value as DG.AssessmentOutcome)} className={inputCls}><option value="">—</option>{DG.ASSESSMENT_OUTCOMES.map((o) => <option key={o} value={o}>{o}</option>)}</select></Field>
@@ -315,8 +345,9 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
                 ))}
               </div>
             </Field>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Field label="Priority severity"><select value={severity} onChange={(e) => setSeverity(e.target.value)} className={inputCls}><option value="">—</option>{DG.SEVERITY.map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
+              <Field label="Role weight tier"><select value={roleWeightTier} onChange={(e) => setRoleWeightTier(e.target.value as DG.RoleWeightTier)} className={inputCls}><option value="">—</option>{DG.ROLE_WEIGHT_TIERS.map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
               <Field label="Next action"><select value={nextActionType} onChange={(e) => setNextActionType(e.target.value)} className={inputCls}><option value="">—</option>{DG.NEXT_ACTION_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
             </div>
             <Field label="Recommended action"><input value={recommendedAction} onChange={(e) => setRecommendedAction(e.target.value)} className={inputCls} /></Field>
@@ -327,15 +358,16 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
             </div>
             <Field label="Target role"><select value={targetRole} onChange={(e) => setTargetRole(e.target.value)} className={inputCls}><option value="">—</option>{DG.TARGET_ROLES.map((s) => <option key={s} value={s}>{s}</option>)}</select></Field>
           </div>
-        </Accordion>
+        </Accordion>)}
 
-        <Accordion title="Narrative (strengths · weaknesses · next target)">
+        {mode === "full" && (<Accordion title="Narrative (strengths · weaknesses · focus areas · next target)">
           <div className="space-y-3">
             <Field label="Strengths"><textarea value={strengths} onChange={(e) => setStrengths(e.target.value)} className={`${inputCls} h-16`} /></Field>
             <Field label="Weaknesses"><textarea value={weaknesses} onChange={(e) => setWeaknesses(e.target.value)} className={`${inputCls} h-16`} /></Field>
+            <Field label="Focus areas (comma-separated)"><input value={focusAreas} onChange={(e) => setFocusAreas(e.target.value)} placeholder="Contracts, Failure handling, Algorithm choice" className={inputCls} /></Field>
             <Field label="Next target"><input value={nextTarget} onChange={(e) => setNextTarget(e.target.value)} className={inputCls} /></Field>
           </div>
-        </Accordion>
+        </Accordion>)}
       </div>
 
       {/* Right rail: live derived result */}

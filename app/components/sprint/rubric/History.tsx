@@ -112,7 +112,7 @@ function EntryCard({ entry, open, onToggle, onDelete }: { entry: RubricEntry; op
           <div className="text-xs text-[var(--text-dim)] mt-0.5 font-mono">
             {entry.date} · {taskLabel(entry.taskType)} · D{entry.difficulty} · A{entry.assistanceLevel}
             {entry.problemLevel ? ` · problem ${entry.problemLevel}` : ""}
-            {entry.quickLog ? " · quick" : ""}
+            {entry.loggingMode ? ` · ${entry.loggingMode}` : ""}
           </div>
         </div>
         <div className="hidden sm:flex items-center gap-1 shrink-0 rounded-xl border border-[var(--hairline)] px-1 py-1">

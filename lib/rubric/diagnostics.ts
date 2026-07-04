@@ -32,11 +32,37 @@ export const RISK_LEVELS = ['Low', 'Medium', 'High', 'Unknown'] as const;
 export const MATCH_QUALITY = ['Weak', 'Partial', 'Strong'] as const;
 export const QUALITY_NWPS = ['None', 'Weak', 'Partial', 'Strong'] as const;
 export const TRACKER_HEALTH = ['Good', 'Warning', 'Critical', 'Unknown'] as const;
-export const GAP_TYPES = ['Conceptual gap', 'Mechanism gap', 'Application gap', 'Tradeoff gap', 'Verification gap', 'Autonomy gap', 'Communication gap', 'Recall gap', 'Scope gap', 'Evidence quality gap'] as const;
+export const GAP_TYPES = ['Conceptual gap', 'Mechanism gap', 'Application gap', 'Tradeoff gap', 'Verification gap', 'Autonomy gap', 'Communication gap', 'Recall gap', 'Scope gap', 'Evidence quality gap', 'Requirements translation gap'] as const;
 export const TAG_CLASSES = ['weaknessTags', 'knowledgeGapTags', 'gapTypes'] as const;
 
+/** v1.11 logging mode (§17.35) — supersedes the deprecated quickLog boolean. */
+export const LOGGING_MODES = ['fast', 'full'] as const;
+export type LoggingMode = (typeof LOGGING_MODES)[number];
+
+/** v1.11 role weight tier (§17.34) for weighting roleImpact / next-action ranking. */
+export const ROLE_WEIGHT_TIERS = ['Primary', 'Secondary', 'Tertiary'] as const;
+export type RoleWeightTier = (typeof ROLE_WEIGHT_TIERS)[number];
+export const ROLE_TIER_WEIGHT: Record<RoleWeightTier, number> = { Primary: 1.0, Secondary: 0.7, Tertiary: 0.4 };
+
 /** Recommended target roles / archetypes (spec §17.8). */
-export const TARGET_ROLES = ['Chewy SWE II — HR Systems', 'SWE II — Backend', 'SWE II — Vet Care', 'SWE II — Sponsored Ads', 'SWE II — Observability', 'SWE I — Frontend Payments', 'SWE I — Chewy Plus', 'MLE II — Legal', 'DS II — Customer Care', 'DS II — Outbound', 'BI Engineer I / II', 'DE / Analytics Engineering Bridge', 'Platform / DevOps'] as const;
+export const TARGET_ROLES = ['Chewy SWE II — HR Systems', 'SWE II — Backend', 'SWE II — Vet Care', 'SWE II — Sponsored Ads', 'SWE II — Observability', 'SWE I — Frontend Payments', 'SWE I — Chewy Plus', 'MLE II — Legal', 'DS II — Customer Care', 'DS II — Outbound', 'BI Engineer I / II', 'Business Intelligence Analyst', 'DE / Analytics Engineering Bridge', 'Platform / DevOps'] as const;
+
+/**
+ * Current Primary/Secondary/Tertiary weighting for active target roles (§17.34).
+ * Living config — revise as the active search changes. Anything unlisted → Secondary.
+ */
+export const ROLE_WEIGHT_TABLE: { tier: RoleWeightTier; roles: string[] }[] = [
+  { tier: 'Primary', roles: ['Chewy SWE II — HR Systems', 'MLE II — Legal'] },
+  { tier: 'Tertiary', roles: ['BI Engineer I / II', 'Business Intelligence Analyst'] },
+];
+
+export function roleTier(targetRole: string | undefined | null): RoleWeightTier {
+  if (!targetRole) return 'Secondary';
+  for (const { tier, roles } of ROLE_WEIGHT_TABLE) {
+    if (roles.some((r) => r === targetRole || targetRole.startsWith(r))) return tier;
+  }
+  return 'Secondary';
+}
 
 export type GateVerdict = (typeof GATE_VERDICTS)[number];
 export type LevelVerdict = (typeof LEVEL_VERDICTS)[number];
@@ -130,6 +156,7 @@ export interface Priority {
   severity?: (typeof SEVERITY)[number];
   urgency?: (typeof LMH)[number];
   roleImpact?: (typeof LMH)[number];
+  roleWeightTier?: RoleWeightTier;
   nextActionType?: (typeof NEXT_ACTION_TYPES)[number];
   recommendedAction?: string;
 }

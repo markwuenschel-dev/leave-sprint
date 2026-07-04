@@ -40,7 +40,7 @@ export function QuickLogModal({ task, track, onClose, onLogged }: QuickLogModalP
       assistanceLevel: assist as 0 | 1 | 2 | 3 | 4 | 5,
       finalScore: score,
       evidenceClass: "classB",
-      quickLog: true,
+      loggingMode: "fast",
     });
     onLogged?.();
     onClose();

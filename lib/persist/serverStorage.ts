@@ -76,7 +76,7 @@ export const serverStorage: StateStorage = {
       const data = (await res.json()) as Record<string, unknown> & { empty?: boolean };
       serverEmpty = !!data.empty;
       const { empty: _empty, ...slice } = data;
-      return JSON.stringify({ state: slice, version: 3 });
+      return JSON.stringify({ state: slice, version: 4 });
     } catch {
       return null;
     }

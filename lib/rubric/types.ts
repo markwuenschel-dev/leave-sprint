@@ -92,9 +92,13 @@ export interface RubricEntry {
   weaknessTags: string[];
   knowledgeGapTags: string[];
   gapTypes: string[];
+  focusAreas: string[];
   strengths: string;
   weaknesses: string;
   nextTarget: string;
+  /** v1.11 §17.35 — 'fast' (three scores + gates + tags) or 'full'. Supersedes quickLog. */
+  loggingMode: D.LoggingMode | null;
+  /** @deprecated v1.11 — migrated to loggingMode; retained for back-compat reads. */
   quickLog: boolean;
 
   /* Expected-element accounting */
