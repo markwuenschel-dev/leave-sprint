@@ -1,0 +1,71 @@
+/**
+ * Row <-> domain mappers. The interesting one is the RubricEntry hybrid: a fixed
+ * set of promoted columns + a `diagnostic` jsonb for everything else. On read we
+ * merge them back and run through normaliseEntry so the full shape is guaranteed.
+ */
+
+import type { InferSelectModel } from 'drizzle-orm';
+import { rubricEntries } from './schema';
+import { normaliseEntry } from '../rubric/normalize';
+import type { RubricEntry } from '../rubric/types';
+
+type RubricRow = InferSelectModel<typeof rubricEntries>;
+
+/** Keys stored as dedicated columns (everything else goes to `diagnostic`). */
+const PROMOTED = [
+  'id', 'rubricVersion', 'date', 'task', 'taskType', 'domain', 'primaryDomain', 'primaryRole',
+  'difficulty', 'assistanceLevel', 'evidenceClass', 'universalScore', 'taskSpecificScore',
+  'rawScore', 'finalScore', 'demonstratedLevel', 'quickLog', 'weaknessTags',
+] as const;
+
+export function rubricEntryToRow(e: RubricEntry): RubricRow {
+  const diagnostic: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(e)) {
+    if (!(PROMOTED as readonly string[]).includes(k)) diagnostic[k] = v;
+  }
+  return {
+    id: e.id,
+    rubricVersion: e.rubricVersion ?? null,
+    date: e.date,
+    task: e.task ?? null,
+    taskType: e.taskType || null,
+    domain: e.domain ?? null,
+    primaryDomain: e.primaryDomain ?? null,
+    primaryRole: e.primaryRole || null,
+    difficulty: e.difficulty ?? null,
+    assistanceLevel: e.assistanceLevel ?? null,
+    evidenceClass: e.evidenceClass ?? null,
+    universalScore: e.universalScore ?? null,
+    taskSpecificScore: e.taskSpecificScore ?? null,
+    rawScore: e.rawScore ?? null,
+    finalScore: e.finalScore ?? null,
+    demonstratedLevel: e.demonstratedLevel ?? null,
+    quickLog: Boolean(e.quickLog),
+    weaknessTags: e.weaknessTags ?? [],
+    diagnostic,
+  };
+}
+
+export function rowToRubricEntry(row: RubricRow): RubricEntry {
+  return normaliseEntry({
+    ...(row.diagnostic ?? {}),
+    id: row.id,
+    rubricVersion: row.rubricVersion,
+    date: row.date,
+    task: row.task,
+    taskType: row.taskType,
+    domain: row.domain,
+    primaryDomain: row.primaryDomain,
+    primaryRole: row.primaryRole,
+    difficulty: row.difficulty,
+    assistanceLevel: row.assistanceLevel,
+    evidenceClass: row.evidenceClass,
+    universalScore: row.universalScore,
+    taskSpecificScore: row.taskSpecificScore,
+    rawScore: row.rawScore,
+    finalScore: row.finalScore,
+    demonstratedLevel: row.demonstratedLevel,
+    quickLog: row.quickLog,
+    weaknessTags: row.weaknessTags,
+  });
+}
