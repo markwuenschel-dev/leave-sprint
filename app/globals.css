@@ -10,7 +10,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
-  /* Design tokens - Dark glassmorphism first */
+  /* Design tokens */
   --bg: #0a0c10;
   --bg-elev: #11141a;
   --surface: #161a22;
@@ -28,12 +28,29 @@
   --green: #22c55e;
   --yellow: #eab308;
   --orange: #f97316;
+  --violet: #a78bfa;
+  --slate: #94a3b8;
+  --blue: #60a5fa;
 
   /* Status */
   --done: #22c55e;
   --doing: #00f9ff;
   --at-risk: #eab308;
+
+  /* Rubric verdict bands */
+  --verdict-exceptional: #22c55e;
+  --verdict-pass: #00f9ff;
+  --verdict-border: #eab308;
+  --verdict-fail: #f97316;
 }
+
+/* Rubric verdict text colors (score bands) */
+.verdict-exceptional { color: var(--verdict-exceptional); }
+.verdict-pass { color: var(--verdict-pass); }
+.verdict-border { color: var(--verdict-border); }
+.verdict-fail { color: var(--verdict-fail); }
+
+/* Rest of your existing CSS remains unchanged */
 
 * {
   scrollbar-width: thin;
