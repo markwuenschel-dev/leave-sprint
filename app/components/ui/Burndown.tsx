@@ -69,14 +69,19 @@ export function Burndown({ series, maxY, width = 620, height = 200, todayIndex, 
         <line x1={x(todayIndex)} y1={pad.top} x2={x(todayIndex)} y2={pad.top + plotH} stroke="var(--magenta)" strokeWidth={1} strokeDasharray="3 3" opacity={0.7} />
       )}
 
-      {markers?.map((m, i) => (
-        <g key={`m${i}`}>
-          <line x1={x(m.index)} y1={pad.top} x2={x(m.index)} y2={pad.top + plotH} stroke={m.color ?? "var(--text-dim)"} strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
-          <text x={x(m.index)} y={pad.top - 4} textAnchor="middle" fontSize={8} fill={m.color ?? "var(--text-dim)"} className="font-mono">
-            {m.label}
-          </text>
-        </g>
-      ))}
+      {markers?.map((m, i) => {
+        const nearRight = m.index > (nDays - 1) * 0.8;
+        // Stagger label height by parity so adjacent milestones (e.g. day 21 & 22) don't overlap.
+        const ly = pad.top + 8 + (i % 2) * 12;
+        return (
+          <g key={`m${i}`}>
+            <line x1={x(m.index)} y1={pad.top} x2={x(m.index)} y2={pad.top + plotH} stroke={m.color ?? "var(--text-dim)"} strokeWidth={1} strokeDasharray="2 3" opacity={0.5} />
+            <text x={x(m.index) + (nearRight ? -3 : 3)} y={ly} textAnchor={nearRight ? "end" : "start"} fontSize={8} fill={m.color ?? "var(--text-dim)"} className="font-mono">
+              {m.label}
+            </text>
+          </g>
+        );
+      })}
 
       {series.map((s, i) => (
         <path key={i} d={pathFor(s.points)} fill="none" stroke={s.color} strokeWidth={2} strokeDasharray={s.dashed ? "5 4" : undefined} strokeLinejoin="round" strokeLinecap="round" />
