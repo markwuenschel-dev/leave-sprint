@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useSprintStore } from "@/lib/store";
-import { parseImport } from "@/lib/rubric/io";
+import { parseImport, parseImportFiles } from "@/lib/rubric/io";
 import { GradeForm } from "./GradeForm";
+import { Upload } from "lucide-react";
 
 type Mode = "form" | "json";
 
@@ -45,6 +46,19 @@ export function LogEntry() {
     setTimeout(() => setJsonStatus(""), 5000);
   };
 
+  const uploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    const { entries, count, ok, failed } = await parseImportFiles(files);
+    if (entries.length) importRubricEntries(entries, "merge");
+    setJsonStatus(
+      `✅ Imported ${count} entr${count === 1 ? "y" : "ies"} from ${ok} file${ok === 1 ? "" : "s"}` +
+        (failed ? ` · ${failed} failed` : "") + "."
+    );
+    e.target.value = ""; // allow re-selecting the same files
+    setTimeout(() => setJsonStatus(""), 6000);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex gap-2 flex-wrap">
@@ -60,11 +74,18 @@ export function LogEntry() {
         <GradeForm />
       ) : (
         <div className="card-glass p-6 space-y-3">
-          <div className="section-title">IMPORT RUBRIC RECORDS</div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="section-title !mb-0">IMPORT RUBRIC RECORDS</div>
+            <label className="btn text-xs cursor-pointer" title="Upload one or more assessment JSON files at once">
+              <Upload size={14} /> Upload JSON files
+              <input type="file" accept=".json,application/json" multiple onChange={uploadFiles} className="hidden" />
+            </label>
+          </div>
           <p className="text-xs text-[var(--text-mid)]">
-            Paste a single record, an array of records, or a full backup object
-            (<span className="font-mono">{`{ days, stages, rubricEntries, … }`}</span> from Export JSON — restores every tab).
+            Upload one or more <span className="font-mono">.json</span> files, or paste a single record, an array of records,
+            or a full backup object (<span className="font-mono">{`{ days, stages, rubricEntries, … }`}</span> from Export JSON — restores every tab).
             Records are normalised on import: <span className="font-mono">quickLog</span>→<span className="font-mono">loggingMode</span>, boolean gates→Pass/Partial/Fail, retired tags→canonical.
+            Uploaded files are de-duped by id, so re-uploading is safe.
           </p>
           <textarea
             value={json}
