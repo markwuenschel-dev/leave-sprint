@@ -2,13 +2,17 @@
 
 import type { TaskType, Role } from '../rubric/types';
 
-export type TrackKey = 'swe' | 'mle' | 'ds' | 'de' | 'react' | 'sql' | 'sdlc';
+export type TrackKey = 'swe' | 'mle' | 'ds' | 'de' | 'react' | 'sql' | 'sdlc' | 'diag';
 export type QBankStatus = 'mastered' | 'review';
 
 /** One Level-I question with its Level II/III stretch follow-ons. */
 export interface QBankQuestion {
   id: string;
   q: string;
+  /** Optional multi-line source under diagnosis, rendered as a fenced code block. */
+  code?: string;
+  /** Fence language hint for `code`, e.g. 'java' | 'python' | 'tsx' | 'sql'. */
+  lang?: string;
   anchor: string;
   compressed?: string;
   detail?: string;

@@ -1251,4 +1251,616 @@ export const QBANK: Record<TrackKey, QBankTrack> = {
       },
     ],
   },
+  diag: {
+    label: `Code Diagnosis`, short: `Diagnosis`,
+    icon: `🔍`, color: `slate`,
+    questions: [
+      {
+        id:`diag-01`,
+        q:`Read this Spring controller. Identify the design, security, observability, and HTTP-semantics issues, then give the smallest safe fix.`,
+        lang:`java`,
+        code:`@PostMapping("/api/retrieve")
+public ResponseEntity<?> retrieve(@RequestBody RetrieveRequest request) {
+    try {
+        return ResponseEntity.ok(service.retrieve(request.query()));
+    } catch (Exception e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+}`,
+        anchor:`On success it returns 200 with the result; on **any** exception it catches everything and returns 400 with the raw exception message — conflating 5xx server faults with 4xx client errors, leaking internals, and logging nothing.`,
+        detail:`**Issues (priority order):** HTTP semantics — server faults and bad requests both map to 400, so clients and load balancers can't tell a retryable failure from a bad input. Security — the raw \`e.getMessage()\` leaks internal details. Observability — no log, no trace/correlation ID, no error metric. Over-broad catch — swallows \`Error\`-level problems (OOM, stack overflow) that should fail fast. Weak typing — \`ResponseEntity<?>\` plus a raw string body.
+
+**Smallest safe fix** — classify the exception, log with a trace ID, and return a structured body:
+\`\`\`java
+} catch (BusinessException | ValidationException ex) {
+    log.warn("Business/validation error in retrieve", ex);
+    return ResponseEntity.badRequest()
+        .body(new ErrorResponse("BUSINESS_ERROR", ex.getMessage()));
+} catch (Exception ex) {
+    log.error("Unexpected error in retrieve [traceId={}]", MDC.get("traceId"), ex);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(new ErrorResponse("INTERNAL_ERROR", "An unexpected error occurred. Reference trace ID for support."));
+}
+\`\`\`
+Also add \`@Valid\` on the request and a small \`ErrorResponse\` record. A global \`@ControllerAdvice\` is better long-term, but this is the acceptable pairing-session delta.`,
+        followup:`Your service now throws a new RateLimitExceededException that should return 429. How does your current fix behave, and what's the minimal change to support classified error responses without duplicating this across every controller?`,
+        followupAnswer:`Right now it falls into the generic \`Exception\` branch and wrongly returns 500. The minimal fix is not another catch block in every controller — it's to map exception type → status/code in one place: a \`@RestControllerAdvice\` with \`@ExceptionHandler\` methods (or a small \`Map<Class<? extends Exception>, HttpStatus>\`). RateLimitExceededException maps to 429, BusinessException to 400, everything unmapped to 500 — added once, inherited everywhere.`,
+        tie:`This is exactly the GlobalExceptionHandler boundary in the compounding-quality project — clients need a stable error contract with a requestId, not stack traces.`,
+        trap:`"It's defensive — it stops the app crashing." It hides real bugs and breaks the HTTP contract. Also: naming only the broad catch and stopping, or forgetting to log (the one thing on-call actually needs).`,
+        l2q:`This endpoint is called by both internal microservices and external mobile partners. How does your error-response strategy change?`,
+        l2a:`Split the contract by audience. Internal callers get richer structured errors — internal error codes, trace context — because they're trusted and you control both ends. External partners get a sanitized, stable public error shape that never leaks stack traces or internal codes, and a \`supportReferenceId\` instead of a raw trace ID. Implement it with content negotiation or an \`ErrorResponse\` that carries a visibility flag, so the same handler emits the right level of detail. The key discipline: never force external partners to parse internal error shapes, because that shape then becomes a contract you can't change.`,
+        l3q:`How would you evolve this into a company-wide error-handling standard without slowing teams down?`,
+        l3a:`Ship a lightweight shared library — an \`ErrorResponse\` record plus a small set of standard codes — and make the structured handler the default in the internal Spring Boot starter/template, so new services get it for free. Don't big-bang migrate existing code: add a lint rule or codemod that flags broad \`catch (Exception)\` + raw-message returns, migrate high-traffic/critical services first, and document the *why* (retry behavior, observability, security, client DX) so teams see value, not process theater. A thin \`@ControllerAdvice\` handles the cross-cutting cases (unexpected → 500 with trace ID) while teams still own their own business exceptions. The same principle extends to WebFlux (\`onErrorResume\`) and gRPC (\`StatusRuntimeException\`) by keeping the classify-and-respond logic transport-independent.`,
+      },
+      {
+        id:`diag-02`,
+        q:`This precision@k implementation is used in a RAG/search eval pipeline. Explain intended vs actual behavior, find every correctness and edge-case bug, and give the smallest safe fix.`,
+        lang:`python`,
+        code:`def precision_at_k(results: list[SearchResult], relevant_ids: set[str], k: int) -> float:
+    """Compute precision@k for a ranked list of search results."""
+    hits = 0
+    for result in results:
+        if result.id in relevant_ids:
+            hits += 1
+    return hits / k`,
+        anchor:`Intended: fraction of relevant items among the **top k**. Actual: it counts hits across the **entire** results list (ignoring the @k cutoff) and always divides by k — so it inflates when len(results) > k and can return > 1.0 or raise ZeroDivisionError.`,
+        detail:`**Bugs:** it never slices to \`results[:k]\`, so relevant items beyond position k still count; dividing by \`k\` when \`len(results) < k\` or \`k == 0\` yields values above 1.0 or a crash; no guard on non-positive \`k\`.
+
+**Smallest safe fix:**
+\`\`\`python
+def precision_at_k(results, relevant_ids, k):
+    if k <= 0:
+        return 0.0
+    top_k = results[:k]
+    hits = sum(1 for r in top_k if r.id in relevant_ids)
+    return hits / k
+\`\`\`
+A regression test should pin the contract that only the top k count: with relevant ids at positions 0, 5, 9 and k=5, precision must be 2/5 — the item at position 9 must not count.`,
+        followup:`Now implement recall_at_k and ndcg_at_k in the same style. What additional edge cases appear for NDCG that were hidden in precision?`,
+        followupAnswer:`recall@k divides hits-in-top-k by \`min(len(relevant_ids), k)\` or by total relevant, depending on the definition you commit to — so the denominator choice matters and must be documented. NDCG adds new hazards: you need graded relevance and a discount (1/log2(rank+1)), you must normalize by the *ideal* DCG (which is 0 when there are no relevant items → guard the divide-by-zero), and ranks are 1-based, so an off-by-one in the discount silently skews every score.`,
+        tie:`This is the Recall@k / MRR eval path in your retrieval work — an inflated offline metric quietly promotes worse rankers.`,
+        trap:`"Looks mostly right, just add [:k]" — that misses the divide-by-k and k<=0 problems. Or fixating on "use a set" (performance) instead of correctness.`,
+        l2q:`We now want precision@k with graded (non-binary) relevance. How do the implementation and testing strategy change?`,
+        l2a:`Change the signature to accept either a set of relevant ids or a \`dict[str, float]\` of graded relevance, and turn the core from a count into a weighted sum. Version the metric — \`precision_at_k\` vs \`precision_at_k_graded\` — so you don't silently change what existing experiments optimize for. Testing shifts too: add property-based tests over random graded inputs to check mathematical invariants, keep a small hand-graded golden set, and run an offline harness comparing graded vs binary on historical data so you can quantify how many ranking decisions actually flip.`,
+        l3q:`How does this bug interact with online A/B testing and model-training loops, and how do you keep it from becoming a feedback loop?`,
+        l3a:`It's dangerous because the inflated metric can create a self-reinforcing loop: a ranker that looks better on the buggy metric gets promoted, which changes what the retriever returns, which changes future evals — so you systematically prefer models that exploit the bug. Break the loop by re-evaluating recent model comparisons with the fixed metric before any new launch, adding the corrected metric as a guardrail in the online A/B framework, and making sure the offline eval that generates training data uses the corrected version too. In production, add telemetry (a histogram of result-list length, a warning when len(results) < k) so truncated-result situations are visible rather than silent.`,
+      },
+      {
+        id:`diag-03`,
+        q:`Explain what happens when the items prop changes after mount or the search term clears. Identify the React rule violation and give the smallest safe fix.`,
+        lang:`tsx`,
+        code:`interface Props {
+  items: Item[];
+  searchTerm: string;
+}
+
+const ItemFilter: React.FC<Props> = ({ items, searchTerm }) => {
+  const [filtered, setFiltered] = useState<Item[]>(items);
+
+  useEffect(() => {
+    setFiltered(items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())));
+  }, [searchTerm]);   // items is missing
+
+  return (
+    <ul>{filtered.map(item => <li key={item.id}>{item.name}</li>)}</ul>
+  );
+};`,
+        anchor:`\`filtered\` is derived state stored in state. The effect only re-runs on \`searchTerm\`, so when the parent passes a new \`items\` array the list goes stale — and if \`items\` starts empty and fills later, it stays empty forever.`,
+        detail:`**Issues:** missing dependency — \`items\` is read in the effect but not in the dep array (a React hooks lint violation and a stale-closure bug); derived-state anti-pattern — \`filtered\` is fully determined by \`items\` + \`searchTerm\`, so storing it invites sync bugs and extra renders.
+
+**Smallest safe fix** — don't store derived state; compute it:
+\`\`\`tsx
+const filtered = useMemo(
+  () => items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())),
+  [items, searchTerm]
+);
+\`\`\`
+This is the "You Might Not Need an Effect" case. If you must keep local state, at minimum add \`items\` to the deps — but useMemo is strictly better. A good test rerenders with a *new items prop* (not just typing) and asserts the list updated.`,
+        followup:`The parent now wants to also filter by category. How does your solution scale — would you lift state up or keep the filtering here?`,
+        followupAnswer:`It scales cleanly: extend the memo's input to a declarative filter object (\`{ searchTerm, category }\`) and keep the pure computation in \`useMemo\`. Whether to lift depends on ownership — if only this component needs the filter state, keep it local; if siblings (a filter bar, a result count) need it too, lift the *filter criteria* up and pass them down, but keep the derivation (the actual filtering) here as a memo rather than syncing another copy into state.`,
+        tie:`Same derived-state discipline as the review-checklist UI — keep the source of truth single and compute views from it.`,
+        trap:`Only saying "add items to the dependency array" and stopping (treats the symptom, not the derived-state root cause). Or writing a test that only types in the box and never changes the items prop.`,
+        l2q:`This filtering needs to be reused across many components and also support category filters and sorting. How would you design the API of a reusable solution?`,
+        l2a:`Extract a typed hook, \`useFilteredAndSortedItems<T>(items, filters, sortConfig)\`, returning the processed list plus metadata (resultCount, isFiltering). Make filters a declarative object rather than positional params so it's extensible, and memoize internally so it returns a stable reference when inputs are unchanged — preventing needless re-renders in consumers. Support both controlled and uncontrolled use (some callers own filter state, some want the hook to), and expose \`resetFilters()\` with strong types for good autocomplete. For simple cases the hook is the right unit; for complex UIs a compound \`<FilterableList>\` component may read cleaner.`,
+        l3q:`You discover 40+ components across the codebase with this same derived-state-in-effect bug. How do you roll out a fix and prevent recurrence?`,
+        l3a:`Don't fix by hand. Write an ESLint rule (or a jscodeshift/ts-morph codemod) that detects the "useState + useEffect that only setState from props/state not in the dep array" shape, run it to get an accurate count and rank files by impact, then migrate in waves — pairing with the 2–3 highest-instance teams first as worked examples. Add the lint rule to CI so new instances are blocked, and where the transform is safe, ship a codemod that rewrites the common case to \`useMemo\` (starting in suggest mode before going automatic). In a Server Components world much of this filtering can move server-side, but for interactive client filtering the "don't store derived state" principle is unchanged.`,
+      },
+      {
+        id:`diag-04`,
+        q:`Explain what the author intended vs what this query returns, why the LEFT JOIN silently becomes an INNER JOIN, and the smallest safe fix.`,
+        lang:`sql`,
+        code:`SELECT
+    r.id            AS review_id,
+    r.status,
+    e.citation,
+    e.source_type
+FROM reviews r
+LEFT JOIN evidence e
+    ON e.review_id = r.id
+WHERE e.source_type = 'POLICY';`,
+        anchor:`Intended: all reviews, with POLICY citations where present (others show NULL). Actual: only reviews that have at least one POLICY evidence row — the WHERE filter on the right table drops every NULL-padded row, turning the outer join into an inner join.`,
+        detail:`**Root cause:** the WHERE clause runs **after** the LEFT JOIN. The NULL rows the outer join generates for reviews with no POLICY evidence fail \`e.source_type = 'POLICY'\` and get filtered out — so the outer semantics are silently lost.
+
+**Fix — move the filter into the ON clause** so it constrains the join, not the result:
+\`\`\`sql
+FROM reviews r
+LEFT JOIN evidence e
+    ON e.review_id = r.id
+   AND e.source_type = 'POLICY';
+\`\`\`
+(If you actually want "has POLICY evidence *or* no evidence at all", use \`WHERE (e.source_type = 'POLICY' OR e.source_type IS NULL)\` instead.) Verify with a row-count before/after: the fixed query should return the full review count again, not the shrunken subset.`,
+        followup:`The stakeholder now says "I only want reviews that have no POLICY evidence at all." How would you write that, and would your ON-clause fix still work?`,
+        followupAnswer:`Keep the LEFT JOIN with the predicate in the ON clause, then filter for the unmatched rows: \`... LEFT JOIN evidence e ON e.review_id = r.id AND e.source_type = 'POLICY' WHERE e.review_id IS NULL\`. That's the anti-join pattern — the ON clause keeps outer semantics, and the \`IS NULL\` check on the right key selects exactly the reviews with no matching POLICY evidence. The plain ON-clause fix alone returns everyone; you add the IS NULL to invert it.`,
+        tie:`This is the "latest event per task + LEFT JOIN" gotcha from your eval_run queries — a filter on the right table quietly changes the population.`,
+        trap:`"Just change LEFT to INNER" — that abandons the intended outer semantics. Or adding only \`OR IS NULL\` without mentioning the cleaner ON-clause approach. And not noticing the query may be dropping the majority of production rows.`,
+        l2q:`How would you detect similar "LEFT JOIN + WHERE on the right table" bugs across hundreds of existing queries?`,
+        l2a:`Add static analysis for SQL: a SQLFluff rule (or dbt custom test) that flags a WHERE clause referencing only right-side columns of a LEFT JOIN, or the specific \`LEFT JOIN ... WHERE <right>.col IS NOT NULL\` shape. On the warehouse side, a query-history analyzer can flag queries whose row count drops sharply after a join, and dbt post-hooks can assert expected row counts on critical models. Start with the highest-impact datasets — the fact tables behind executive dashboards — and work outward. Pair it with a style-guide rule: filters on a LEFT-joined table go in the ON clause unless you explicitly intend an inner join, documented with a comment.`,
+        l3q:`Multiple teams have already built reports and ML features on top of the buggy (under-counted) version of this data. How do you handle the correction?`,
+        l3a:`Treat it as a breaking change, not a silent hotfix. First quantify blast radius — how many dashboards, models, and downstream tables consume it. Then publish a change note with concrete before/after row counts and examples, and offer a migration window where both the old (buggy) and corrected versions are available in parallel for a few weeks. Work with ML owners to find models trained on the filtered set and decide whether they need retraining, and add data tests (e.g. "expected % of reviews have POLICY evidence") so the regression can't silently return. The goal is transparency and help, not "we fixed it, deal with it."`,
+      },
+      {
+        id:`diag-05`,
+        q:`What does this endpoint do when the review exists vs when it doesn't? Identify the API, error-handling, and layering issues, then give the smallest safe fix.`,
+        lang:`java`,
+        code:`@GetMapping("/api/reviews/{id}")
+public ResponseEntity<ReviewDto> getReview(@PathVariable Long id) {
+    Review review = reviewRepository.findById(id).get();
+    return ResponseEntity.ok(reviewMapper.toDto(review));
+}`,
+        anchor:`If it exists, 200 with the DTO. If it doesn't, \`Optional.get()\` throws NoSuchElementException → a generic 500. A missing resource is a normal API condition and should be 404, not a server error.`,
+        detail:`**Issues:** \`.get()\` with no presence check turns an expected "not found" into an accidental 500; the controller talks straight to the repository, bypassing the service layer where authorization, ownership, and audit live; no structured error body or stable code; no validation on \`id\`.
+
+**Smallest safe fix** — go through the service and throw a domain exception:
+\`\`\`java
+public ReviewDto getReviewDto(Long id) {
+    Review review = reviewRepository.findById(id)
+        .orElseThrow(() -> new ReviewNotFoundException(id));
+    return reviewMapper.toDto(review);
+}
+\`\`\`
+Then map ReviewNotFoundException → 404 via the existing handler. A test should assert that a missing id returns 404 with a stable errorCode, not the repository detail.`,
+        followup:`For security reasons product wants unauthorized users to see the same response as missing reviews. Would you return 403 or 404, and how do you keep that consistent?`,
+        followupAnswer:`Return 404 for both — a 403 confirms the resource exists, which leaks existence to someone not allowed to know. Enforce it in the service: check ownership/authorization during the lookup and throw the same ReviewNotFoundException for "absent" and "not yours", so callers can't distinguish them. Keep that decision in one place (the service or a policy component) so every endpoint behaves identically rather than each controller re-deciding.`,
+        tie:`Mirrors the getReview path in the review service — the service owns authorization and the 404-vs-403 policy, not the controller.`,
+        trap:`Swapping \`.get()\` for \`.orElse(null)\` and creating a later NullPointerException; returning 200 with a null body; or mapping *all* exceptions to 404. Talking only about Optional style and ignoring the API semantics.`,
+        l2q:`Extend this to an endpoint that returns a list with pagination. What new failure and contract issues appear that the single-resource case didn't have?`,
+        l2a:`A list endpoint rarely 404s — "no results" is an empty list with 200, not an error — so the not-found handling inverts. New concerns appear: a stable sort with a tie-breaker (otherwise pagination is non-deterministic), bounded \`limit\` values so a caller can't request a million rows, and a total-count or next-cursor contract the client can rely on. Validation moves to the query params (\`@Positive\`/\`@Max\` on page size), and you decide offset vs keyset pagination based on whether the data churns under concurrent writes.`,
+        l3q:`How would you make "missing resource → 404 with a stable error contract" the default across every controller in a large service, instead of relying on each author to remember?`,
+        l3a:`Centralize it. Define domain exceptions (ReviewNotFoundException extends a shared ResourceNotFoundException) and map them once in a \`@RestControllerAdvice\` to 404 with a structured ErrorResponse + requestId — so no controller writes not-found handling by hand. Provide a repository/service helper like \`findOrThrow(id)\` so the correct pattern is the path of least resistance, and add an ArchUnit test or lint rule that forbids controllers from calling repositories directly (forcing the service boundary where auth and not-found policy live). New endpoints then inherit correct semantics for free, and the 404-vs-403 existence-hiding rule lives in exactly one place.`,
+      },
+      {
+        id:`diag-06`,
+        q:`Explain what this is trying to prevent, identify the race condition under concurrent requests, and give the smallest safe fix.`,
+        lang:`java`,
+        code:`@Transactional
+public Order createOrder(CreateOrderRequest request) {
+    if (orderRepository.existsByIdempotencyKey(request.idempotencyKey())) {
+        throw new DuplicateOrderException(request.idempotencyKey());
+    }
+
+    Order order = new Order(
+        request.customerId(),
+        request.idempotencyKey(),
+        request.items()
+    );
+
+    return orderRepository.save(order);
+}`,
+        anchor:`It tries to stop duplicate orders by checking the idempotency key before inserting. But the check and the insert are separate operations — two concurrent requests can both see "not present" and both insert. Classic check-then-act race.`,
+        detail:`**Issues:** \`@Transactional\` alone doesn't make the predicate globally safe at normal isolation levels; without a DB constraint, correctness depends on timing; a duplicate insert can trigger downstream effects (reserve inventory, charge payment, publish events twice).
+
+**Smallest safe fix** — let the database enforce the invariant, then handle the violation:
+\`\`\`sql
+ALTER TABLE orders ADD CONSTRAINT uk_orders_idempotency_key UNIQUE (idempotency_key);
+\`\`\`
+\`\`\`java
+try {
+    return orderRepository.saveAndFlush(
+        new Order(request.customerId(), request.idempotencyKey(), request.items()));
+} catch (DataIntegrityViolationException ex) {
+    throw new DuplicateOrderException(request.idempotencyKey(), ex);
+}
+\`\`\`
+For *true* idempotency (not just rejection), fetch and return the original order for that key after the conflict. A real test runs the two calls concurrently and asserts exactly one row exists.`,
+        followup:`If payment is charged after the order row is created, where should the idempotency boundary live — order service, payment service, or both?`,
+        followupAnswer:`Both, at their own boundaries. The order service's unique key makes order creation idempotent; the payment service needs its own idempotency key (usually derived from or carrying the order's key) so a retry of the charge doesn't double-bill even if the order already exists. Idempotency isn't a single global switch — each side effect that can be retried needs its own dedupe key, ideally threaded through so the whole chain is replay-safe.`,
+        tie:`Same pattern as the Idempotency Key Store drill — the DB constraint is the source of truth, not application-level checks.`,
+        trap:`"Wrap it in synchronized" — fails across multiple app instances. "The transaction already prevents this" — usually false at read-committed. Writing only a sequential unit test that never exercises concurrency.`,
+        l2q:`The client expects the same successful response when it retries with the same key (true idempotency), not an error. How do you implement replay?`,
+        l2a:`On the unique-constraint conflict, don't just throw — load the existing order by its idempotency key and return the *same* response the original request produced, so a retry is indistinguishable from the first call. That means the stored order (or a small idempotency-record table) must capture enough to reconstruct the response, and you must define what happens when the same key arrives with a *different* payload — reject with a 409 conflict, because replaying a key is only valid for an identical request. This turns "duplicate rejection" into genuine at-most-once semantics from the client's view.`,
+        l3q:`Design idempotency for a create flow that spans several services (order, payment, inventory) with events between them. Where do keys and dedupe live?`,
+        l3a:`Give each request a client-supplied idempotency key at the edge and propagate it (and per-step derived keys) through the whole flow, so every service can dedupe its own writes independently. Use the transactional outbox pattern — persist the state change and the outgoing event in the same local transaction, then relay events asynchronously — so you never send an event for work that rolled back. Make each consumer idempotent (dedupe on the event/message id) because delivery is at-least-once, and coordinate multi-service invariants with sagas and compensating actions rather than a distributed transaction. The honest framing: you're engineering at-least-once delivery + idempotent handlers to *simulate* exactly-once, because true exactly-once across services doesn't exist.`,
+      },
+      {
+        id:`diag-07`,
+        q:`Walk through this method in order. What breaks if the transaction rolls back after the email is sent, and what's the smallest safe fix?`,
+        lang:`java`,
+        code:`@Transactional
+public void approveReview(Long reviewId, String approverEmail) {
+    Review review = reviewRepository.findById(reviewId)
+        .orElseThrow(() -> new ReviewNotFoundException(reviewId));
+
+    review.approve(approverEmail);
+    emailClient.sendApprovalEmail(review.getSubmitterEmail(), review.getId());
+    auditRepository.save(AuditEvent.reviewApproved(review.getId(), approverEmail));
+}`,
+        anchor:`It mutates review state, sends an email, then saves an audit row — all inside one transaction. The email is an external side effect that can't be rolled back, so if the transaction later fails the user gets an "approved" email for a review that was never actually approved.`,
+        detail:`**Issues:** the irreversible side effect (email) happens *before* commit; an email failure can also roll back the DB work; the audit row may never persist if the email throws first; no retry/dead-letter strategy.
+
+**Smallest safe fix** — commit the state change, then send the email *after* commit:
+\`\`\`java
+review.approve(approverEmail);
+auditRepository.save(AuditEvent.reviewApproved(review.getId(), approverEmail));
+eventPublisher.publishEvent(new ReviewApprovedEvent(review.getId()));
+\`\`\`
+\`\`\`java
+@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+public void sendApprovalEmail(ReviewApprovedEvent e) { /* send here */ }
+\`\`\`
+For higher reliability, persist an outbox row in the same transaction and let a worker send the email. A test forces the audit save to fail and asserts the email client was never called.`,
+        followup:`If the email worker retries after a timeout, how do you prevent duplicate emails?`,
+        followupAnswer:`Make the send idempotent: give each notification a stable id (e.g. reviewId + event type) and record "sent" state so a retry that finds it already sent is a no-op. With an outbox, mark the row sent only after a confirmed send, and dedupe on the outbox id; because delivery is at-least-once, the worker must tolerate seeing the same event twice and collapse it to one actual email. You accept the occasional duplicate-suppressed retry rather than risk losing the email entirely.`,
+        tie:`This is why the final-assessment flow separates persisting reviewer-confirmed state from any downstream notification — state first, effects after commit.`,
+        trap:`"Just put the email last" — still fails if commit fails after the method returns. Catching the email exception and silently ignoring it. Making the whole method non-transactional.`,
+        l2q:`When would you choose an in-memory AFTER_COMMIT event versus a persistent outbox table? What does each guarantee?`,
+        l2a:`AFTER_COMMIT events are simple and fine when a lost notification is tolerable — the email fires only after the DB commit, but if the app crashes between commit and send, the event is gone (in-memory, no durability). An outbox writes the intent into the same transaction as the state change, so it survives a crash and a worker guarantees eventual delivery with retries — at the cost of a table, a relay process, and consumer-side dedupe. Choose AFTER_COMMIT for best-effort, non-critical notifications; choose the outbox when the side effect must not be lost (payments, legally required audit exports, downstream state others depend on).`,
+        l3q:`Design reliable side-effect delivery for this workflow at scale — ordering, retries, poison messages, and observability.`,
+        l3a:`Use the outbox pattern as the durable hand-off: state change + outbox row in one transaction, a relay (polling or CDC) publishing to a broker, and idempotent consumers keyed on the event id. Get ordering only where it matters by partitioning on the aggregate id (all events for one review stay ordered) rather than forcing a global order. Handle retries with backoff and a dead-letter queue for poison messages so one bad event can't block the stream, and cap attempts. Make it observable end-to-end with a correlation id threaded from the API through the outbox to the consumer, plus metrics on outbox lag, retry counts, and DLQ depth — so "did the email actually go out" is answerable, not a guess.`,
+      },
+      {
+        id:`diag-08`,
+        q:`This training function reports suspiciously high accuracy. Identify the leakage bug, explain why it inflates the score, and give the smallest safe fix.`,
+        lang:`python`,
+        code:`def train_model(df: pd.DataFrame) -> float:
+    X = df[["age", "income", "risk_score"]]
+    y = df["defaulted"]
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_scaled, y, test_size=0.2, random_state=42
+    )
+
+    model = LogisticRegression()
+    model.fit(X_train, y_train)
+
+    return model.score(X_test, y_test)`,
+        anchor:`It scales the features on the **whole** dataset *before* the split, so the scaler learns the mean/std of the test rows too. Test-set information leaks into training-time preprocessing, making the reported score optimistically biased.`,
+        detail:`**Issues:** data leakage (fitted preprocessing sees the test distribution); production serving will scale differently unless the scaler is serialized with the model; the function returns only a score, not the fitted artifact; no stratification, so an imbalanced label can make the split unstable.
+
+**Smallest safe fix** — split first, then fit preprocessing inside a pipeline on train only:
+\`\`\`python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y)
+
+pipeline = Pipeline([
+    ("scaler", StandardScaler()),
+    ("model", LogisticRegression(max_iter=1000)),
+])
+pipeline.fit(X_train, y_train)
+return pipeline.score(X_test, y_test)
+\`\`\`
+The pipeline guarantees the scaler is fit on training rows only and applied consistently at inference.`,
+        followup:`How does this change when you move to k-fold cross-validation or a serialized production pipeline?`,
+        followupAnswer:`Under k-fold, the preprocessing must be re-fit *inside each fold* — fitting the scaler once on all data before cross-validating leaks across folds — which is exactly what wrapping it in a \`Pipeline\` and passing that to \`cross_val_score\` handles automatically. For production, you serialize the whole fitted pipeline (scaler + model together) so serving applies the identical transform learned at train time; hand-writing separate train and inference preprocessing is where skew creeps back in. The invariant is the same everywhere: fit preprocessing only on data the model is allowed to learn from.`,
+        tie:`This is the group/time-based split discipline from your MLE drills — surface leakage proactively before anyone asks.`,
+        trap:`"Scaling is unsupervised, so it's not leakage" — false; it still learns statistics from held-out data. Moving \`fit_transform\` after the split but then calling \`fit_transform\` (not \`transform\`) on the test set. Hand-writing separate train/inference preprocessing.`,
+        l2q:`Beyond scaling, what other operations silently leak, and how do you catch them in review?`,
+        l2a:`Any step that learns from data leaks if fit before the split or across folds: target/mean encoding of categoricals, imputation with dataset-wide means, feature selection using the full label, oversampling (SMOTE) before splitting, and — subtly — time-series features that peek at future rows. The tell is "did this transform use information the model won't have at prediction time?" In review, insist that every stateful transform lives inside the CV pipeline, that splits are group- or time-aware when rows aren't independent, and that a suspiciously high score triggers a leakage check before a modeling celebration.`,
+        l3q:`How would you prevent this class of bug from recurring across dozens of notebooks and training scripts?`,
+        l3a:`Make the safe path the default and the unsafe path hard. Provide a shared training harness / pipeline factory that enforces split-then-fit and returns a serialized pipeline, so individual notebooks don't re-implement preprocessing. Add CI checks or a linter that flags \`fit_transform\` on features before a \`train_test_split\`, and code-review guidance that any stateful transform must be inside a Pipeline/ColumnTransformer. Standardize on group/time-aware splitters where rows aren't independent, and add a guardrail eval — a held-out set the model literally never touches during development — so an inflated CV score gets caught against reality before launch.`,
+      },
+      {
+        id:`diag-09`,
+        q:`This RAG chunker produces corrupted chunk metadata. Identify the aliasing bug, explain how it corrupts the output, and give the smallest safe fix.`,
+        lang:`python`,
+        code:`def chunk_documents(documents: list[Document]) -> list[dict]:
+    rows = []
+
+    for doc in documents:
+        metadata = doc.metadata
+        chunks = split_text(doc.text, chunk_size=500, overlap=50)
+
+        for i, chunk in enumerate(chunks):
+            metadata["chunk_index"] = i
+            metadata["chunk_count"] = len(chunks)
+            rows.append({
+                "text": chunk,
+                "metadata": metadata,
+            })
+
+    return rows`,
+        anchor:`\`metadata = doc.metadata\` aliases the same dict for every chunk of a document. Each iteration mutates that one shared object, so every row ends up pointing at it with the *final* chunk_index — and it also mutates the original \`doc.metadata\` as a side effect.`,
+        detail:`**Issues:** all chunks from a doc share one metadata object, so chunk_index/chunk_count are wrong (they show the last values); the source document's metadata is corrupted in place; downstream, citations and retrieval evals point at the wrong chunk.
+
+**Smallest safe fix** — build a fresh dict per chunk:
+\`\`\`python
+for i, chunk in enumerate(chunks):
+    metadata = {
+        **doc.metadata,
+        "chunk_index": i,
+        "chunk_count": len(chunks),
+    }
+    rows.append({"text": chunk, "metadata": metadata})
+\`\`\`
+If metadata holds nested mutable values, use \`copy.deepcopy(doc.metadata)\`. A test asserts \`rows[0]["metadata"] is not rows[1]["metadata"]\`, that indices are 0 and 1, and that \`"chunk_index" not in doc.metadata\`.`,
+        followup:`If metadata includes a nested source object with page ranges, when is a shallow copy insufficient?`,
+        followupAnswer:`A shallow copy (\`{**doc.metadata}\`) gives each chunk its own top-level dict but the nested \`source\` object is still shared by reference — so mutating \`metadata["source"]["page"]\` corrupts every chunk and the original. As soon as you mutate anything below the top level, you need \`copy.deepcopy\`, or you rebuild the nested structure explicitly. If the metadata is only ever read (never mutated below the top level), the shallow copy is enough — the deep copy is the price of nested mutation.`,
+        tie:`Directly relevant to your ingestion/chunking path — wrong chunk metadata silently poisons Recall@k and citation accuracy.`,
+        trap:`Copying the metadata once per document instead of once per chunk. Ignoring the mutation of the original \`doc.metadata\`. Dismissing it as harmless "because the text is still correct."`,
+        l2q:`Why does this specific bug make retrieval evaluation untrustworthy, not just cosmetically wrong?`,
+        l2a:`Because the metadata is how you connect a retrieved chunk back to its position and source, and this bug makes that mapping lie. Recall@k / citation metrics compare retrieved chunk ids and positions against expected ones; if every chunk claims the last chunk_index, "did we retrieve the right passage?" is computed against corrupted labels, so the metric can pass while the system is wrong (or fail for the wrong reason). Worse, it's silent — the text is fine, so nothing crashes — which means a plausible-looking eval quietly certifies a broken pipeline. Trustworthy evals require the provenance metadata to be exactly right per chunk.`,
+        l3q:`How would you defend a data pipeline like this against shared-mutable-state and aliasing bugs in general?`,
+        l3a:`Prefer immutability and construct-don't-mutate: build each record fresh from inputs rather than mutating a shared object, and model records as frozen dataclasses / pydantic models so accidental in-place writes fail loudly. Where you must copy, be explicit about shallow vs deep and document why. Add invariant checks in the pipeline (assert unique, monotonic chunk indices per document; assert the source object wasn't mutated) and property-based tests that generate multi-chunk documents and verify per-chunk independence. The general principle: aliasing bugs come from sharing mutable state across iterations, so the durable fix is to stop sharing it — treat pipeline data as values, not mutable buffers.`,
+      },
+      {
+        id:`diag-10`,
+        q:`This list uses the array index as the React key. Explain what goes wrong when a row is inserted, removed, or sorted, and give the smallest safe fix.`,
+        lang:`tsx`,
+        code:`const ReviewList = ({ items }: { items: ReviewItem[] }) => (
+  <ul>
+    {items.map((item, index) => (
+      <ReviewRow key={index} item={item} />
+    ))}
+  </ul>
+);
+
+const ReviewRow = ({ item }: { item: ReviewItem }) => {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <li>
+      <button onClick={() => setExpanded(!expanded)}>{item.title}</button>
+      {expanded && <div>Details for {item.title}</div>}
+    </li>
+  );
+};`,
+        anchor:`With \`key={index}\`, React ties component identity to *position*, not to the item. Remove or reorder a row and the local \`expanded\` state stays attached to the index — so the wrong row appears expanded after the list changes.`,
+        detail:`**Issues:** per-row state (expanded, and in general selection, edits, form input) follows the index and jumps to the wrong item on insert/delete/reorder; bugs are intermittent and data-dependent; index keys can also cause extra re-renders.
+
+**Smallest safe fix** — key by a stable domain id:
+\`\`\`tsx
+{items.map(item => (
+  <ReviewRow key={item.id} item={item} />
+))}
+\`\`\`
+If items have no stable id, assign one at ingestion time — never generate a key with \`Math.random()\`/\`Date.now()\` on render. A test expands "Beta", removes another row, and asserts "Beta" is still the expanded one.`,
+        followup:`If the list is virtualized and only some rows are mounted at once, does your key choice become more or less important?`,
+        followupAnswer:`More important. Virtualization constantly mounts and unmounts rows as you scroll and reuses DOM nodes, so a position-based key makes React recycle a scrolled-away row's state into whatever item now occupies that slot — amplifying exactly this bug. A stable domain id keeps identity attached to the data regardless of which rows are currently realized, which is what lets the virtualizer recycle nodes safely.`,
+        tie:`Same identity discipline as any editable review table — keys are identity, not just a warning to silence.`,
+        trap:`Using \`Math.random()\` or \`Date.now()\` as the key (a new key every render remounts everything). Claiming index keys are *always* wrong — they're acceptable for a static, never-reordered, append-only list. Lifting state to the parent before simply trying a stable key.`,
+        l2q:`When are index keys genuinely safe, and how do you decide?`,
+        l2a:`Index keys are safe only when the list is static or strictly append-only, never reordered or filtered, and the rows hold no per-row state or uncontrolled DOM state (no local \`useState\`, no focus/scroll/input to preserve). The moment rows can be inserted in the middle, removed, sorted, or filtered — or carry any identity-bound state — you need a stable key. The decision rule: does a row have identity that must survive list mutations? If yes, key by that identity; if the row is purely presentational and the list never mutates, index is fine.`,
+        l3q:`Beyond keys, how do you decide where row state like "expanded" should live as this component grows?`,
+        l3a:`Keep it local when it's ephemeral UI state that only that row cares about (an expand toggle) — colocating state is simpler and avoids prop-drilling. Lift it up when the state must be shared (a parent "collapse all", a selection set the toolbar reads, or persistence across navigation), storing it keyed by the stable item id rather than by index so it survives reorders. If many rows and many consumers need it, a small context or store scoped to the list beats threading callbacks through every level. The through-line is the same as the key fix: bind state to item identity, not to position, so the data model — not the render order — owns the truth.`,
+      },
+      {
+        id:`diag-11`,
+        q:`This typed fetch helper is used everywhere. Identify the correctness, runtime-safety, and UX bugs, then give the smallest safe fix.`,
+        lang:`tsx`,
+        code:`export async function getJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  return response.json() as Promise<T>;
+}`,
+        anchor:`It never checks \`response.ok\`, so 404/500/429 bodies are parsed and returned as if they were success payloads. The \`as Promise<T>\` cast is compile-time only — it does zero runtime validation, giving false confidence about the shape.`,
+        detail:`**Issues:** non-2xx responses are treated as success; \`204 No Content\` or invalid JSON throws unexpectedly; no timeout/abort; no structured error type; callers can't distinguish network vs server vs validation vs parse failures. \`fetch\` does **not** reject on 404 — a common misconception.
+
+**Smallest safe fix** — check status, handle 204, throw a typed error:
+\`\`\`tsx
+export class ApiError extends Error {
+  constructor(public status: number, public body: unknown,
+              message = \`Request failed with status \${status}\`) { super(message); }
+}
+
+export async function getJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  const body = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) throw new ApiError(response.status, body);
+  return body as T;
+}
+\`\`\`
+For real correctness, validate the body at the boundary with Zod/schema parsing. A test stubs a 500 and asserts it rejects with an ApiError carrying status + body.`,
+        followup:`Where would you put runtime schema validation — inside this helper, per endpoint, or at the API client boundary?`,
+        followupAnswer:`Per endpoint, at the client boundary — but not hard-coded inside this generic helper. Keep \`getJson\` responsible for transport concerns (status, 204, throwing ApiError), and let each endpoint wrapper pass its own schema so the response is parsed/validated where the shape is actually known: \`getReview(id)\` owns the ReviewDto schema. That keeps one place per endpoint asserting the contract, avoids a giant switch inside the transport helper, and gives you a typed, validated object instead of a cast.`,
+        tie:`This is the reviewApi/getJson transport boundary — the one place fetch logic should live so error handling doesn't scatter across components.`,
+        trap:`"fetch throws on 404" — it doesn't. Wrapping in try/catch that swallows the error and returns null. Treating the TypeScript generic as proof the server sent the right shape.`,
+        l2q:`Extend this to support timeouts/cancellation and retries. What are the correctness traps?`,
+        l2a:`Add an \`AbortController\` with a timeout so a hung request rejects instead of leaking, and thread the signal through so React can cancel on unmount (avoiding "set state on unmounted component" and race conditions where a stale response overwrites a newer one). Retries must be *safe*: only retry idempotent methods (GET), use exponential backoff with jitter, cap attempts, and never retry a 4xx (it won't fix itself) — retry 5xx/network/timeout only. The subtle trap is retrying non-idempotent writes, which can duplicate side effects; that needs an idempotency key, not blind retry.`,
+        l3q:`Design a typed API client layer for a large frontend. How do you get end-to-end type safety and consistent error handling without a cast per call?`,
+        l3a:`Make runtime validation the source of truth for types: define each endpoint's response with a schema (Zod/io-ts) and *infer* the TypeScript type from it, so \`as T\` disappears and the compile-time type is guaranteed to match what you actually validated at runtime. Centralize transport concerns (status handling, ApiError, auth headers, timeout, retry policy) in one client, and generate or hand-write thin per-endpoint wrappers that each own their schema — or generate the whole client from an OpenAPI spec so the contract is single-sourced with the backend. Standardize the error model (ApiError with status + parsed body + code) so every consumer handles failures the same way, and surface it consistently in the UI (loading/error/empty states) rather than each component reinventing it.`,
+      },
+      {
+        id:`diag-12`,
+        q:`This query is meant to count reviews per status. Explain why the count can be wrong and give the smallest safe fix.`,
+        lang:`sql`,
+        code:`SELECT
+    r.status,
+    COUNT(*) AS review_count
+FROM reviews r
+JOIN evidence e
+    ON e.review_id = r.id
+GROUP BY r.status;`,
+        anchor:`The join produces one row per review–evidence pair, so \`COUNT(*)\` counts evidence rows, not reviews. A review with five evidence rows adds five to its status bucket — silently inflating the numbers.`,
+        detail:`**Issues:** it counts joined rows, not distinct reviews; the inflation is invisible and distorts dashboards and eval reports; and the INNER JOIN also drops reviews with no evidence entirely.
+
+**Smallest safe fixes:**
+\`\`\`sql
+-- Count distinct reviews
+SELECT r.status, COUNT(DISTINCT r.id) AS review_count
+FROM reviews r JOIN evidence e ON e.review_id = r.id
+GROUP BY r.status;
+\`\`\`
+\`\`\`sql
+-- Semantically cleaner: reviews that HAVE evidence
+SELECT r.status, COUNT(*) AS review_count
+FROM reviews r
+WHERE EXISTS (SELECT 1 FROM evidence e WHERE e.review_id = r.id)
+GROUP BY r.status;
+\`\`\`
+\`COUNT(DISTINCT)\` is simple but can be expensive at scale; \`EXISTS\` expresses "at least one" without fanning out the join. Verify with a query that finds reviews with >1 evidence row.`,
+        followup:`If the dashboard also needs the average evidence count per review by status, how would you write that without double-counting?`,
+        followupAnswer:`Aggregate evidence per review first, then average — don't mix grains in one flat join. Use a CTE or subquery: count evidence rows grouped by review (\`SELECT review_id, COUNT(*) AS ev FROM evidence GROUP BY review_id\`), join that to reviews, then \`AVG(COALESCE(ev, 0))\` grouped by status. Pre-aggregating to the review grain before averaging keeps the "one row per review" invariant, so neither the count nor the average is inflated by the fan-out.`,
+        tie:`Same fan-out trap that corrupts eval dashboards — always ask "what entity am I counting?" before COUNT(*).`,
+        trap:`Assuming \`GROUP BY r.status\` deduplicates reviews (it doesn't). Adding more columns to GROUP BY, which usually makes it worse. Ignoring the business definition of the metric.`,
+        l2q:`When is COUNT(DISTINCT) acceptable and when should you pre-aggregate in a CTE instead?`,
+        l2a:`COUNT(DISTINCT r.id) is fine for a one-off or moderate data volume where clarity beats micro-optimizing, and when you only need the distinct count of one entity. Pre-aggregate in a CTE (collapse evidence to the review grain first, then join/count) when the data is large — DISTINCT over a big fanned-out set is costly — or when you need *several* metrics at the review grain (count, avg, max) that would otherwise each need their own DISTINCT/anti-fan-out logic. The deciding factor is grain: if you're computing multiple things about reviews, get to one-row-per-review first, then everything downstream is a clean aggregate.`,
+        l3q:`How do you prevent grain/fan-out mistakes like this from silently corrupting metrics across a warehouse?`,
+        l3a:`Model metrics at explicit, documented grains and stop letting analysts hand-write raw fan-out joins. Build reusable dbt models (or a semantic layer) where the review grain is materialized once with its evidence counts pre-aggregated, so downstream metrics consume a clean one-row-per-review table instead of re-joining. Add dbt tests — uniqueness on the grain key, row-count and relationship tests — that fail when a transform accidentally fans out, and code-review guidance that any COUNT over a joined table must justify the grain. The goal is that the correct grain is the default building block, so "counting evidence rows when you meant reviews" can't quietly ship.`,
+      },
+      {
+        id:`diag-13`,
+        q:`This pagination query returns inconsistent pages. Explain why, give the smallest safe fix, and say when keyset pagination is better.`,
+        lang:`sql`,
+        code:`SELECT id, title, created_at
+FROM reviews
+WHERE status = 'PENDING'
+LIMIT 20 OFFSET 40;`,
+        anchor:`With no ORDER BY, the database may return rows in any order, so "page 3" isn't stable across requests. Even with an order, OFFSET pagination can skip or duplicate rows when rows are inserted or deleted between page fetches.`,
+        detail:`**Issues:** no deterministic order; results vary run to run; OFFSET gets slower as it grows (the DB still scans and discards the skipped rows); concurrent inserts/deletes shift the window; ordering by \`created_at\` alone leaves ties unstable.
+
+**Smallest safe fix** — order by a unique tie-breaker:
+\`\`\`sql
+SELECT id, title, created_at
+FROM reviews WHERE status = 'PENDING'
+ORDER BY created_at DESC, id DESC
+LIMIT 20 OFFSET 40;
+\`\`\`
+For high-volume feeds, use **keyset** pagination (seek method), which is stable under writes and stays fast at depth:
+\`\`\`sql
+... WHERE status = 'PENDING' AND (created_at, id) < (:last_created_at, :last_id)
+ORDER BY created_at DESC, id DESC LIMIT 20;
+\`\`\`
+Support it with an index on \`(status, created_at DESC, id DESC)\`.`,
+        followup:`Product wants a "go to page 37" jump. Does keyset pagination still fit?`,
+        followupAnswer:`Not directly — keyset pagination is a "next/previous from here" cursor; it has no cheap way to land on an arbitrary page N because it needs the boundary values of the previous page. If random page jumps are a hard requirement, offset pagination (with a stable ORDER BY) is the pragmatic choice despite its cost, often capped to a reasonable max page. A common compromise: keyset for the infinite-scroll/next-page path where 99% of traffic is, and offset only where a numbered pager genuinely needs it.`,
+        tie:`This is the Cursor Pagination drill — a stable key as an opaque cursor beats offset once the feed churns.`,
+        trap:`Believing primary-key order is implicit without ORDER BY. Adding \`ORDER BY created_at\` with no tie-breaker. Jumping straight to keyset without acknowledging it loses arbitrary page jumps.`,
+        l2q:`Design the API contract for keyset pagination. What does the client send and receive, and how do you keep the cursor robust?`,
+        l2a:`Return the page plus an opaque \`nextCursor\` (and optionally \`hasMore\`); the client sends that cursor back to get the following page rather than a page number. Encode the cursor opaquely — base64 of the sort key values (\`created_at\`, \`id\`) — so clients treat it as a token and can't hand-craft or depend on its internals, letting you change the sort later. Make it robust by including every column in the ORDER BY inside the cursor (so ties are resolved deterministically), validating/HMAC-signing it if it's user-facing, and defining behavior when the referenced row was deleted (the comparison still positions correctly because you seek by value, not by that row's existence).`,
+        l3q:`How would you make pagination consistent and performant across many endpoints and large tables org-wide?`,
+        l3a:`Standardize a pagination contract in a shared library — opaque cursors, a required deterministic sort with a unique tie-breaker, bounded page sizes — so every endpoint behaves the same and clients learn one model. Default to keyset for feeds and large tables, reserving offset for the few places that truly need numbered pages, and make sure each paginated query has a matching composite index on its sort columns (and review query plans, not just correctness). Add guardrails: a max limit enforced server-side, and monitoring on deep-offset queries so a slow \`OFFSET 100000\` scan surfaces before it becomes a production incident. The principle is that a stable sort + a supporting index is what makes pagination a contract rather than a coincidence.`,
+      },
+      {
+        id:`diag-14`,
+        q:`This sliding-window function is supposed to return the length of the longest substring without repeating characters. Find the bug with a concrete input and give the smallest safe fix.`,
+        lang:`python`,
+        code:`def longest_unique_substring(s: str) -> int:
+    seen = set()
+    left = 0
+    best = 0
+
+    for right, ch in enumerate(s):
+        if ch in seen:
+            left += 1
+
+        seen.add(ch)
+        best = max(best, right - left + 1)
+
+    return best`,
+        anchor:`On a duplicate it increments \`left\` once but never removes characters from \`seen\`, so \`seen\` stops matching the actual window. The window invariant breaks and it reports invalid (too-long) results — e.g. on "abba" it doesn't reliably return 2.`,
+        detail:`**Root cause:** the invariant should be "\`seen\` equals the characters in \`s[left:right+1]\`." Bumping \`left\` by one without evicting \`s[left]\` from the set violates it, and a single \`if\` can't shrink past multiple duplicates.
+
+**Smallest safe fix** — shrink with a while loop, evicting as you go:
+\`\`\`python
+def longest_unique_substring(s: str) -> int:
+    seen = set()
+    left = best = 0
+    for right, ch in enumerate(s):
+        while ch in seen:
+            seen.remove(s[left])
+            left += 1
+        seen.add(ch)
+        best = max(best, right - left + 1)
+    return best
+\`\`\`
+Tests: "abba" → 2, "abcde" → 5, "" → 0. It's O(n): each character enters and leaves the window at most once.`,
+        followup:`How would you modify this to return the actual substring, not just its length?`,
+        followupAnswer:`Track where the best window started, not just its length: when \`right - left + 1\` beats \`best\`, record \`best = right - left + 1\` and \`best_start = left\`, then return \`s[best_start:best_start + best]\` at the end. The window logic is unchanged — you're only remembering the left boundary at the moment you found a new maximum. It stays O(n) time and now O(k) extra space for the returned slice.`,
+        tie:`Classic Tier-B sliding-window pattern — state the window invariant out loud before writing the loop.`,
+        trap:`Clearing the whole \`seen\` set on a duplicate (works but is imprecise and can be O(n²)-ish reasoning). Using \`if\` instead of \`while\` (can't skip multiple duplicates). Claiming the nested while makes it O(n²) — amortized, each char is added/removed once, so it's O(n).`,
+        l2q:`Generalize this to "longest substring with at most K distinct characters." What changes in the window and the shrink condition?`,
+        l2a:`Replace the set with a \`dict\` (or Counter) of char → count in the window, and change the shrink condition from "current char already present" to "more than K distinct keys." While \`len(counts) > K\`, decrement \`counts[s[left]]\` and delete the key when it hits zero, advancing \`left\`. The skeleton — expand right, shrink left while the invariant is violated, track best — is identical; only the "what makes the window invalid" predicate and the bookkeeping (counts instead of presence) change. It's still O(n) because each index is visited by \`left\` and \`right\` at most once.`,
+        l3q:`This "expand right, shrink left while invalid, track best" template solves a whole family of problems. How do you recognize when it applies, and where does it break down?`,
+        l3a:`It applies to contiguous-subarray/substring problems with a monotonic feasibility property: growing the window can only make it "more invalid," and shrinking can only help — so once the window is valid you don't need to re-expand, giving amortized O(n). Recognize it by "longest/shortest/count of subarrays satisfying condition X" where X is monotone in window size (distinct-char limits, sum ≤ target with non-negative numbers, at-most-K constraints). It breaks down when monotonicity fails — e.g. arrays with negative numbers (a longer window can become valid again, so shrinking isn't safe; you need prefix sums + a hashmap instead), or when the answer isn't contiguous. The senior move is naming the invariant and checking monotonicity *before* reaching for the template, rather than pattern-matching on "substring."`,
+      },
+      {
+        id:`diag-15`,
+        q:`Explain what this test actually verifies, why it's weak, and how it could pass while the feature is broken. Then write a better behavior-focused test.`,
+        lang:`java`,
+        code:`@Test
+void approveReview_savesReview() {
+    Review review = new Review(123L, ReviewStatus.PENDING);
+    when(reviewRepository.findById(123L)).thenReturn(Optional.of(review));
+
+    reviewService.approveReview(123L, "qa@example.com");
+
+    verify(reviewRepository).save(review);
+}`,
+        anchor:`It only verifies that \`save(review)\` was *called*. It never asserts the review was actually approved, the approver recorded, or the timestamp set — so it's coupled to implementation, not behavior, and could pass even if \`review.approve(...)\` were deleted.`,
+        detail:`**Issues:** it tests a collaborator call, not the domain outcome; it would stay green if the approval logic broke (as long as save is still invoked); it ignores failure paths and the actual state transition.
+
+**Better, behavior-focused test:**
+\`\`\`java
+@Test
+void approveReview_whenPending_marksApprovedAndRecordsApprover() {
+    Review review = new Review(123L, ReviewStatus.PENDING);
+    when(reviewRepository.findById(123L)).thenReturn(Optional.of(review));
+
+    reviewService.approveReview(123L, "qa@example.com");
+
+    assertThat(review.getStatus()).isEqualTo(ReviewStatus.APPROVED);
+    assertThat(review.getApprovedBy()).isEqualTo("qa@example.com");
+    assertThat(review.getApprovedAt()).isNotNull();
+}
+\`\`\`
+Keep mock verification for genuine side effects (email sent, event published), and reload-and-assert in an integration test.`,
+        followup:`What would you test at the unit level versus the integration level for this approval workflow?`,
+        followupAnswer:`Unit level: the domain outcome and rules in isolation — status transitions, approver/timestamp recorded, and rejection of invalid transitions (approving an already-approved or rejected review) — with fast, mocked collaborators. Integration level: that it actually persists (save the review, reload from the database, assert the stored state) and that real side effects fire correctly (an approval event is published, the audit row exists), because those cross boundaries mocks can't prove. The split: unit tests own business logic and invariants; integration tests own wiring, persistence, and side-effect delivery.`,
+        tie:`Reinforces the behavior-over-implementation testing discipline — assert observable outcomes so refactors don't break green tests.`,
+        trap:`Concluding "all mocks are bad." Just adding more \`verify(...)\` calls. Ignoring the domain invariant and the failure paths.`,
+        l2q:`When is verifying a collaborator call (verify(...)) the right thing rather than a smell?`,
+        l2a:`Verify a collaborator when the *interaction itself is the behavior* and has no observable state to assert — sending an email, publishing an event, calling an external payment API. There the fact that the call happened (with the right arguments, the right number of times) is exactly what you care about, and you can't observe an "outcome" any other way. It becomes a smell when you verify calls to something whose *result* you could assert instead (a repository whose saved state you can check), because then you're pinning how the code is implemented rather than what it accomplishes — which makes tests brittle under refactoring.`,
+        l3q:`How do you steer a team toward behavior-focused tests so the suite survives refactoring and still catches regressions?`,
+        l3a:`Make the default unit of testing "observable behavior through a stable seam" — test services through their public API and assert outcomes, reserving interaction verification for true side effects — and encode that in review guidance and examples. Watch the signal that tests break on *refactors that didn't change behavior*: that's over-coupling, and it's a prompt to rewrite the test against outcomes. Favor a healthy pyramid (many fast behavior unit tests, fewer integration tests for wiring/persistence, a thin end-to-end layer), use test names that state a behavior ("whenPending_marksApproved") so intent is legible, and treat mutation testing or deliberate bug-injection as a way to prove the suite actually fails when the feature breaks — a test that stays green when you delete \`review.approve()\` is worse than no test.`,
+      },
+      {
+        id:`diag-16`,
+        q:`This cache lives in a Spring @Service (singleton by default). Identify the concurrency and production risks, then give the smallest safe fix.`,
+        lang:`java`,
+        code:`@Service
+public class PolicyCache {
+    private final Map<String, Policy> cache = new HashMap<>();
+    private final PolicyClient policyClient;
+
+    public Policy getPolicy(String policyId) {
+        if (!cache.containsKey(policyId)) {
+            Policy policy = policyClient.fetchPolicy(policyId);
+            cache.put(policyId, policy);
+        }
+        return cache.get(policyId);
+    }
+}`,
+        anchor:`The singleton shares one \`HashMap\` across all request threads. \`HashMap\` isn't thread-safe and the check-then-put isn't atomic — concurrent calls can corrupt the map or double-fetch. There's also no TTL, eviction, or invalidation, and each instance has its own cache.`,
+        detail:`**Issues:** data races on an unsynchronized \`HashMap\` (can even infinite-loop under concurrent resize on older JDKs); duplicate fetches for the same key; unbounded growth (no eviction) → memory leak; no invalidation when a policy changes; per-instance caches diverge in a multi-pod deployment.
+
+**Smallest safe fix** — atomic compute on a concurrent map:
+\`\`\`java
+private final ConcurrentMap<String, Policy> cache = new ConcurrentHashMap<>();
+
+public Policy getPolicy(String policyId) {
+    return cache.computeIfAbsent(policyId, policyClient::fetchPolicy);
+}
+\`\`\`
+For production, use Caffeine with a max size, TTL, and metrics rather than an unbounded map. A stress test hits one key from many threads and asserts \`fetchPolicy\` runs at most once.`,
+        followup:`If a policy update must be visible within 30 seconds across all app instances, is local caching still acceptable?`,
+        followupAnswer:`Local in-memory caching alone isn't sufficient, because each instance caches independently and nothing tells the others a policy changed — you could serve stale data well past 30s. Options: a short TTL (≤30s) so staleness is bounded by expiry, a distributed cache like Redis as the shared source of truth, or a pub/sub invalidation message that tells every instance to evict the key on update. The tradeoff is freshness vs load: a tiny TTL bounds staleness but increases fetches, while invalidation is precise but adds infrastructure — you pick based on how strict the 30s really is.`,
+        tie:`This is the PolicyCache-style boundary — thread-safe local caching is fine for read-mostly reference data, but freshness across pods is a separate problem.`,
+        trap:`"Use Collections.synchronizedMap" — that guards individual ops but not the check-then-act, so you still double-fetch. Ignoring invalidation and unbounded growth. Assuming a local cache behaves the same across multiple Kubernetes replicas.`,
+        l2q:`\`computeIfAbsent\` makes it thread-safe, but what production concerns does it still not solve?`,
+        l2a:`It fixes atomicity and double-fetch, but the cache is still unbounded (no eviction → memory grows forever), has no TTL (entries never refresh, so an updated policy is served stale indefinitely), and no metrics (you can't see hit rate or size). It also doesn't handle a failed fetch well — a thrown exception propagates and nothing is cached, which is usually fine, but caching a null/negative result to avoid hammering a missing key is a separate decision. And under \`computeIfAbsent\`, a slow \`fetchPolicy\` holds a lock on that key's bin, so a very slow loader can stall other callers of the same key. Caffeine addresses eviction, TTL/refresh, and metrics in one place.`,
+        l3q:`How do you choose between a local map, Caffeine, Redis, or no cache for reference data like this?`,
+        l3a:`Decide by access pattern, freshness needs, and data size. No cache when the source is already fast or the data changes every read (caching just adds a stale-data risk for no benefit). A local ConcurrentHashMap/Caffeine when the data is read-mostly, fits in memory, and modest per-instance staleness is acceptable — it's the fastest and simplest, with Caffeine adding TTL, bounded size, and metrics. Redis (or another distributed cache) when instances must share state or agree on freshness, when the dataset is too big for local memory, or when you need cross-pod invalidation — at the cost of a network hop and new infrastructure. Often you layer them: a small local cache in front of Redis for hot keys. The senior instinct is that "add a cache" is a correctness decision (staleness, invalidation, consistency across instances), not just a latency optimization.`,
+      },
+    ],
+  },
 };
