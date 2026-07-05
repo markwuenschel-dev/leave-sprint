@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useSprintStore } from "@/lib/store";
 import { RD } from "@/lib/rubric/referenceData";
 import { subPct, scoreBand, taskLabel } from "@/lib/rubric/scoring";
-import { exportEntries, parseImport } from "@/lib/rubric/io";
+import { exportEntries, parseImportFiles } from "@/lib/rubric/io";
 import type { RubricEntry, TaskType } from "@/lib/rubric/types";
 import { Radar } from "@/app/components/ui/Radar";
 import { Trash2, Download, Upload, ChevronDown } from "lucide-react";
@@ -13,6 +13,7 @@ export function History() {
   const { rubricEntries, deleteRubricEntry, importRubricEntries } = useSprintStore();
   const [filter, setFilter] = useState<"all" | TaskType>("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [importMsg, setImportMsg] = useState("");
 
   const entries = useMemo(() => {
     const list = filter === "all" ? rubricEntries : rubricEntries.filter((e) => e.taskType === filter);
@@ -29,19 +30,17 @@ export function History() {
     URL.revokeObjectURL(url);
   };
 
-  const importFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const { entries: imported } = parseImport(ev.target?.result as string);
-        importRubricEntries(imported, "merge");
-      } catch {
-        /* ignore */
-      }
-    };
-    reader.readAsText(file);
+  const importFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    const { entries, count, ok, failed } = await parseImportFiles(files);
+    if (entries.length) importRubricEntries(entries, "merge");
+    setImportMsg(
+      `Imported ${count} assessment${count === 1 ? "" : "s"} from ${ok} file${ok === 1 ? "" : "s"}` +
+        (failed ? ` · ${failed} file${failed === 1 ? "" : "s"} failed` : "")
+    );
+    e.target.value = ""; // allow re-selecting the same files
+    setTimeout(() => setImportMsg(""), 6000);
   };
 
   return (
@@ -59,12 +58,14 @@ export function History() {
           <button onClick={exportAll} className="btn text-xs" disabled={!rubricEntries.length}>
             <Download size={14} /> Export
           </button>
-          <label className="btn text-xs cursor-pointer">
+          <label className="btn text-xs cursor-pointer" title="Upload one or more assessment JSON files (records, arrays, or backups)">
             <Upload size={14} /> Import
-            <input type="file" accept=".json" onChange={importFile} className="hidden" />
+            <input type="file" accept=".json,application/json" multiple onChange={importFiles} className="hidden" />
           </label>
         </div>
       </div>
+
+      {importMsg && <div className="text-xs text-[var(--text-mid)] text-right -mt-2">{importMsg}</div>}
 
       {entries.length === 0 && (
         <div className="card-glass p-10 text-center text-[var(--text-dim)] text-sm">

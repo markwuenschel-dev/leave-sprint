@@ -18,17 +18,72 @@ export interface ImportResult {
   count: number;
 }
 
-/** Parse a JSON string (object | array) into normalised, de-duped entries. */
-export function parseImport(text: string): ImportResult {
-  const data = JSON.parse(text);
-  const list = Array.isArray(data) ? data : [data];
+/** Normalise parsed JSON (single record, array, or a backup object with a
+ *  `rubricEntries` array) into de-duped entries. Later duplicates win. */
+function entriesFromData(data: unknown): RubricEntry[] {
+  // A full backup/export object carries its grades under `rubricEntries`.
+  const source =
+    data && typeof data === 'object' && !Array.isArray(data) &&
+    Array.isArray((data as { rubricEntries?: unknown }).rubricEntries)
+      ? (data as { rubricEntries: unknown[] }).rubricEntries
+      : data;
+  const list = Array.isArray(source) ? source : [source];
   const byId = new Map<string, RubricEntry>();
   for (const raw of list) {
     const entry = normaliseEntry(raw as Record<string, unknown>);
     byId.set(entry.id, entry);
   }
-  const entries = Array.from(byId.values());
+  return Array.from(byId.values());
+}
+
+/** Parse a JSON string (object | array) into normalised, de-duped entries. */
+export function parseImport(text: string): ImportResult {
+  const entries = entriesFromData(JSON.parse(text));
   return { entries, count: entries.length };
+}
+
+/** Per-file outcome for a multi-file grading import. */
+export interface FileImportResult {
+  name: string;
+  count: number;
+  error?: string;
+}
+
+export interface MultiImportResult {
+  /** Aggregated, id-de-duped entries across all files (later files win). */
+  entries: RubricEntry[];
+  count: number;
+  files: FileImportResult[];
+  ok: number;
+  failed: number;
+}
+
+/**
+ * Parse many JSON files into one merged, de-duped set of rubric entries.
+ * Each file may be a single record, an array of records, or a full backup
+ * object (grades read from its `rubricEntries`). Parse failures are isolated
+ * per-file so one malformed file never aborts the whole batch.
+ */
+export async function parseImportFiles(files: FileList | File[]): Promise<MultiImportResult> {
+  const byId = new Map<string, RubricEntry>();
+  const results: FileImportResult[] = [];
+  for (const file of Array.from(files)) {
+    try {
+      const entries = entriesFromData(JSON.parse(await file.text()));
+      for (const e of entries) byId.set(e.id, e); // later file / later entry wins
+      results.push({ name: file.name, count: entries.length });
+    } catch (err) {
+      results.push({ name: file.name, count: 0, error: err instanceof Error ? err.message : 'invalid JSON' });
+    }
+  }
+  const entries = Array.from(byId.values());
+  return {
+    entries,
+    count: entries.length,
+    files: results,
+    ok: results.filter((r) => !r.error).length,
+    failed: results.filter((r) => r.error).length,
+  };
 }
 
 /** Merge incoming entries into an existing set, de-duping by id (incoming wins). */

@@ -55,23 +55,29 @@ export function DataExport() {
     download(md, `leave-sprint-summary-${new Date().toISOString().slice(0, 10)}.md`, "text/markdown");
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    let ok = 0;
+    let failed = 0;
+    for (const file of Array.from(files)) {
       try {
-        const imported = JSON.parse(event.target?.result as string);
+        const imported = JSON.parse(await file.text());
         // Accept a full backup object OR a bare array of rubric records.
+        // Sequential importState calls merge cumulatively across files.
         store.importState(Array.isArray(imported) ? { rubricEntries: imported } : imported);
-        setImportStatus("✅ Imported successfully");
-        setTimeout(() => setImportStatus(""), 3000);
+        ok++;
       } catch {
-        setImportStatus("❌ Invalid file");
-        setTimeout(() => setImportStatus(""), 3000);
+        failed++;
       }
-    };
-    reader.readAsText(file);
+    }
+    setImportStatus(
+      failed && !ok
+        ? "❌ Invalid file(s)"
+        : `✅ Imported ${ok} file${ok === 1 ? "" : "s"}${failed ? ` · ${failed} failed` : ""}`
+    );
+    e.target.value = ""; // allow re-selecting the same files
+    setTimeout(() => setImportStatus(""), 4000);
   };
 
   const importLegacy = () => {
@@ -95,9 +101,9 @@ export function DataExport() {
         <button onClick={exportMarkdown} className="btn flex items-center justify-center gap-2 h-12">
           <FileText size={18} /> Export Markdown
         </button>
-        <label className="btn flex items-center justify-center gap-2 h-12 cursor-pointer">
+        <label className="btn flex items-center justify-center gap-2 h-12 cursor-pointer" title="Import one or more JSON backups / rubric-record files">
           <Upload size={18} /> Import JSON
-          <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+          <input type="file" accept=".json,application/json" multiple onChange={handleImport} className="hidden" />
         </label>
         <button onClick={importLegacy} className="btn flex items-center justify-center gap-2 h-12" title="Import rubric-log-v1 / cqw-qbank-v1 / cqw-sprint-v1 from the old standalone page">
           <HardDriveDownload size={18} /> Import Old App
