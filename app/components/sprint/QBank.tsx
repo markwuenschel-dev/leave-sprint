@@ -6,10 +6,11 @@ import { QBANK } from "@/data/qbank";
 import type { TrackKey, QBankQuestion } from "@/lib/qbank/types";
 import { ProgressRing } from "@/app/components/ui/ProgressRing";
 import { Flashcard, type FlashcardLayer } from "@/app/components/ui/Flashcard";
+import { Markdown } from "@/app/components/ui/Markdown";
 import { QuickLogModal } from "./rubric/QuickLogModal";
 import { Check, RotateCcw, Download } from "lucide-react";
 
-const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc"];
+const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
 
 const TRACK_COLOR: Record<TrackKey, string> = {
   swe: "var(--cyan)",
@@ -19,19 +20,31 @@ const TRACK_COLOR: Record<TrackKey, string> = {
   react: "var(--violet)",
   sql: "var(--green)",
   sdlc: "var(--blue)",
+  diag: "var(--slate)",
 };
 
-/** Build the reveal layers for a question, skipping empty fields. */
-function buildLayers(q: QBankQuestion): FlashcardLayer[] {
+/**
+ * Build the reveal layers for a question, skipping empty fields.
+ * When `useMd` is set (the Code Diagnosis track), string content is rendered as
+ * markdown so fenced code / inline code highlight; other tracks stay plain text.
+ */
+function buildLayers(q: QBankQuestion, useMd: boolean): FlashcardLayer[] {
   const layers: FlashcardLayer[] = [];
+  const md = (text: string) => (useMd ? <Markdown>{text}</Markdown> : text);
+  const pair = (question: string, answer?: string) => (
+    <>
+      <div className="font-medium text-[var(--text)] mb-1">{md(question)}</div>
+      {answer && md(answer)}
+    </>
+  );
   const answer = q.compressed || q.anchor;
-  if (answer) layers.push({ label: "Answer", content: answer });
-  if (q.detail) layers.push({ label: "Full detail", content: q.detail, tone: "muted" });
-  if (q.followup) layers.push({ label: "Follow-up", content: <><div className="font-medium text-[var(--text)] mb-1">{q.followup}</div>{q.followupAnswer}</> });
-  if (q.tie) layers.push({ label: "Project tie-in", content: q.tie, tone: "accent" });
-  if (q.trap) layers.push({ label: "Trap to avoid", content: q.trap, tone: "warn" });
-  if (q.l2q) layers.push({ label: "Level II stretch", content: <><div className="font-medium text-[var(--text)] mb-1">{q.l2q}</div>{q.l2a}</> });
-  if (q.l3q) layers.push({ label: "Level III stretch", content: <><div className="font-medium text-[var(--text)] mb-1">{q.l3q}</div>{q.l3a}</> });
+  if (answer) layers.push({ label: "Answer", content: md(answer) });
+  if (q.detail) layers.push({ label: "Full detail", content: md(q.detail), tone: "muted" });
+  if (q.followup) layers.push({ label: "Follow-up", content: pair(q.followup, q.followupAnswer) });
+  if (q.tie) layers.push({ label: "Project tie-in", content: md(q.tie), tone: "accent" });
+  if (q.trap) layers.push({ label: "Trap to avoid", content: md(q.trap), tone: "warn" });
+  if (q.l2q) layers.push({ label: "Level II stretch", content: pair(q.l2q, q.l2a) });
+  if (q.l3q) layers.push({ label: "Level III stretch", content: pair(q.l3q, q.l3a) });
   return layers;
 }
 
@@ -44,6 +57,7 @@ function exportMarkdown() {
     lines.push(`## ${track.label}`, "");
     track.questions.forEach((q, i) => {
       lines.push(`### ${i + 1}. ${q.q}`);
+      if (q.code) lines.push("", "```" + (q.lang || ""), q.code, "```");
       if (q.anchor) lines.push(`**Anchor:** ${q.anchor}`);
       if (q.detail) lines.push("", q.detail);
       if (q.followup) lines.push("", `*Follow-up:* ${q.followup}`, q.followupAnswer || "");
@@ -71,7 +85,20 @@ export function QBank() {
   const [revealed, setRevealed] = useState<boolean[]>([]);
   const [logPrompt, setLogPrompt] = useState<string | null>(null);
 
-  const layers = useMemo(() => buildLayers(current), [current]);
+  const useMd = track === "diag";
+  const layers = useMemo(() => buildLayers(current, useMd), [current, useMd]);
+  const questionNode = useMd ? (
+    <>
+      <Markdown>{current.q}</Markdown>
+      {current.code && (
+        <div className="mt-3 text-base font-normal">
+          <Markdown>{"```" + (current.lang ?? "") + "\n" + current.code + "\n```"}</Markdown>
+        </div>
+      )}
+    </>
+  ) : (
+    current.q
+  );
 
   // Reset reveal state when the question changes.
   useEffect(() => {
@@ -173,7 +200,7 @@ export function QBank() {
       </div>
 
       <Flashcard
-        question={current.q}
+        question={questionNode}
         meta={
           <span>
             {track.toUpperCase()} · {current.id}
