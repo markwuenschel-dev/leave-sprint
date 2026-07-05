@@ -63,19 +63,19 @@ export const useSprintStore = create<SprintStore>()(
       updateFocusNote: (day: number, note: string) => {
         set((state) => {
           const current = state.days[day] || defaultRhythm();
-          return { days: { ...state.days, [day]: { ...current, focusNote: note } } };
+          return { days: { ...state.days, [day]: { ...current, focusNote: note } }, lastUpdated: now() };
         });
       },
 
       setEnergy: (day: number, energy: Energy) => {
         set((state) => {
           const current = state.days[day] || defaultRhythm();
-          return { days: { ...state.days, [day]: { ...current, energy } } };
+          return { days: { ...state.days, [day]: { ...current, energy } }, lastUpdated: now() };
         });
       },
 
       setSelectedDay: (day: number) => {
-        set({ selectedDay: Math.min(Math.max(day, 1), 29) });
+        set({ selectedDay: Math.min(Math.max(day, 1), 29), lastUpdated: now() });
       },
 
       // --- Stages ---
@@ -87,7 +87,7 @@ export const useSprintStore = create<SprintStore>()(
       },
 
       unmarkStage: (id: StageId) => {
-        set((state) => ({ stages: { ...state.stages, [id]: { done: false } } }));
+        set((state) => ({ stages: { ...state.stages, [id]: { done: false } }, lastUpdated: now() }));
       },
 
       // --- Problems ---
@@ -112,6 +112,7 @@ export const useSprintStore = create<SprintStore>()(
       updateFileNotes: (id: string, notes: string) => {
         set((state) => ({
           fileDefense: state.fileDefense.map((f) => (f.id === id ? { ...f, notes } : f)),
+          lastUpdated: now(),
         }));
       },
 
@@ -139,7 +140,7 @@ export const useSprintStore = create<SprintStore>()(
       },
 
       deleteRubricEntry: (id: string) => {
-        set((state) => ({ rubricEntries: state.rubricEntries.filter((e) => e.id !== id) }));
+        set((state) => ({ rubricEntries: state.rubricEntries.filter((e) => e.id !== id), lastUpdated: now() }));
       },
 
       importRubricEntries: (list: RubricEntry[], mode: 'merge' | 'replace') => {
@@ -155,12 +156,12 @@ export const useSprintStore = create<SprintStore>()(
           const next = { ...state.qbankStatus };
           if (status === undefined) delete next[id];
           else next[id] = status;
-          return { qbankStatus: next };
+          return { qbankStatus: next, lastUpdated: now() };
         });
       },
 
       setQbankPos: (track: TrackKey, idx: number) => {
-        set({ qbankPos: { track, idx } });
+        set({ qbankPos: { track, idx }, lastUpdated: now() });
       },
 
       // --- Import / migration ---
