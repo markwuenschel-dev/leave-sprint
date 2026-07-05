@@ -21,6 +21,11 @@ function isPostgresUrl(url: string | undefined): url is string {
 
 async function init(): Promise<AppDb> {
   const url = process.env.DATABASE_URL;
+  console.log(
+    isPostgresUrl(url)
+      ? "[db] using postgres (persistent)"
+      : "[db] using pglite fallback (EPHEMERAL — set DATABASE_URL to a persistent Postgres to keep data across restarts)",
+  );
   if (isPostgresUrl(url)) {
     const postgres = (await import('postgres')).default;
     const { drizzle } = await import('drizzle-orm/postgres-js');

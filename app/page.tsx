@@ -10,14 +10,14 @@ import { clampedSprintDay } from "@/lib/velocity";
 import { Rubric } from "./components/sprint/Rubric";
 import { CompetencyDashboards } from "./components/sprint/competency/CompetencyDashboards";
 import { WeeklySchedule } from "./components/sprint/WeeklySchedule";
-import { WorkbenchModules } from "./components/sprint/WorkbenchModules";
 import { CodingBankTiers } from "./components/sprint/CodingBankTiers";
 import { FileDefense } from "./components/sprint/FileDefense";
 import { DataExport } from "./components/sprint/DataExport";
 import { QBank } from "./components/sprint/QBank";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { SaveIndicator } from "./components/ui/SaveIndicator";
 import { useSprintStore } from "@/lib/store";
-import { Target, TrendingUp, Calendar as CalendarIcon, BookOpen, BarChart3, SquareEqual, Gauge, CalendarRange, Wrench } from "lucide-react";
+import { Target, TrendingUp, Calendar as CalendarIcon, BookOpen, BarChart3, SquareEqual, Gauge, CalendarRange } from "lucide-react";
 
 function getCurrentStreak(days: Record<number, any>): number {
   const today = new Date();
@@ -39,8 +39,21 @@ function getCurrentStreak(days: Record<number, any>): number {
   return streak;
 }
 
+type TabId = "today" | "schedule" | "stages" | "analytics" | "competency" | "rubric" | "qbank" | "calendar" | "bank";
+const TAB_IDS: TabId[] = ["today", "schedule", "stages", "analytics", "competency", "rubric", "qbank", "calendar", "bank"];
+const ACTIVE_TAB_KEY = "ls-active-tab";
+
 export default function LeaveSprintTwin() {
-  const [activeTab, setActiveTab] = useState<"today" | "schedule" | "stages" | "analytics" | "competency" | "rubric" | "qbank" | "calendar" | "bank" | "workbench">("today");
+  const [activeTab, setActiveTab] = useState<TabId>("today");
+
+  // Restore the last-viewed tab (UI preference; kept in localStorage, not the DB).
+  useEffect(() => {
+    const saved = localStorage.getItem(ACTIVE_TAB_KEY);
+    if (saved && (TAB_IDS as string[]).includes(saved)) setActiveTab(saved as TabId);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+  }, [activeTab]);
 
   const { days, selectedDay } = useSprintStore();
   const daysDone = Object.values(days).filter(d => 
@@ -58,7 +71,6 @@ export default function LeaveSprintTwin() {
       if (e.key.toLowerCase() === "g") setActiveTab("competency");
       if (e.key.toLowerCase() === "r") setActiveTab("rubric");
       if (e.key.toLowerCase() === "q") setActiveTab("qbank");
-      if (e.key.toLowerCase() === "w") setActiveTab("workbench");
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -74,7 +86,6 @@ export default function LeaveSprintTwin() {
     { id: "qbank", label: "Q Bank", icon: BookOpen },
     { id: "calendar", label: "Calendar", icon: CalendarIcon },
     { id: "bank", label: "Problem Bank", icon: BookOpen },
-    { id: "workbench", label: "Workbench", icon: Wrench },
   ] as const;
 
   return (
@@ -88,6 +99,7 @@ export default function LeaveSprintTwin() {
           </div>
 
           <div className="flex items-center gap-6">
+            <SaveIndicator />
             <ThemeToggle />
             <div className="flex items-center gap-8 text-sm">
         {/* Overall Progress */}
@@ -158,12 +170,11 @@ export default function LeaveSprintTwin() {
         {activeTab === "rubric" && <Rubric />}
         {activeTab === "qbank" && <QBank />}
         {activeTab === "calendar" && <Calendar />}
-        {activeTab === "bank" && <ProblemBank />}
-        {activeTab === "workbench" && (
+        {activeTab === "bank" && (
           <div className="space-y-10">
-            <WorkbenchModules />
-            <FileDefense />
+            <ProblemBank />
             <CodingBankTiers />
+            <FileDefense />
           </div>
         )}
         <DataExport />
