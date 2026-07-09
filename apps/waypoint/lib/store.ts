@@ -9,6 +9,7 @@ import type { QBankStatus, TrackKey } from "@waypoint/qbank";
 import { serverStorage } from "./persist/serverStorage";
 import { SEED } from "../data/seed";
 import { mergeCatalogLists } from "../data/catalog";
+import { applyTwinImport } from "./twinImport";
 import type {
   Application,
   AppStatus,
@@ -19,6 +20,7 @@ import type {
   TargetRole,
   WaypointState,
 } from "./domain";
+import type { TwinImportSummary } from "./twinImport";
 import { emptyRhythm, todayIso, weekStartIso } from "./domain";
 
 const now = () => new Date().toISOString();
@@ -45,6 +47,8 @@ export interface WaypointStore extends WaypointState {
   logSolidInterview: (role: PrimaryRole, label?: string) => void;
   /** Pull new catalog rows; preserve status / practiced / notes. */
   mergeCatalog: () => void;
+  /** One-shot twin import (practice progress + rubric only). Returns summary. */
+  importTwin: (raw: unknown) => TwinImportSummary;
   importState: (slice: WaypointState) => void;
   exportState: () => WaypointState;
 }
@@ -193,6 +197,19 @@ export const useWaypointStore = create<WaypointStore>()(
           return { problems, fileDefense, lastUpdated: now() };
         }),
 
+      importTwin: (raw) => {
+        const cur = get().exportState();
+        const { state, summary } = applyTwinImport(cur, raw);
+        const { problems, fileDefense } = mergeCatalogLists(state.problems, state.fileDefense);
+        set({
+          ...state,
+          problems,
+          fileDefense,
+          lastUpdated: now(),
+        });
+        return summary;
+      },
+
       importState: (slice) => {
         const { problems, fileDefense } = mergeCatalogLists(
           slice.problems ?? [],
@@ -220,6 +237,7 @@ export const useWaypointStore = create<WaypointStore>()(
           setWeeklyField: _m,
           logSolidInterview: _n,
           mergeCatalog: _q,
+          importTwin: _twin,
           importState: _o,
           exportState: _p,
           ...rest
