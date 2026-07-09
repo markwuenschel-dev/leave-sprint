@@ -1,0 +1,385 @@
+@import "tailwindcss";
+
+/* Ensure monorepo app sources are scanned (Tailwind v4) */
+@source "../**/*.{ts,tsx}";
+@source "../../packages/*/src/**/*.{ts,tsx}";
+
+/*
+  Waypoint design system (tokens from twin)
+
+  Two themes: dark (default, neon cyan/magenta cyberpunk) and light (warm parchment).
+  Only the base palette differs per theme; the semantic layer (--hairline, --fill-*,
+  --tint-*, verdict/status) is defined once via color-mix and follows the palette.
+  Theme is selected by `data-theme` on <html> (set pre-paint in layout.tsx).
+*/
+
+:root,
+:root[data-theme="dark"] {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Base palette — dark */
+  --bg: #0a0c10;
+  --bg-elev: #11141a;
+  --surface: #161a22;
+  --surface-2: #1c212c;
+  --border: #2a2f3a;
+  --border-subtle: #222830;
+
+  --text: #e6e8eb;
+  --text-mid: #a1a7b3;
+  --text-dim: #6b7280;
+
+  /* Neon accents */
+  --cyan: #00f9ff;
+  --magenta: #ff00aa;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --orange: #f97316;
+  --violet: #a78bfa;
+  --slate: #94a3b8;
+  --blue: #60a5fa;
+}
+
+/* Warm paper / parchment — light */
+:root[data-theme="light"] {
+  --bg: #f5f1e8;
+  --bg-elev: #efe7d6;
+  --surface: #fbf8f1;
+  --surface-2: #f2ecdf;
+  --border: #e0d6c2;
+  --border-subtle: #e9e1d1;
+
+  --text: #211d17;
+  --text-mid: #5c5344;
+  --text-dim: #8a7f6c;
+
+  /* Warmer accents that read on parchment */
+  --cyan: #0f766e;   /* teal (primary accent) */
+  --magenta: #9d4d7c; /* plum */
+  --green: #3f7d4e;
+  --yellow: #b8860b;
+  --orange: #c2632b;
+  --violet: #7c5cd6;
+  --slate: #6b7280;
+  --blue: #2563eb;
+}
+
+/* Semantic layer — defined once, follows the active palette via color-mix */
+:root {
+  /* Status / verdict — reference accents so they flip with the theme */
+  --done: var(--green);
+  --doing: var(--cyan);
+  --at-risk: var(--yellow);
+  --verdict-exceptional: var(--green);
+  --verdict-pass: var(--cyan);
+  --verdict-border: var(--yellow);
+  --verdict-fail: var(--orange);
+
+  /* Chrome: hairlines + fills derived from text so they invert with the theme */
+  --hairline: color-mix(in srgb, var(--text) 10%, transparent);
+  --hairline-strong: color-mix(in srgb, var(--text) 20%, transparent);
+  --fill-subtle: color-mix(in srgb, var(--text) 5%, transparent);
+  --fill-strong: color-mix(in srgb, var(--text) 10%, transparent);
+  --overlay: color-mix(in srgb, var(--bg) 95%, transparent);
+
+  /* Accent tints for state backgrounds */
+  --tint-cyan: color-mix(in srgb, var(--cyan) 10%, transparent);
+  --tint-green: color-mix(in srgb, var(--green) 12%, transparent);
+  --tint-yellow: color-mix(in srgb, var(--yellow) 12%, transparent);
+  --tint-orange: color-mix(in srgb, var(--orange) 12%, transparent);
+  --tint-violet: color-mix(in srgb, var(--violet) 12%, transparent);
+  --tint-magenta: color-mix(in srgb, var(--magenta) 12%, transparent);
+}
+
+/* Rubric verdict text colors (score bands) */
+.verdict-exceptional { color: var(--verdict-exceptional); }
+.verdict-pass { color: var(--verdict-pass); }
+.verdict-border { color: var(--verdict-border); }
+.verdict-fail { color: var(--verdict-fail); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--surface);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Glass cards */
+.glass {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.card {
+  @apply rounded-2xl p-5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.card-glass {
+  @apply rounded-2xl p-5;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(24px);
+}
+
+/* Neon interactive accents */
+.accent-cyan {
+  color: var(--cyan);
+}
+.accent-magenta {
+  color: var(--magenta);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all active:scale-[0.985];
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.btn:hover {
+  border-color: var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-2) 92%, var(--text) 8%);
+}
+
+.btn-primary {
+  background: var(--cyan);
+  color: var(--bg);
+  border-color: var(--cyan);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* Progress ring */
+.progress-ring {
+  transition: stroke-dashoffset 0.35s;
+}
+
+/* Stage rows */
+.stage {
+  @apply flex items-center gap-3 rounded-xl border p-3 transition-all;
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.stage.done {
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: var(--tint-green);
+}
+
+.stage.next {
+  border-color: color-mix(in srgb, var(--cyan) 35%, transparent);
+}
+
+.stage-mark {
+  @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs transition-all;
+  border-color: var(--border);
+}
+
+.stage.done .stage-mark {
+  background: var(--done);
+  color: var(--bg);
+  border-color: var(--done);
+}
+
+/* Rhythm checklist */
+.rhythm-item {
+  @apply flex items-start gap-3 rounded-2xl border p-4 transition-all;
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.rhythm-item:hover {
+  border-color: var(--cyan);
+  transform: translateY(-1px);
+}
+
+.rhythm-item.done {
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: var(--tint-green);
+}
+
+.rhythm-item input[type="checkbox"] {
+  @apply h-5 w-5 cursor-pointer mt-0.5;
+  accent-color: var(--cyan);
+}
+
+/* Calendar */
+.cal-day {
+  @apply flex flex-col rounded-lg border p-1.5 text-xs transition-all cursor-pointer select-none;
+  background: var(--surface);
+  border-color: var(--border);
+  min-height: 64px;
+}
+
+.cal-day:hover {
+  border-color: var(--cyan);
+}
+
+.cal-day.full { border-color: color-mix(in srgb, var(--green) 50%, transparent); }
+.cal-day.partial { border-color: var(--cyan); }
+.cal-day.at-risk { border-color: var(--yellow); }
+
+/* Tabs / Nav */
+.nav-link {
+  @apply flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors;
+}
+.nav-link.active, .nav-link:hover {
+  background: var(--surface-2);
+  color: var(--cyan);
+}
+
+/* Detail panel */
+.detail-panel {
+  @apply fixed inset-y-0 right-0 z-50 w-full max-w-md overflow-y-auto border-l p-6;
+  background: var(--bg-elev);
+  border-color: var(--border);
+}
+
+/* Focus notes, energy */
+.energy-btn {
+  @apply rounded-lg border px-3 py-1 text-xs transition-all;
+  border-color: var(--border);
+}
+.energy-btn.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: var(--tint-cyan);
+}
+
+/* Mobile bottom nav */
+@media (max-width: 768px) {
+  .desktop-nav { display: none; }
+}
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+}
+
+/* High signal polish */
+.section-title {
+  @apply mb-3 text-xs font-semibold uppercase tracking-[1.5px] text-[var(--text-dim)];
+}
+
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.status-dot.green { background: var(--green); }
+.status-dot.cyan { background: var(--cyan); }
+.status-dot.yellow { background: var(--yellow); }
+
+/* ── Markdown (Code Diagnosis track) ───────────────────────────────────────
+   Rendered by app/components/ui/Markdown.tsx (react-markdown + rehype-highlight).
+   Scoped to `.md` so only opted-in content is affected. The highlight.js theme
+   below maps hljs token classes onto the app palette so code reads natively in
+   both dark and light themes. */
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0.5em 0; }
+.md ul, .md ol { margin: 0.5em 0; padding-left: 1.35em; }
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md li { margin: 0.2em 0; }
+.md li::marker { color: var(--text-dim); }
+.md strong { color: var(--text); font-weight: 600; }
+.md a { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
+.md h1, .md h2, .md h3, .md h4 {
+  color: var(--text); font-weight: 600; margin: 0.9em 0 0.4em;
+  line-height: 1.25;
+}
+.md h1 { font-size: 1.05em; }
+.md h2 { font-size: 1em; }
+.md h3, .md h4 { font-size: 0.95em; }
+.md blockquote {
+  margin: 0.6em 0; padding: 0.1em 0.9em;
+  border-left: 3px solid var(--border);
+  color: var(--text-mid);
+}
+
+/* Inline code */
+.md :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.1em 0.34em;
+  border-radius: 5px;
+  background: var(--fill-strong);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  white-space: break-spaces;
+}
+
+/* Fenced code blocks */
+.md pre {
+  margin: 0.7em 0;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+.md pre code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  white-space: pre;
+}
+
+/* Tables (GFM) */
+.md table {
+  width: 100%; border-collapse: collapse; margin: 0.7em 0; font-size: 0.92em;
+  display: block; overflow-x: auto;
+}
+.md th, .md td { border: 1px solid var(--border); padding: 0.4em 0.6em; text-align: left; }
+.md th { background: var(--fill-subtle); color: var(--text); font-weight: 600; }
+
+/* highlight.js token theme, palette-driven (works in both themes) */
+.md .hljs-comment, .md .hljs-quote { color: var(--text-dim); font-style: italic; }
+.md .hljs-keyword, .md .hljs-selector-tag, .md .hljs-literal, .md .hljs-doctag,
+.md .hljs-name, .md .hljs-section { color: var(--magenta); }
+.md .hljs-string, .md .hljs-regexp, .md .hljs-addition, .md .hljs-meta-string { color: var(--green); }
+.md .hljs-number, .md .hljs-symbol, .md .hljs-bullet { color: var(--orange); }
+.md .hljs-title, .md .hljs-title.function_, .md .hljs-built_in { color: var(--cyan); }
+.md .hljs-title.class_, .md .hljs-type, .md .hljs-class .hljs-title { color: var(--yellow); }
+.md .hljs-attr, .md .hljs-attribute, .md .hljs-variable, .md .hljs-template-variable { color: var(--blue); }
+.md .hljs-params { color: var(--text-mid); }
+.md .hljs-meta, .md .hljs-comment.hljs-doctag { color: var(--slate); }
+.md .hljs-deletion { color: var(--orange); }
+.md .hljs-emphasis { font-style: italic; }
+.md .hljs-strong { font-weight: 700; }

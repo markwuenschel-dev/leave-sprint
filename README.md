@@ -1,182 +1,107 @@
-# Leave Sprint Twin
+# Waypoint (+ Leave Sprint Twin)
 
-**High-signal, local-first command center dashboard** for the 29-day leave sprint (June 17 – July 15 2026).
+**Waypoint** is the active product: a **local-first career transition hub** (phase B readiness → phase A applications).
 
-A modern Next.js rebuild of the original single-file dashboard. Built for daily use during the final phase of the sprint: interview prep, daily rhythm discipline, stage tracking, and progress visibility.
+**Leave Sprint Twin** (repo root `app/`, `lib/`) is **frozen scaffolding** — not the daily driver.
 
-> **Always use pnpm** for this project.
+> Always use **pnpm**.
 
-## Quick Start
-
-```bash
-pnpm install
-pnpm dev      # http://localhost:3000 (Turbopack)
-pnpm build
-```
-
-**Current status (2026-07-03 ≈ Day 17):** Build work is complete. Focus has shifted fully to consistent daily rhythm (Coding Drill + File Defense + Q&A + Build/Prep), 20-stage completion, problem bank practice, and mock interview readiness. Applications target: Day 22 (July 8). Mock #1: Day 21.
-
----
-
-## Tech Stack
-
-- **Next.js 16.2.10** (App Router) + React 19.2 + **TypeScript ^6.0** + Tailwind 4 + Turbopack
-- **shadcn/ui** + Radix primitives (planned progressive adoption)
-- **Zustand** + persist middleware (persists to Postgres via `/api/state`)
-- **Drizzle ORM** + Postgres (postgres.js in prod, embedded PGlite for local dev)
-- **Framer Motion** for micro-interactions
-- **date-fns** for date handling
-- Deploy target: **Railway** (Node server + Postgres), token-gated
-
----
-
-## Key Screens (v1)
-
-| Screen | Description |
-|--------|-------------|
-| **Today / Daily Rhythm** | Prominent progress ring for current day. Synced checklist for the 4 disciplines (Coding Drill, File Defense, Q&A, Build Block). Focus notes, energy selector (low/medium/high), and per-day journal. |
-| **20-Stage Progression** | Beautiful stepper view of the full build + prep stages. One-click "Mark Done" with ISO timestamps. Phase gates clearly visible. |
-| **Interactive Calendar** | July 2026 grid with live color coding: green = full rhythm done, cyan = partial, yellow = at-risk. Click any sprint day for detail panel showing rhythm state + quick actions. |
-| **Problem Bank** | Search + filters (Tier, Status, Pattern). Status tracking: Not Started / Practicing / Solid. All updates persist instantly. |
-| **File Defense Map** | (Core data present; detail views + "Mark Practiced" + notes in progress) |
-
-**Milestones:** Mock #1 (Day 21) · Applications ⭐ (Day 22) · Mock #2 (Day 26) · Sprint End (Day 29)
-
-## Features & Quality Bar
-
-- **Instant persistence**: Every checkbox, status change, note, and journal updates Zustand + localStorage immediately.
-- **Seed + merge**: On first load, state hydrates from `data/app-state.json` (or `data/seed.ts`) and intelligently merges with persisted data.
-- **Fully typed** + accessible + mobile-first (bottom nav on small screens).
-- **Smooth interactions** via Framer Motion.
-- **Easy content edits**: Modify `data/app-state.json` or `data/day-plans.ts` for most schedule and reference data updates.
-
-**LocalStorage key:** `leave-sprint-twin-v1` (different from the legacy single-file `cqw-sprint-v1`).
-
----
-
-## Keyboard Shortcuts (App)
-
-| Keys | Action |
-|------|--------|
-| `T`  | Jump to Today tab |
-| `S`  | Jump to Stages tab |
-
-(Additional shortcuts for future Practice/Quiz modes planned.)
-
----
-
-## Data & Persistence
-
-**Seed data lives in:**
-
-- `data/app-state.json` — primary editable seed (days, stages, problems, file defense)
-- `data/seed.ts` — TypeScript mirror (used by the store for safe import)
-- `data/day-plans.ts` — static daily rhythm content and milestone definitions
-
-**How it works:**
-1. On first load the app starts from the seed.
-2. Zustand `persist` middleware overlays any saved progress.
-3. `onRehydrateStorage` merges intelligently (your local progress always wins; new seed fields appear).
-4. All mutations are optimistic and write to localStorage under the key `leave-sprint-twin-v1`.
-
-**Editing during the sprint:** Change `data/app-state.json` or `day-plans.ts` → restart dev server (or hard reload) to pick up baseline changes. Your completed work stays in localStorage.
-
----
-
-## Project Structure
-
-```
-app/
-  layout.tsx
-  page.tsx
-  components/
-    sprint/
-      TodayRhythm.tsx
-      StageProgression.tsx
-      Calendar.tsx
-      ProblemBank.tsx
-lib/
-  store.ts          # Zustand store + persist config
-  types.ts
-  utils.ts
-data/
-  app-state.json    # ← primary content to edit
-  day-plans.ts
-  seed.ts
-```
-
----
-
-## Development
+## Quick start (Waypoint)
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev          # http://localhost:3000 — apps/waypoint
 pnpm build
+pnpm start        # migrate PGlite + next start (local)
 ```
 
-- Uses **Turbopack** (via `--turbopack` flag)
-- TypeScript ^6.0 with modern settings (`verbatimModuleSyntax`, `moduleResolution: bundler`)
-- After changing `package.json` versions, run `pnpm install` to update `pnpm-lock.yaml`
+Data lives in embedded **PGlite** under `apps/waypoint/.pglite` (no cloud host required).
 
-## Persistence & deployment (Railway + Postgres)
+Optional: set `APP_TOKEN` for a cookie gate; unset = open.
 
-State is stored **server-side in Postgres** (durable across devices), via a single
-`/api/state` endpoint. The Zustand store persists to the server instead of `localStorage`
-through a custom storage adapter, so it still feels instant/optimistic. The whole site is
-gated by a shared `APP_TOKEN` (single user, no accounts).
+### Deploy on AWS EC2 (Node)
 
-**Local dev (zero setup):** when `DATABASE_URL` is unset, the app uses an embedded
-[PGlite](https://github.com/electric-sql/pglite) database at `./.pglite`.
+Local-first still means **your** server — EC2 is fine. Not Railway.
+
+1. Instance: Amazon Linux 2023 or Ubuntu, security group **inbound 80/443** (and 22 for SSH). App can listen on **3000** behind nginx.
+2. Install **Node 22+**, **pnpm**, git. Clone repo.
+3. On the box:
 
 ```bash
-pnpm db:migrate   # create tables (PGlite locally, or your DATABASE_URL)
-pnpm dev
+pnpm install
+pnpm --filter waypoint build
+# durable PGlite dir (persist across restarts — use a real path on the instance disk)
+export WAYPOINT_PGLITE_DIR=/var/lib/waypoint/pglite
+export APP_TOKEN='strong-secret'   # optional but recommended on a public IP
+mkdir -p "$WAYPOINT_PGLITE_DIR"
+pnpm --filter waypoint start       # binds 0.0.0.0; PORT defaults 3000
 ```
 
-**Railway:**
-1. Create a service from this repo + add the **Postgres** plugin (provides `DATABASE_URL`).
-2. Set env vars: `DATABASE_URL` (from the plugin) and `APP_TOKEN` (a strong secret).
-3. Build `pnpm build`; start `pnpm start` (runs `db:migrate` then `next start`, binding `$PORT`).
-4. Visit `https://<app>/?token=<APP_TOKEN>` once to set the access cookie.
+4. Put **nginx** (or Caddy) in front: proxy `http://127.0.0.1:3000`, TLS via ACM/Let’s Encrypt.
+5. **systemd** unit example (user `ubuntu`, adjust paths):
 
-Migrations live in `drizzle/` (generate with `pnpm db:generate`) and are applied at start by
-`lib/db/migrate.ts`. See `.env.example`. (Netlify/static-export is no longer used.)
+```ini
+[Unit]
+Description=Waypoint
+After=network.target
 
----
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/leave-sprint
+Environment=NODE_ENV=production
+Environment=WAYPOINT_PGLITE_DIR=/var/lib/waypoint/pglite
+Environment=APP_TOKEN=change-me
+Environment=PORT=3000
+ExecStart=/usr/bin/pnpm --filter waypoint start
+Restart=on-failure
 
-## Roadmap / Near-term
+[Install]
+WantedBy=multi-user.target
+```
 
-- Rich File Defense detail modal + "Quiz me" + practiced tracking
-- At-Risk + Insights panel (velocity, projections, streak, recommendations)
-- Optional LeetCode enrichment helper (slug → title/difficulty)
-- More complete Practice / Quiz modes
-- Theme switcher (dark/light/system) + better shadcn/ui components
+6. Open the app: `https://your-host/?token=APP_TOKEN` once if gated.
 
----
+**Note:** PGlite is single-node file DB — fine for one EC2. Back up `/var/lib/waypoint/pglite` (or use **More → Export JSON**). Multi-instance load balancing needs a different DB story later.
 
-## Legacy Single-File Version
+### Monorepo layout
 
-The original implementation lives alongside:
+```
+apps/waypoint/           # Waypoint Next app
+packages/rubric/         # @waypoint/rubric
+packages/qbank/          # @waypoint/qbank
+packages/practice-types/ # @waypoint/practice-types
+app/, lib/, data/        # Leave Sprint Twin (frozen)
+```
 
-- `unified_schedule.html` (+ `.js` + `.css`)
-- Old localStorage keys: `cqw-sprint-v1`, `cqw-qbank-v1`
+### Twin (optional)
 
-This is kept as a **reference and content source**. The new Next.js app is the active daily driver.
+```bash
+pnpm dev:twin     # port 3001
+pnpm build:twin
+```
 
-Many day plans, problem descriptions, file defense entries, and Q&A prompts were ported from the legacy version.
+## Waypoint surfaces
 
----
+| Nav | Purpose |
+|-----|---------|
+| **Today** | Daily checklist: Practice · Defense · Interview reps · Admin light |
+| **Readiness** | Hybrid evidence floor (both primaries) + phase B→A go/no-go |
+| **Practice** | Problem bank / solidity |
+| **Defense** | File & story defense |
+| **Interview** | Q bank + quick rubric log |
+| **Applications** | Role+company pipeline |
+| **Weekly** | Weekly review |
+| **More** | Export/import JSON, about |
 
-## Goals & v1 Definition of Done
+Role filter (All / SWE / MLE) is in the header.
 
-A beautiful, fast, local-first dashboard usable every day for the remaining sprint days. You should be able to:
+## Stack
 
-- Check off daily rhythm items
-- Advance stages with timestamps
-- Use the calendar + day detail
-- Track Problem Bank and File Defense status
-- See live progress and at-risk signals
+- Next.js 16 App Router, React 19, TypeScript, Tailwind 4
+- Zustand + `/api/state` → PGlite (Drizzle)
+- Shared packages for rubric engine + qbank content
 
-All without leaving the browser and with zero backend.
+## Decisions
 
+Product decisions live under `.scratch/career-transition-hub/` (wayfinder map + decision pack). Domain glossary: `CONTEXT.md`.
