@@ -42,13 +42,13 @@
   -
 
 ## 🚫 Non-Goals & Boundaries
-<!-- What was deliberately left out? Helps future-you understand scope. -->
+<!-- What was deliberately left out? Helps future-you understand scope and missing pieces. -->
 -
 -
 -
 
 ## ✅ Verification, Testing & Visuals
-<!-- How was this validated? Prefer commands + expected outcomes. -->
+<!-- How was this validated? Prefer commands + expected outcomes. Metrics when rigorous. -->
 
 ### Testing performed
 - [ ] **Unit / Integration** (pytest, mypy, ruff, `tsc --noEmit`, package tests)
@@ -59,9 +59,9 @@
 - [ ] **Privacy / safety** (no secrets in client, token gate, export/import integrity)
 - [ ] **Other:**
 
-### Manual / command checklist
+### Commands Run / Evidence
 ```bash
-# paste commands you actually ran
+# Example commands and outputs
 ```
 
 | Check | Command / Steps | Result |
@@ -71,35 +71,34 @@
 | Persist round-trip | change → save → reload | ☐ pass |
 | | | |
 
-### Visuals / demos
-<!-- Screenshots, GIFs, before/after, or links. Especially for UI surfaces. -->
--
+### Visuals
+<!-- Screenshots, GIFs, or before/after for UI, digital twin, game views. Crucial for visual history. -->
+<!-- Drag & drop images here -->
 
 ### Metrics / evidence (when applicable)
 - Before:
 - After:
 - Notes:
 
-## 📚 Documentation, Governance & Audit Trail
-<!-- Keep the system legible for agents + humans. -->
-- [ ] **README / CONTEXT.md / decision pack** updated (or N/A: ___ )
-- [ ] **Domain glossary** terms added/changed (or N/A)
-- [ ] **Schema / migration** docs or SQL notes (or N/A)
-- [ ] **Changelog-relevant** summary is clear from title + this body
-- [ ] **Privacy / data-handling** notes if state shape or export changes
-- [ ] **Open questions / follow-ups** filed or listed below
+## 📚 Documentation Updates
+<!-- For strong audit trails and maintainability. -->
+- [ ] Updated README, AGENTS.md, CLAUDE.md, project docs, or inline comments
+- [ ] Changelog / Release notes entry
+- [ ] Governance / Privacy / Security alignment (local-only, no PII, LICENSE)
+- [ ] CONTEXT.md / domain glossary / decision pack (or N/A: ___ )
+- [ ] Schema / migration notes (or N/A)
+- [ ] Other docs impacted:
 
 ### Follow-ups (not in this PR)
 -
 -
 
-## 🚢 Ops, Deploy & Migration
-<!-- Single-user EC2/PGlite, env vars, backup, one-shot imports. -->
-- **Env / config:** (`APP_TOKEN`, `WAYPOINT_PGLITE_DIR`, ports, …)
-- **DB / persist:** (ensure/migrate, empty-driver, catalog refresh)
-- **Deploy notes:** (systemd, reverse proxy, backup path)
+## ⚠️ Ops, Migration & Post-Merge Notes
+<!-- Deployment, data, monitoring. Single-user EC2/PGlite, env vars, backups, one-shot imports. -->
+- **Data Migrations / PGlite / DB Changes:**
+- **Post-Deploy / Setup Steps:** (`APP_TOKEN`, `WAYPOINT_PGLITE_DIR`, ports, systemd, proxy)
+- **Monitoring / Risks / Follow-ups:**
 - **Rollback:** (how to reverse safely)
-- **Data migration / one-shot import:** (twin import scope, backup JSON)
 
 ## 🧾 Reviewer Focus
 <!-- 2–5 things you most want eyes on. -->
@@ -107,11 +106,17 @@
 2.
 3.
 
----
-
-### PR hygiene (author self-check)
-- [ ] Title follows Conventional Commits and is scannable
-- [ ] Diff is the minimum coherent slice (no drive-by refactors unless called out)
+## ✅ Checklist
+- [ ] Code follows project standards (style, types, tests passing)
+- [ ] Validation / No silent failures / Auditability ensured
+- [ ] Documentation complete and self-contained for future self-review
+- [ ] Dependencies reviewed (licensing, security, versions)
+- [ ] Branch up-to-date with main
+- [ ] PR enables easy understanding 6+ months from now
+- [ ] All relevant sections above completed (delete unused)
 - [ ] No secrets, tokens, or local absolute paths committed
-- [ ] Branch is up to date with base (or conflicts called out)
-- [ ] Ready for review / draft status set intentionally
+- [ ] Diff is the minimum coherent slice (no drive-by refactors unless called out)
+
+## Additional Context / Open Questions
+<!-- Links to research, AI sessions, RTX 5090 notes, deferred work, etc. -->
+-
