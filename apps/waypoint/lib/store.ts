@@ -35,6 +35,7 @@ export interface WaypointStore extends WaypointState {
   setQBankStatus: (questionId: string, status: QBankStatus | null) => void;
   setQBankPos: (track: TrackKey, idx: number) => void;
   addRubricEntry: (entry: Partial<RubricEntry>) => void;
+  deleteRubricEntry: (id: string) => void;
   upsertApplication: (app: Application) => void;
   deleteApplication: (id: string) => void;
   setWeeklyField: (
@@ -135,6 +136,12 @@ export const useWaypointStore = create<WaypointStore>()(
           };
         }),
 
+      deleteRubricEntry: (id) =>
+        set((s) => ({
+          rubricEntries: s.rubricEntries.filter((e) => e.id !== id && e.assessmentId !== id),
+          lastUpdated: now(),
+        })),
+
       upsertApplication: (app) =>
         set((s) => {
           const idx = s.applications.findIndex((a) => a.id === app.id);
@@ -207,6 +214,7 @@ export const useWaypointStore = create<WaypointStore>()(
           setQBankStatus: _h,
           setQBankPos: _i,
           addRubricEntry: _j,
+          deleteRubricEntry: _delR,
           upsertApplication: _k,
           deleteApplication: _l,
           setWeeklyField: _m,
