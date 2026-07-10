@@ -9,6 +9,7 @@ import {
   Mic2,
   Briefcase,
   CalendarRange,
+  Sparkles,
   MoreHorizontal,
 } from "lucide-react";
 import { useWaypointStore } from "@/lib/store";
@@ -23,6 +24,7 @@ import {
   InterviewSurface,
   ApplicationsSurface,
   WeeklySurface,
+  MockSurface,
   MoreSurface,
 } from "./components/surfaces";
 import { ROLE_FILTER_OPTIONS, type RoleFilter, type WaypointState } from "@/lib/domain";
@@ -44,6 +46,7 @@ const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "interview", label: "Interview", icon: Mic2 },
   { id: "applications", label: "Applications", icon: Briefcase },
   { id: "weekly", label: "Weekly", icon: CalendarRange },
+  { id: "mock", label: "Mock", icon: Sparkles },
   { id: "more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -104,6 +107,7 @@ export default function WaypointHome() {
           TABS[4],
           TABS[6],
           TABS[7],
+          TABS[8],
         ]
       : TABS;
 
@@ -191,6 +195,7 @@ export default function WaypointHome() {
         )}
         {tab === "applications" && <ApplicationsSurface />}
         {tab === "weekly" && <WeeklySurface />}
+        {tab === "mock" && <MockSurface />}
         {tab === "more" && <MoreSurface />}
       </main>
     </div>
