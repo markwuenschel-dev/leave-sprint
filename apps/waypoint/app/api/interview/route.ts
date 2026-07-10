@@ -24,9 +24,9 @@ export async function GET() {
 }
 
 interface InterviewBody {
-  action?: "question" | "probe" | "grade";
+  action?: "question" | "slate" | "probe" | "grade";
   provider: ProviderId;
-  // action: "question"
+  // action: "question" | "slate"
   role?: string;
   domain?: string;
   seed?: string;
@@ -65,6 +65,22 @@ export async function POST(req: Request) {
         buildQuestionPrompt({ role: body.role, domain: body.domain, seed: body.seed, avoid: body.avoid }),
       );
       return NextResponse.json({ question: text.trim() });
+    }
+
+    if (action === "slate") {
+      if (!body.role || !body.domain) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+      const role = body.role;
+      const domain = body.domain;
+      const results = await Promise.allSettled(
+        availableProviders().map(async (id) => ({
+          provider: id,
+          question: (
+            await getProvider(id).complete(buildQuestionPrompt({ role, domain, seed: body.seed, avoid: body.avoid }))
+          ).trim(),
+        })),
+      );
+      const candidates = results.flatMap((r) => (r.status === "fulfilled" && r.value.question ? [r.value] : []));
+      return NextResponse.json({ candidates });
     }
 
     if (action === "probe") {
