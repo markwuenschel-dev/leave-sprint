@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Target,
   Gauge,
@@ -25,17 +25,16 @@ import {
   WeeklySurface,
   MoreSurface,
 } from "./components/surfaces";
-import type { RoleFilter } from "@/lib/domain";
+import { ROLE_FILTER_OPTIONS, type RoleFilter, type WaypointState } from "@/lib/domain";
+import {
+  MAIN_TAB_KEY,
+  WP_NAV_EVENT,
+  type InterviewTabId,
+  type MainTabId,
+  type WpNavDetail,
+} from "@/lib/nav";
 
-type TabId =
-  | "today"
-  | "readiness"
-  | "practice"
-  | "defense"
-  | "interview"
-  | "applications"
-  | "weekly"
-  | "more";
+type TabId = MainTabId;
 
 const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "today", label: "Today", icon: Target },
@@ -48,22 +47,50 @@ const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "more", label: "More", icon: MoreHorizontal },
 ];
 
-const TAB_KEY = "wp-active-tab";
-
 export default function WaypointHome() {
   const [tab, setTab] = useState<TabId>("today");
+  const [interviewTab, setInterviewTab] = useState<InterviewTabId>("qbank");
   const phase = useWaypointStore((s) => s.phase);
   const roleFilter = useWaypointStore((s) => s.roleFilter);
   const setRoleFilter = useWaypointStore((s) => s.setRoleFilter);
-  const readiness = useWaypointStore((s) => computeReadiness(s));
+  // Never call computeReadiness inside a zustand selector — new object every
+  // time → useSyncExternalStore infinite loop / getServerSnapshot warning.
+  const problems = useWaypointStore((s) => s.problems);
+  const fileDefense = useWaypointStore((s) => s.fileDefense);
+  const rubricEntries = useWaypointStore((s) => s.rubricEntries);
+  const solidInterviewLogs = useWaypointStore((s) => s.solidInterviewLogs);
+  const evidenceGreen = useMemo(() => {
+    // Only readiness inputs; cast is fine — computeReadiness doesn't need full state.
+    const slice = {
+      problems,
+      fileDefense,
+      rubricEntries,
+      solidInterviewLogs,
+    } as WaypointState;
+    return computeReadiness(slice).evidenceGreen;
+  }, [problems, fileDefense, rubricEntries, solidInterviewLogs]);
 
   useEffect(() => {
-    const s = localStorage.getItem(TAB_KEY) as TabId | null;
+    const s = localStorage.getItem(MAIN_TAB_KEY) as TabId | null;
     if (s && TABS.some((t) => t.id === s)) setTab(s);
   }, []);
   useEffect(() => {
-    localStorage.setItem(TAB_KEY, tab);
+    localStorage.setItem(MAIN_TAB_KEY, tab);
   }, [tab]);
+
+  useEffect(() => {
+    const onNav = (ev: Event) => {
+      const detail = (ev as CustomEvent<WpNavDetail>).detail;
+      if (detail?.tab && TABS.some((t) => t.id === detail.tab)) {
+        setTab(detail.tab);
+      }
+      if (detail?.interviewTab) {
+        setInterviewTab(detail.interviewTab);
+      }
+    };
+    window.addEventListener(WP_NAV_EVENT, onNav);
+    return () => window.removeEventListener(WP_NAV_EVENT, onNav);
+  }, []);
 
   // Phase A: optional reorder — Applications higher on mobile strip
   const ordered =
@@ -96,25 +123,32 @@ export default function WaypointHome() {
           <div className="min-w-0">
             <div className="text-xl font-semibold tracking-tight">Waypoint</div>
             <div className="truncate text-[10px]" style={{ color: "var(--text-dim)" }}>
-              Phase {phase} · Evidence {readiness.evidenceGreen ? "green" : "open"} · EC2-ready
+              Phase {phase} · Evidence {evidenceGreen ? "green" : "open"} · EC2-ready
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <select
-              className="rounded-lg border px-2 py-1 text-xs"
-              style={{
-                background: "var(--bg)",
-                borderColor: "var(--hairline)",
-                color: "var(--text)",
-              }}
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
-              title="Role filter"
-            >
-              <option value="ALL">All roles</option>
-              <option value="SWE">SWE</option>
-              <option value="MLE">MLE</option>
-            </select>
+            <label className="flex items-center gap-1.5" title="Scopes Practice, Defense, Interview analytics, Readiness matrix">
+              <span className="hidden text-[10px] uppercase tracking-wider text-[var(--text-dim)] sm:inline">
+                Scope
+              </span>
+              <select
+                className="rounded-lg border px-2 py-1 text-xs"
+                style={{
+                  background: "var(--bg)",
+                  borderColor: "var(--hairline)",
+                  color: "var(--text)",
+                }}
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
+                aria-label="Role scope filter"
+              >
+                {ROLE_FILTER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <SaveIndicator />
             <ThemeToggle />
           </div>
@@ -152,7 +186,9 @@ export default function WaypointHome() {
         {tab === "readiness" && <ReadinessSurface />}
         {tab === "practice" && <PracticeSurface />}
         {tab === "defense" && <DefenseSurface />}
-        {tab === "interview" && <InterviewSurface />}
+        {tab === "interview" && (
+          <InterviewSurface key={interviewTab} initialTab={interviewTab} />
+        )}
         {tab === "applications" && <ApplicationsSurface />}
         {tab === "weekly" && <WeeklySurface />}
         {tab === "more" && <MoreSurface />}

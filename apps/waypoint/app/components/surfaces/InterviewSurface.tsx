@@ -3,17 +3,35 @@
 import { useEffect, useMemo, useState } from "react";
 import { QBANK, type QBankQuestion, type TrackKey } from "@waypoint/qbank";
 import { useWaypointStore } from "@/lib/store";
+import {
+  INTERVIEW_TAB_KEY,
+  WP_NAV_EVENT,
+  isInterviewTabId,
+  resolveInterviewTab,
+  type InterviewTabId,
+  type WpNavDetail,
+} from "@/lib/nav";
 import { Flashcard, type FlashcardLayer } from "../ui/Flashcard";
 import { Markdown } from "../ui/Markdown";
 import { ProgressRing } from "../ui/ProgressRing";
 import { GradeForm } from "../rubric/GradeForm";
 import { RubricHistory } from "../rubric/History";
 import { QuickLogModal } from "../rubric/QuickLogModal";
-import { card } from "./shared";
+import { GapsBoard } from "../rubric/GapsBoard";
+import { RetestQueue } from "../rubric/RetestQueue";
+import { PerformancePanel } from "../rubric/PerformancePanel";
+import { SurfaceHero, card } from "./shared";
 
 const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
 
-type InterviewTab = "qbank" | "grade" | "history";
+const INTERVIEW_TABS: { id: InterviewTabId; label: string; short?: string }[] = [
+  { id: "qbank", label: "Q Bank" },
+  { id: "grade", label: "Grade" },
+  { id: "history", label: "History" },
+  { id: "gaps", label: "Gaps" },
+  { id: "retest", label: "Retest" },
+  { id: "performance", label: "Performance", short: "Perf" },
+];
 
 function buildLayers(q: QBankQuestion, useMd: boolean): FlashcardLayer[] {
   const layers: FlashcardLayer[] = [];
@@ -36,13 +54,21 @@ function buildLayers(q: QBankQuestion, useMd: boolean): FlashcardLayer[] {
   return layers;
 }
 
-export function InterviewSurface() {
-  const [tab, setTab] = useState<InterviewTab>("qbank");
+export function InterviewSurface({
+  initialTab,
+}: {
+  /** When parent navigates (e.g. Today → Gaps), remount with this subtab. */
+  initialTab?: InterviewTabId;
+} = {}) {
+  const [tab, setTab] = useState<InterviewTabId>(() =>
+    isInterviewTabId(initialTab) ? initialTab : resolveInterviewTab("qbank"),
+  );
   const pos = useWaypointStore((s) => s.qbankPos);
   const setPos = useWaypointStore((s) => s.setQBankPos);
   const status = useWaypointStore((s) => s.qbankStatus);
   const setStatus = useWaypointStore((s) => s.setQBankStatus);
   const entries = useWaypointStore((s) => s.rubricEntries);
+  const roleFilter = useWaypointStore((s) => s.roleFilter);
   const trackKey = (TRACK_ORDER.includes(pos.track) ? pos.track : "swe") as TrackKey;
   const track = QBANK[trackKey];
   const idx = Math.min(pos.idx, Math.max(0, track.questions.length - 1));
@@ -52,6 +78,30 @@ export function InterviewSurface() {
 
   const useMd = trackKey === "diag";
   const layers = useMemo(() => (q ? buildLayers(q, useMd) : []), [q, useMd]);
+
+  // Parent forced a subtab (navigation) — apply even if we were already mounted via key change
+  useEffect(() => {
+    if (isInterviewTabId(initialTab)) setTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(INTERVIEW_TAB_KEY, tab);
+    } catch {
+      /* ignore */
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    const onNav = (ev: Event) => {
+      const detail = (ev as CustomEvent<WpNavDetail>).detail;
+      if (detail?.interviewTab && isInterviewTabId(detail.interviewTab)) {
+        setTab(detail.interviewTab);
+      }
+    };
+    window.addEventListener(WP_NAV_EVENT, onNav);
+    return () => window.removeEventListener(WP_NAV_EVENT, onNav);
+  }, []);
 
   useEffect(() => {
     setRevealed(new Array(layers.length).fill(false));
@@ -84,81 +134,111 @@ export function InterviewSurface() {
     setLogPrompt(q.q);
   }
 
-  const tabs: { id: InterviewTab; label: string; hint?: string }[] = [
-    { id: "qbank", label: "Q Bank" },
-    { id: "grade", label: "Grade" },
-    { id: "history", label: "History", hint: String(entries.length) },
-  ];
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold">Interview</h2>
-          <p className="mt-1 text-sm text-[var(--text-dim)]">
-            Q bank · full rubric grade · {masteredAll}/{totalQ} Qs mastered ·{" "}
-            {entries.length} assessments
-          </p>
-        </div>
-        {tab === "qbank" ? (
-          <div className={`${card} flex items-center gap-3 py-3`}>
-            <ProgressRing value={trackPct} size={56}>
-              <span className="text-[11px] font-semibold">{trackMastered}</span>
-            </ProgressRing>
-            <div className="text-xs text-[var(--text-dim)]">
-              this track · {track.questions.length} Qs
+    <div className="space-y-5">
+      <SurfaceHero
+        eyebrow="Verbal · mocks · evidence"
+        title="Interview"
+        accent="cyan"
+        subtitle={
+          <>
+            Q bank for recall, full grade for the floor, gaps/retest for debt, performance for
+            role × level. {masteredAll}/{totalQ} mastered · {entries.length} graded.
+          </>
+        }
+        right={
+          tab === "qbank" ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-3">
+              <ProgressRing value={trackPct} size={64} color="var(--cyan)">
+                <span className="text-xs font-bold">{trackPct}%</span>
+              </ProgressRing>
+              <div className="text-xs leading-snug">
+                <div className="font-medium text-[var(--text)]">{track.short} track</div>
+                <div className="text-[var(--text-dim)]">
+                  {trackMastered}/{track.questions.length} mastered
+                </div>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : (
+            <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-3 text-right text-xs">
+              <div className="font-mono text-lg font-semibold text-[var(--cyan)]">
+                {entries.length}
+              </div>
+              <div className="text-[var(--text-dim)]">assessments</div>
+            </div>
+          )
+        }
+      />
+
+      {/* Segmented primary subnav */}
+      <div className="overflow-x-auto rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] p-1">
+        <div className="flex min-w-max gap-0.5">
+          {INTERVIEW_TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`rounded-xl px-3.5 py-2 text-sm font-medium transition ${
+                  active
+                    ? "bg-[var(--surface)] text-[var(--cyan)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--cyan)_35%,transparent)]"
+                    : "text-[var(--text-dim)] hover:text-[var(--text-mid)]"
+                }`}
+              >
+                {t.label}
+                {t.id === "history" && entries.length > 0 ? (
+                  <span className="ml-1 font-mono text-[10px] opacity-70">{entries.length}</span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`rounded-lg border px-3 py-1.5 text-sm ${
-              tab === t.id
-                ? "border-[var(--cyan)] text-[var(--cyan)]"
-                : "border-[var(--hairline)] text-[var(--text-mid)]"
-            }`}
-          >
-            {t.label}
-            {t.hint ? (
-              <span className="ml-1 text-[var(--text-dim)]">({t.hint})</span>
-            ) : null}
-          </button>
-        ))}
-      </div>
-
-      {tab === "grade" ? (
-        <GradeForm onLogged={() => setTab("history")} />
-      ) : null}
-
+      {tab === "grade" ? <GradeForm onLogged={() => setTab("history")} /> : null}
       {tab === "history" ? <RubricHistory /> : null}
+      {tab === "gaps" ? <GapsBoard entries={entries} roleFilter={roleFilter} /> : null}
+      {tab === "retest" ? <RetestQueue entries={entries} roleFilter={roleFilter} /> : null}
+      {tab === "performance" ? (
+        <PerformancePanel entries={entries} roleFilter={roleFilter} />
+      ) : null}
 
       {tab === "qbank" ? (
         <>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
             {TRACK_ORDER.map((t) => {
               const tr = QBANK[t];
               const m = tr.questions.filter((qq) => status[qq.id] === "mastered").length;
+              const pct = tr.questions.length
+                ? Math.round((m / tr.questions.length) * 100)
+                : 0;
+              const active = trackKey === t;
               return (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setPos(t, 0)}
-                  className={`rounded-lg border px-2 py-1 text-xs ${
-                    trackKey === t
-                      ? "border-[var(--cyan)] text-[var(--cyan)]"
-                      : "border-[var(--hairline)] text-[var(--text-mid)]"
+                  className={`rounded-2xl border px-3 py-2.5 text-left transition ${
+                    active
+                      ? "border-[var(--cyan)]/50 bg-[var(--tint-cyan)] shadow-[0_0_24px_-8px_var(--cyan)]"
+                      : "border-[var(--hairline)] bg-[var(--surface)] hover:border-[var(--hairline-strong)]"
                   }`}
                 >
-                  {tr.short}{" "}
-                  <span className="text-[var(--text-dim)]">
+                  <div
+                    className={`text-xs font-semibold ${active ? "text-[var(--cyan)]" : "text-[var(--text)]"}`}
+                  >
+                    {tr.short}
+                  </div>
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--fill-strong)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--cyan)] transition-all"
+                      style={{ width: `${pct}%`, opacity: active ? 1 : 0.55 }}
+                    />
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] text-[var(--text-dim)]">
                     {m}/{tr.questions.length}
-                  </span>
+                  </div>
                 </button>
               );
             })}
@@ -166,9 +246,21 @@ export function InterviewSurface() {
 
           {q ? (
             <Flashcard
-              meta={`${track.label} · ${idx + 1}/${track.questions.length}${
-                status[q.id] ? ` · ${status[q.id]}` : ""
-              }`}
+              meta={
+                <>
+                  <span className="text-[var(--cyan)]">{track.label}</span>
+                  <span>·</span>
+                  <span>
+                    {idx + 1}/{track.questions.length}
+                  </span>
+                  {status[q.id] ? (
+                    <>
+                      <span>·</span>
+                      <span className="text-[var(--green)]">{status[q.id]}</span>
+                    </>
+                  ) : null}
+                </>
+              }
               question={questionNode}
               layers={layers}
               revealed={revealed}
@@ -180,41 +272,56 @@ export function InterviewSurface() {
                 })
               }
               footer={
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="rounded-lg border border-[var(--hairline)] px-3 py-1 text-sm"
                     disabled={idx <= 0}
                     onClick={() => setPos(trackKey, idx - 1)}
+                    className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm disabled:opacity-40"
                   >
                     Prev
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg border border-[var(--hairline)] px-3 py-1 text-sm"
                     disabled={idx >= track.questions.length - 1}
                     onClick={() => setPos(trackKey, idx + 1)}
+                    className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm disabled:opacity-40"
                   >
                     Next
                   </button>
+                  {status[q.id] === "mastered" ? (
+                    <button
+                      type="button"
+                      onClick={() => setStatus(q.id, null)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--green)] bg-[var(--tint-green)] px-3 py-2 text-sm font-semibold text-[var(--green)]"
+                      title="Clear mastered"
+                    >
+                      Mastered ✓
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={markMastered}
+                      className="inline-flex items-center rounded-lg border border-[var(--cyan)] bg-[var(--cyan)] px-3 py-2 text-sm font-semibold text-[var(--bg)]"
+                    >
+                      Mark mastered
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="rounded-lg border border-[var(--green)] px-3 py-1 text-sm text-[var(--green)]"
-                    onClick={markMastered}
-                  >
-                    Mastered {status[q.id] === "mastered" ? "✓" : ""}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-[var(--yellow)] px-3 py-1 text-sm text-[var(--yellow)]"
                     onClick={() => setStatus(q.id, "review")}
+                    className={`inline-flex items-center rounded-lg border px-3 py-2 text-sm ${
+                      status[q.id] === "review"
+                        ? "border-[var(--yellow)] bg-[var(--tint-yellow)] text-[var(--yellow)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)]"
+                    }`}
                   >
                     Review
                   </button>
-                  {status[q.id] ? (
+                  {status[q.id] && status[q.id] !== "mastered" ? (
                     <button
                       type="button"
-                      className="rounded-lg border border-[var(--hairline)] px-3 py-1 text-sm text-[var(--text-dim)]"
+                      className="text-xs text-[var(--text-dim)] underline-offset-2 hover:underline"
                       onClick={() => setStatus(q.id, null)}
                     >
                       Clear
@@ -222,7 +329,7 @@ export function InterviewSurface() {
                   ) : null}
                   <button
                     type="button"
-                    className="rounded-lg border border-[var(--cyan)] px-3 py-1 text-sm text-[var(--cyan)]"
+                    className="ml-auto inline-flex items-center rounded-lg border border-[var(--cyan)]/40 px-3 py-2 text-sm text-[var(--cyan)]"
                     onClick={() => setLogPrompt(q.q)}
                   >
                     Quick log…

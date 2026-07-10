@@ -18,10 +18,10 @@ import type {
   WeeklyReview,
   Application,
   Phase,
-  RoleFilter,
   TargetRole,
   AppStatus,
 } from "../domain";
+import { coerceRoleFilter } from "../domain";
 import type { Problem, FileDefenseItem, Energy } from "@waypoint/practice-types";
 import type { QBankStatus, TrackKey } from "@waypoint/qbank";
 
@@ -123,7 +123,7 @@ export async function loadState(): Promise<LoadedState> {
   const m = meta[0];
   return {
     phase: (m.phase as Phase) || "B",
-    roleFilter: (m.roleFilter as RoleFilter) || "ALL",
+    roleFilter: coerceRoleFilter(m.roleFilter),
     rhythmDays: rhythmOut,
     weeklyReviews: weekOut,
     problems: problemsOut,

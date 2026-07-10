@@ -3,6 +3,9 @@
 import { useMemo } from "react";
 import { useWaypointStore, todayIso } from "@/lib/store";
 import { computeReadiness } from "@/lib/readiness";
+import { activeRetestQueue } from "@/lib/gaps";
+import { pickNextMove } from "@/lib/nextMove";
+import { requestNav } from "@/lib/nav";
 import { ProgressRing } from "../ui/ProgressRing";
 import { card } from "./shared";
 
@@ -11,8 +14,30 @@ export function TodaySurface() {
   const toggle = useWaypointStore((s) => s.toggleRhythm);
   const setNote = useWaypointStore((s) => s.setRhythmNote);
   const day = useWaypointStore((s) => s.rhythmDays[todayIso()] || null);
-  const state = useWaypointStore();
-  const readiness = useMemo(() => computeReadiness(state), [state]);
+  const problems = useWaypointStore((s) => s.problems);
+  const fileDefense = useWaypointStore((s) => s.fileDefense);
+  const rubricEntries = useWaypointStore((s) => s.rubricEntries);
+  const solidInterviewLogs = useWaypointStore((s) => s.solidInterviewLogs);
+  const roleFilter = useWaypointStore((s) => s.roleFilter);
+
+  const readiness = useMemo(
+    () =>
+      computeReadiness({
+        problems,
+        fileDefense,
+        rubricEntries,
+        solidInterviewLogs,
+      } as Parameters<typeof computeReadiness>[0]),
+    [problems, fileDefense, rubricEntries, solidInterviewLogs],
+  );
+
+  const queue = useMemo(
+    () => activeRetestQueue(rubricEntries, roleFilter),
+    [rubricEntries, roleFilter],
+  );
+  const top = queue.slice(0, 5);
+  const more = Math.max(0, queue.length - top.length);
+
   const slots = day?.slots || {
     practice: false,
     defense: false,
@@ -35,6 +60,20 @@ export function TodaySurface() {
   const doneCount = items.filter((i) => slots[i.key]).length;
   const rhythmPct = Math.round((doneCount / items.length) * 100);
 
+  const nextMove = useMemo(
+    () =>
+      pickNextMove({
+        problems,
+        fileDefense,
+        rubricEntries,
+        solidInterviewLogs,
+        roleFilter,
+        rhythmDone: slots,
+        phase,
+      }),
+    [problems, fileDefense, rubricEntries, solidInterviewLogs, roleFilter, slots, phase],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -50,6 +89,32 @@ export function TodaySurface() {
           Evidence: {readiness.evidenceGreen ? "green" : "building"} · Phase {phase}
         </span>
       </div>
+
+      {/* Compact “do this next” — full width but short, CTA on the right on large screens */}
+      <button
+        type="button"
+        onClick={() => requestNav(nextMove.tab, nextMove.interviewTab)}
+        className="relative w-full overflow-hidden rounded-2xl border border-[var(--cyan)]/35 bg-[var(--surface)] px-4 py-3.5 text-left transition hover:border-[var(--cyan)]/55 sm:px-5"
+      >
+        <div
+          className="pointer-events-none absolute -right-6 -top-10 h-24 w-24 rounded-full bg-[var(--cyan)]/12 blur-2xl"
+          aria-hidden
+        />
+        <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--cyan)]">
+              Do this next
+            </div>
+            <div className="mt-0.5 truncate text-base font-semibold tracking-tight text-[var(--text)] sm:text-lg">
+              {nextMove.title}
+            </div>
+            <p className="mt-0.5 line-clamp-2 text-sm text-[var(--text-mid)]">{nextMove.why}</p>
+          </div>
+          <div className="shrink-0 self-start rounded-lg border border-[var(--cyan)]/40 bg-[var(--tint-cyan)] px-3 py-1.5 text-sm font-medium text-[var(--cyan)] sm:self-center">
+            {nextMove.cta} →
+          </div>
+        </div>
+      </button>
 
       <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
         <div className={`${card} flex items-center gap-4`}>
@@ -86,6 +151,72 @@ export function TodaySurface() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className={card}>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-medium">Re-practice queue</div>
+          <button
+            type="button"
+            className="text-xs text-[var(--cyan)]"
+            onClick={() => requestNav("interview", "gaps")}
+          >
+            Open Gaps board
+          </button>
+        </div>
+        {top.length === 0 ? (
+          <p className="text-sm text-[var(--text-dim)]">
+            No due gaps yet. Log a grade with gap tags (or a weak score + gap type) — items show up
+            here.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {top.map((i) => (
+              <li key={i.id}>
+                <button
+                  type="button"
+                  className="flex w-full items-start gap-2 rounded-xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-3 py-2 text-left text-sm hover:border-[var(--cyan)]/40"
+                  onClick={() => requestNav("interview", "gaps")}
+                >
+                  <span
+                    className="mt-0.5 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px]"
+                    style={{
+                      borderColor:
+                        i.bucket === "due-now"
+                          ? "var(--orange)"
+                          : i.bucket === "blocked"
+                            ? "var(--text-dim)"
+                            : "var(--yellow)",
+                      color:
+                        i.bucket === "due-now"
+                          ? "var(--orange)"
+                          : i.bucket === "blocked"
+                            ? "var(--text-dim)"
+                            : "var(--yellow)",
+                    }}
+                  >
+                    {i.bucket === "due-now" ? "now" : i.bucket === "blocked" ? "block" : "soon"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{i.task}</span>
+                    <span className="block truncate text-xs text-[var(--text-dim)]">
+                      {i.action}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {more > 0 ? (
+          <button
+            type="button"
+            className="mt-3 text-xs text-[var(--cyan)]"
+            onClick={() => requestNav("interview", "retest")}
+          >
+            +{more} more on Retest →
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

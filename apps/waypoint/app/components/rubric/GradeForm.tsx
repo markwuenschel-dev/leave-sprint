@@ -110,6 +110,8 @@ function Row({ k, v }: { k: string; v: string | number }) {
 
 export function GradeForm({ onLogged }: { onLogged?: () => void }) {
   const addEntry = useWaypointStore((s) => s.addRubricEntry);
+  const patchEntry = useWaypointStore((s) => s.patchRubricEntry);
+  const existingEntries = useWaypointStore((s) => s.rubricEntries);
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [task, setTask] = useState("");
@@ -241,6 +243,21 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
       return;
     }
     const full = mode === "full";
+    const effectiveScore =
+      levelScores.L2 != null
+        ? levelScores.L2
+        : levelScores.L1 != null
+          ? levelScores.L1
+          : finalScore;
+    const weak = effectiveScore != null && effectiveScore < 70;
+    // Nudge: weak attempt without gap type (decision pack capture 3+2).
+    if (weak && gapTypes.size === 0) {
+      const proceed = window.confirm(
+        "Score looks weak (<70). Add a gap type for the Gaps board?\n\nOK = log anyway · Cancel = go back and tag.",
+      );
+      if (!proceed) return;
+    }
+
     const payload: RubricEntryInput = {
       date,
       task: task.trim(),
@@ -290,15 +307,43 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
           }
         : {
             // Fast path still needs a finalScore for readiness floor heuristics
-            finalScore:
-              levelScores.L2 != null
-                ? levelScores.L2
-                : levelScores.L1 != null
-                  ? levelScores.L1
-                  : finalScore,
+            finalScore: effectiveScore,
           }),
     };
     addEntry(payload);
+
+    // Close-on-retest prompt (decision pack lifecycle 3).
+    const solid =
+      (effectiveScore != null && effectiveScore >= 70) ||
+      qualifying === "L2" ||
+      qualifying === "L3";
+    if (solid) {
+      const key = task.trim().toLowerCase();
+      const related = existingEntries.filter((e) => {
+        if (e.task.trim().toLowerCase() !== key) return false;
+        const st = e.gapClosureStatus?.status;
+        return st === "open" || st === "in progress" || st === "reopened";
+      });
+      if (related.length > 0) {
+        const close = window.confirm(
+          `Close ${related.length} related open gap${related.length === 1 ? "" : "s"} for this task?`,
+        );
+        if (close) {
+          const closedDate = new Date().toISOString().slice(0, 10);
+          for (const e of related) {
+            patchEntry(e.id, {
+              gapClosureStatus: {
+                ...e.gapClosureStatus,
+                status: "closed",
+                closedDate,
+                retestRequired: false,
+              },
+            });
+          }
+        }
+      }
+    }
+
     reset();
     setFlash(`Logged — qualifying ${qualifying || "—"} · ${demonstrated}.`);
     setTimeout(() => setFlash(""), 3500);

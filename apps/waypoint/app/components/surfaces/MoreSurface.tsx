@@ -1,15 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { parseImportFiles, type RubricEntry } from "@waypoint/rubric";
 import { useWaypointStore, todayIso } from "@/lib/store";
 import { mergeCatalogLists } from "@/data/catalog";
 import { formatTwinSummary } from "@/lib/twinImport";
+import type { WaypointState } from "@/lib/domain";
 import { card } from "./shared";
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+/** Full Waypoint / twin-shaped backups vs grading-only payloads. */
+function looksLikeAppBackup(d: Record<string, unknown>): boolean {
+  return (
+    "phase" in d ||
+    "rhythmDays" in d ||
+    "problems" in d ||
+    "applications" in d ||
+    "fileDefense" in d
+  );
+}
+
+function looksLikeRubricPayload(data: unknown): boolean {
+  if (Array.isArray(data)) return true;
+  if (!isRecord(data)) return false;
+  if (Array.isArray(data.rubricEntries)) return true;
+  return "task" in data || "assessmentId" in data || "finalScore" in data;
+}
 
 export function MoreSurface() {
   const exportState = useWaypointStore((s) => s.exportState);
   const importState = useWaypointStore((s) => s.importState);
   const importTwin = useWaypointStore((s) => s.importTwin);
+  const importRubricEntries = useWaypointStore((s) => s.importRubricEntries);
   const mergeCatalog = useWaypointStore((s) => s.mergeCatalog);
   const [lastMsg, setLastMsg] = useState("");
 
@@ -23,48 +48,102 @@ export function MoreSurface() {
     a.click();
   }
 
-  function pickJson(onData: (data: unknown) => void) {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json";
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+  function mergeAppBackup(d: Record<string, unknown>) {
+    const base = exportState();
+    const problems = (d.problems as WaypointState["problems"]) ?? base.problems;
+    const fileDefense = (d.fileDefense as WaypointState["fileDefense"]) ?? base.fileDefense;
+    const catalogs = mergeCatalogLists(problems, fileDefense);
+
+    // Merge rubric rather than clobber when multi-file
+    if (Array.isArray(d.rubricEntries)) {
+      importRubricEntries(d.rubricEntries as RubricEntry[], "merge");
+    }
+
+    const after = useWaypointStore.getState().exportState();
+    const next: WaypointState = {
+      ...base,
+      ...(d as Partial<WaypointState>),
+      ...catalogs,
+      rubricEntries: after.rubricEntries,
+    };
+    // Re-apply non-rubric slices from this file without dropping merged grades
+    if (d.qbankStatus && typeof d.qbankStatus === "object") {
+      next.qbankStatus = {
+        ...base.qbankStatus,
+        ...(d.qbankStatus as WaypointState["qbankStatus"]),
+      };
+    }
+    importState(next);
+  }
+
+  /** Multi-file: app backups merge field-wise; rubric arrays merge into the log. */
+  async function handleMultiImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+
+    const rubricOnly: File[] = [];
+    let backupOk = 0;
+    let failed = 0;
+
+    for (const file of Array.from(files)) {
       try {
         const text = await file.text();
-        onData(JSON.parse(text));
+        const data: unknown = JSON.parse(text);
+
+        if (isRecord(data) && looksLikeAppBackup(data)) {
+          mergeAppBackup(data);
+          backupOk++;
+        } else if (looksLikeRubricPayload(data)) {
+          rubricOnly.push(new File([text], file.name, { type: "application/json" }));
+        } else if (isRecord(data)) {
+          mergeAppBackup(data);
+          backupOk++;
+        } else {
+          failed++;
+        }
       } catch {
-        setLastMsg("Import failed — invalid JSON.");
+        failed++;
       }
-    };
-    input.click();
+    }
+
+    let rubricPart = "";
+    if (rubricOnly.length) {
+      const result = await parseImportFiles(rubricOnly);
+      if (result.entries.length) importRubricEntries(result.entries, "merge");
+      rubricPart = ` · ${result.count} assessment${result.count === 1 ? "" : "s"} from ${result.ok} rubric file${result.ok === 1 ? "" : "s"}`;
+      if (result.failed) rubricPart += ` (${result.failed} failed)`;
+    }
+
+    if (!backupOk && !rubricPart) {
+      setLastMsg("Import failed — invalid JSON.");
+    } else {
+      setLastMsg(
+        `Imported ${files.length} file${files.length === 1 ? "" : "s"}` +
+          (backupOk ? ` · ${backupOk} backup merge${backupOk === 1 ? "" : "s"}` : "") +
+          rubricPart +
+          (failed ? ` · ${failed} failed` : ""),
+      );
+    }
+    e.target.value = "";
   }
 
-  function doImport() {
-    pickJson((data) => {
-      if (!data || typeof data !== "object") {
-        setLastMsg("Import failed.");
-        return;
+  async function doTwinImportMulti(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    const lines: string[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        const data = JSON.parse(await file.text());
+        const summary = importTwin(data);
+        lines.push(`${file.name}: ${formatTwinSummary(summary)}`);
+      } catch {
+        lines.push(`${file.name}: failed (invalid JSON)`);
       }
-      const base = exportState();
-      const d = data as Record<string, unknown>;
-      const merged = {
-        ...base,
-        ...d,
-        problems: (d.problems as typeof base.problems) ?? base.problems,
-        fileDefense: (d.fileDefense as typeof base.fileDefense) ?? base.fileDefense,
-      } as ReturnType<typeof exportState>;
-      const catalogs = mergeCatalogLists(merged.problems, merged.fileDefense);
-      importState({ ...merged, ...catalogs });
-      setLastMsg("Waypoint backup imported.");
-    });
-  }
-
-  function doTwinImport() {
-    pickJson((data) => {
-      const summary = importTwin(data);
-      setLastMsg(formatTwinSummary(summary));
-    });
+    }
+    setLastMsg(
+      `Twin import (${files.length} file${files.length === 1 ? "" : "s"}):\n${lines.join("\n")}`,
+    );
+    e.target.value = "";
   }
 
   return (
@@ -80,13 +159,19 @@ export function MoreSurface() {
           >
             Export JSON
           </button>
-          <button
-            type="button"
-            onClick={doImport}
-            className="rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm"
+          <label
+            className="cursor-pointer rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm"
+            title="Import one or more JSON backups / rubric record files"
           >
-            Import JSON
-          </button>
+            Import JSON…
+            <input
+              type="file"
+              accept=".json,application/json"
+              multiple
+              onChange={handleMultiImport}
+              className="hidden"
+            />
+          </label>
           <button
             type="button"
             onClick={() => {
@@ -100,25 +185,29 @@ export function MoreSurface() {
           </button>
         </div>
         <p className="mt-2 text-xs text-[var(--text-dim)]">
-          Full Waypoint backup replaces overlapping fields. Refresh catalog only expands
-          practice/defense rows.
+          Multi-select supported. App backups merge fields; arrays /{" "}
+          <code className="text-[10px]">rubricEntries</code> merge into the assessment log (de-duped
+          by id). For grading dumps only, use{" "}
+          <strong className="font-medium text-[var(--text-mid)]">Interview → History → Import JSON</strong>.
         </p>
       </div>
 
       <div className={card}>
-        <h3 className="mb-2 font-medium">Twin import (optional, one-shot)</h3>
+        <h3 className="mb-2 font-medium">Twin import (optional)</h3>
         <p className="mb-3 text-sm text-[var(--text-mid)]">
-          Pulls only practice progress + rubric history from a Leave Sprint Twin export or{" "}
-          <code className="text-xs">data/app-state.json</code>. Days, stages, and journals are
-          ignored.
+          Pulls practice progress + rubric history from Leave Sprint Twin export(s). Days/stages
+          ignored. Multi-select OK.
         </p>
-        <button
-          type="button"
-          onClick={doTwinImport}
-          className="rounded-lg border border-[var(--cyan)] px-3 py-1.5 text-sm text-[var(--cyan)]"
-        >
+        <label className="inline-block cursor-pointer rounded-lg border border-[var(--cyan)] px-3 py-1.5 text-sm text-[var(--cyan)]">
           Import twin JSON…
-        </button>
+          <input
+            type="file"
+            accept=".json,application/json"
+            multiple
+            onChange={doTwinImportMulti}
+            className="hidden"
+          />
+        </label>
       </div>
 
       {lastMsg ? (
@@ -126,6 +215,37 @@ export function MoreSurface() {
           {lastMsg}
         </div>
       ) : null}
+
+      <div className={`${card} text-sm`}>
+        <h3 className="mb-2 font-medium">Grading system (v1.11 excerpt)</h3>
+        <div className="space-y-2 text-[var(--text-mid)] leading-relaxed">
+          <p>
+            Assessments use a <strong className="text-[var(--text)]">three-score model</strong>:
+            Level I / II / III controlling scores (0–100), plus gates and optional universal
+            subscores. From that we derive:
+          </p>
+          <ul className="list-inside list-disc space-y-1 text-[var(--text-mid)]">
+            <li>
+              <strong className="text-[var(--text)]">Qualifying level</strong> — highest level the
+              attempt actually demonstrates under difficulty + assistance rules.
+            </li>
+            <li>
+              <strong className="text-[var(--text)]">Final score</strong> — overall band (pass-ish
+              often ≥70; exceptional higher).
+            </li>
+            <li>
+              <strong className="text-[var(--text)]">Gap tags</strong> — open debt for the Gaps /
+              Retest boards (soft-open when you tag).
+            </li>
+          </ul>
+          <p className="text-xs text-[var(--text-dim)]">
+            Logging modes: <em>fast</em> (scores + gates + tags) vs <em>full</em> (subscores +
+            narrative). Full reference lives in{" "}
+            <code className="text-[10px]">Technical_Competency_Scoring_System_v1_11.md</code> at
+            repo root.
+          </p>
+        </div>
+      </div>
 
       <div className={`${card} text-sm`}>
         <h3 className="mb-2 font-medium">About</h3>
@@ -139,4 +259,3 @@ export function MoreSurface() {
     </div>
   );
 }
-

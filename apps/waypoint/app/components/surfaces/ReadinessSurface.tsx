@@ -3,8 +3,10 @@
 import { useMemo } from "react";
 import { useWaypointStore } from "@/lib/store";
 import { computeReadiness } from "@/lib/readiness";
+import { buildRoleLevelMatrix, openHighGapCount } from "@/lib/gaps";
 import type { PrimaryRole } from "@/lib/domain";
 import { ProgressRing } from "../ui/ProgressRing";
+import { RoleLevelMatrixView } from "../rubric/RoleLevelMatrix";
 import { card } from "./shared";
 
 function DimBar({
@@ -47,6 +49,15 @@ export function ReadinessSurface() {
   const setPhase = useWaypointStore((s) => s.setPhase);
   const logSolid = useWaypointStore((s) => s.logSolidInterview);
   const phase = state.phase;
+  const roleFilter = state.roleFilter;
+  const highGaps = useMemo(
+    () => openHighGapCount(state.rubricEntries, roleFilter),
+    [state.rubricEntries, roleFilter],
+  );
+  const matrix = useMemo(
+    () => buildRoleLevelMatrix(state.rubricEntries, roleFilter),
+    [state.rubricEntries, roleFilter],
+  );
 
   function enterA() {
     if (!snap.evidenceGreen) {
@@ -150,6 +161,18 @@ export function ReadinessSurface() {
         {" · "}
         both primaries must clear practice, interview, and defense.
       </p>
+
+      {/* Soft signal only — does not block green / Phase A */}
+      <p className="text-sm text-[var(--text-mid)]">
+        Open High/Critical gaps:{" "}
+        <strong style={{ color: highGaps > 0 ? "var(--orange)" : "var(--text-dim)" }}>
+          {highGaps}
+        </strong>
+        {" · "}
+        signal only; does not change evidence green.
+      </p>
+
+      <RoleLevelMatrixView matrix={matrix} compact />
     </div>
   );
 }
