@@ -12,7 +12,7 @@ function safeEqual(a: string, b: string): boolean {
   return r === 0;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const token = process.env.APP_TOKEN;
   if (!token) return NextResponse.next();
 
