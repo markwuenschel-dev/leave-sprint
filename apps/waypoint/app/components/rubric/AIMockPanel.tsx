@@ -42,6 +42,8 @@ export function AIMockPanel() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [probeCount, setProbeCount] = useState(0);
   const [asked, setAsked] = useState<string[]>([]);
+  const [candidates, setCandidates] = useState<{ provider: string; question: string }[] | null>(null);
+  const [qSource, setQSource] = useState("");
   const [result, setResult] = useState<GradeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -85,12 +87,14 @@ export function AIMockPanel() {
     setError(null);
     setResult(null);
     setTurns([]);
+    setCandidates(null);
     setProbeCount(0);
     setPhase("busy");
     try {
-      const seed = QBANK[track].questions[Math.floor(asked.length) % QBANK[track].questions.length]?.q;
+      const seed = QBANK[track].questions[asked.length % QBANK[track].questions.length]?.q;
       const j = await post({ action: "question", role: map.role, domain: map.domain, seed, avoid: asked });
       const question = String(j.question || "").trim();
+      setQSource(`generated:${provider}`);
       setTurns([{ who: "ai", text: question }]);
       setAsked((a) => [...a, question]);
       setPhase("answering");
@@ -98,6 +102,36 @@ export function AIMockPanel() {
       setError(String((e as Error).message));
       setPhase("idle");
     }
+  }
+
+  /** Fan question generation across all providers; the user picks one (ADR-0002). */
+  async function getOptions() {
+    if (!provider || busy) return;
+    setError(null);
+    setResult(null);
+    setTurns([]);
+    setCandidates(null);
+    setProbeCount(0);
+    setPhase("busy");
+    try {
+      const seed = QBANK[track].questions[asked.length % QBANK[track].questions.length]?.q;
+      const j = await post({ action: "slate", role: map.role, domain: map.domain, seed, avoid: asked });
+      setCandidates(j.candidates ?? []);
+    } catch (e) {
+      setError(String((e as Error).message));
+    } finally {
+      setPhase("idle");
+    }
+  }
+
+  function pickCandidate(c: { provider: string; question: string }) {
+    setCandidates(null);
+    setQSource(`slate:${c.provider}`); // question author ≠ grader
+    setTurns([{ who: "ai", text: c.question }]);
+    setAsked((a) => [...a, c.question]);
+    setProbeCount(0);
+    setResult(null);
+    setPhase("answering");
   }
 
   async function doGrade(finalTurns: Turn[]) {
@@ -116,7 +150,7 @@ export function AIMockPanel() {
           primaryRole: map.role,
           problemLevel: "L2",
           difficulty: 2,
-          questionSource: `generated:${provider}`,
+          questionSource: qSource || `generated:${provider}`,
           assessmentMode: "mock interview",
           followUpsAsked: probeCount,
         },
@@ -204,15 +238,26 @@ export function AIMockPanel() {
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          onClick={startInterview}
-          disabled={!provider || busy || noProviders}
-          className="btn-primary ml-auto inline-flex items-center gap-2 disabled:opacity-50"
-        >
-          {busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
-          {turns.length ? "New question" : "Start"}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={getOptions}
+            disabled={!provider || busy || noProviders || phase === "answering"}
+            className="btn inline-flex items-center gap-1.5 disabled:opacity-50"
+            title="Each configured provider proposes a question — you pick one"
+          >
+            Get options
+          </button>
+          <button
+            type="button"
+            onClick={startInterview}
+            disabled={!provider || busy || noProviders}
+            className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            {busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
+            {turns.length ? "New question" : "Start"}
+          </button>
+        </div>
       </div>
 
       {noProviders ? (
@@ -220,6 +265,30 @@ export function AIMockPanel() {
           No providers configured. Add at least one key to the repo-root <code className="font-mono text-[var(--text)]">.env</code>{" "}
           (<code className="font-mono">OPENAI_API_KEY</code>, <code className="font-mono">XAI_API_KEY</code>,{" "}
           <code className="font-mono">GEMINI_API_KEY</code>, <code className="font-mono">ANTHROPIC_API_KEY</code>) and restart.
+        </div>
+      ) : null}
+
+      {/* Candidate slate */}
+      {candidates && !turns.length ? (
+        <div className={`${box} space-y-2 p-4`}>
+          <div className="text-[10px] uppercase tracking-wider text-[var(--text-dim)]">
+            Pick a question · {candidates.length} proposed
+          </div>
+          {candidates.length ? (
+            candidates.map((c) => (
+              <button
+                key={c.provider}
+                type="button"
+                onClick={() => pickCandidate(c)}
+                className="block w-full rounded-xl border border-[var(--hairline)] p-3 text-left text-sm text-[var(--text)] transition hover:border-[var(--hairline-strong)] hover:bg-[var(--surface)]"
+              >
+                <span className="font-mono text-[10px] text-[var(--cyan)]">{c.provider}</span>
+                <div className="mt-0.5">{c.question}</div>
+              </button>
+            ))
+          ) : (
+            <div className="text-sm text-[var(--text-dim)]">No candidates returned.</div>
+          )}
         </div>
       ) : null}
 
@@ -241,10 +310,11 @@ export function AIMockPanel() {
           ) : null}
           <div ref={endRef} />
         </div>
-      ) : (
+      ) : candidates ? null : (
         <div className={`${box} p-6 text-center text-sm text-[var(--text-dim)]`}>
-          Pick a provider and track, then <strong className="text-[var(--text-mid)]">Start</strong> — the interviewer
-          asks a question, probes your answer, and grades it into your rubric.
+          Pick a provider and track, then <strong className="text-[var(--text-mid)]">Start</strong> — or{" "}
+          <strong className="text-[var(--text-mid)]">Get options</strong> to have each provider propose one. The
+          interviewer asks, probes your answer, and grades it into your rubric.
         </div>
       )}
 
