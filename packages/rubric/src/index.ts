@@ -3,6 +3,7 @@ export * from './types';
 export * from './scoring';
 export * from './normalize';
 export * from './derive';
+export * from './observations';
 export * from './promotion';
 export * from './clusters';
 export * from './io';
