@@ -20,12 +20,14 @@ import { QuickLogModal } from "../rubric/QuickLogModal";
 import { GapsBoard } from "../rubric/GapsBoard";
 import { RetestQueue } from "../rubric/RetestQueue";
 import { PerformancePanel } from "../rubric/PerformancePanel";
+import { AIMockPanel } from "../rubric/AIMockPanel";
 import { SurfaceHero, card } from "./shared";
 
 const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
 
 const INTERVIEW_TABS: { id: InterviewTabId; label: string; short?: string }[] = [
   { id: "qbank", label: "Q Bank" },
+  { id: "aimock", label: "AI Mock" },
   { id: "grade", label: "Grade" },
   { id: "history", label: "History" },
   { id: "gaps", label: "Gaps" },
@@ -196,6 +198,7 @@ export function InterviewSurface({
         </div>
       </div>
 
+      {tab === "aimock" ? <AIMockPanel /> : null}
       {tab === "grade" ? <GradeForm onLogged={() => setTab("history")} /> : null}
       {tab === "history" ? <RubricHistory /> : null}
       {tab === "gaps" ? <GapsBoard entries={entries} roleFilter={roleFilter} /> : null}

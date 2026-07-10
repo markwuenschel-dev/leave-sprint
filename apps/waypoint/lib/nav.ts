@@ -12,6 +12,7 @@ export type MainTabId =
 
 export type InterviewTabId =
   | "qbank"
+  | "aimock"
   | "grade"
   | "history"
   | "gaps"
@@ -69,6 +70,7 @@ export function readInterviewTab(): InterviewTabId | null {
 export function isInterviewTabId(s: string | null | undefined): s is InterviewTabId {
   return (
     s === "qbank" ||
+    s === "aimock" ||
     s === "grade" ||
     s === "history" ||
     s === "gaps" ||
