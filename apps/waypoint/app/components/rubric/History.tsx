@@ -7,6 +7,7 @@ import {
   scoreBand,
   taskLabel,
   type LevelId,
+  type RubricEntry,
 } from "@waypoint/rubric";
 import { useWaypointStore } from "@/lib/store";
 
@@ -49,8 +50,9 @@ function LevelScorePills({
   );
 }
 
-export function RubricHistory() {
-  const entries = useWaypointStore((s) => s.rubricEntries);
+export function RubricHistory({ entries: entriesProp }: { entries?: RubricEntry[] } = {}) {
+  const storeEntries = useWaypointStore((s) => s.rubricEntries);
+  const entries = entriesProp ?? storeEntries;
   const del = useWaypointStore((s) => s.deleteRubricEntry);
   const importRubricEntries = useWaypointStore((s) => s.importRubricEntries);
   const [importMsg, setImportMsg] = useState("");
