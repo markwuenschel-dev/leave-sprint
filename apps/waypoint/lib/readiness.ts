@@ -76,7 +76,9 @@ function solidInterviewCount(
       e.demonstratedLevel === "Strong Level III" ||
       e.qualifyingDemonstratedLevel === "L2" ||
       e.qualifyingDemonstratedLevel === "L3";
-    return hit && solid;
+    // Coached sessions (the model helped mid-answer) don't count toward the floor.
+    const coached = e.llmIndependence?.llmUsed === true;
+    return hit && solid && !coached;
   }).length;
   // Prefer max of explicit logs vs derived so either path works
   return Math.max(fromRubric, logs.length);
