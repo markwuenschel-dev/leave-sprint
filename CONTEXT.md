@@ -28,6 +28,10 @@ An LLM-driven examiner that probes knowledge across the Q-bank tracks and produc
 
 An opt-in AI Interviewer mode where the model helps you *during* the answer (hints, scaffolding) rather than only examining. It stamps `llmIndependence.llmUsed: true` and lowers the evidence weight, keeping the readiness floor honest. Distinct from **post-grade teaching** — feedback after a grade lands, which does not affect evidence.
 
+## Observations
+
+The raw judgment surface the AI Interviewer emits per question — the six universal sub-scores, the three level scores (L1/L2/L3), the task-specific score, gate verdicts, and diagnostics (enum-constrained gap type + severity; prompt-steered gap/weakness tags). Deliberately only the **inputs**: the deterministic rubric engine derives the grade (final score, demonstrated/qualifying level, verdicts) from them, with monotonicity validation. Distinct from the derived grade — the model judges, the engine scores.
+
 ## Rhythm
 
 Waypoint cadence is a **rolling daily checklist** plus a **weekly review** (not a fixed 29-day leave plan). Phase B daily disciplines: **Practice**, **Defense**, **Interview reps**, **Admin light**. Phase A uses the same four, weighted toward applications inside Admin light and weekly review. Completing rhythm checkboxes is not the same as meeting the evidence floor.
