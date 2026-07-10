@@ -160,10 +160,10 @@ body {
 }
 
 .btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all active:scale-[0.985];
   background: var(--cyan);
   color: var(--bg);
-  border-color: var(--cyan);
-  font-weight: 600;
+  border: 1px solid var(--cyan);
 }
 
 .btn-primary:hover {

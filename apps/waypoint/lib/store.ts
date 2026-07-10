@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { ProblemStatus } from "@waypoint/practice-types";
 import type { RubricEntry } from "@waypoint/rubric";
-import { normaliseEntry } from "@waypoint/rubric";
+import { mergeEntries, normaliseEntry } from "@waypoint/rubric";
 import type { QBankStatus, TrackKey } from "@waypoint/qbank";
 import { serverStorage } from "./persist/serverStorage";
 import { SEED } from "../data/seed";
@@ -33,10 +33,16 @@ export interface WaypointStore extends WaypointState {
   setRhythmNote: (date: string, field: "journal" | "focusNote", text: string) => void;
   setProblemStatus: (id: string, status: ProblemStatus) => void;
   markDefensePracticed: (id: string) => void;
+  /** Undo last practice mark (or today if present). */
+  unmarkDefensePracticed: (id: string) => void;
   setDefenseNotes: (id: string, notes: string) => void;
   setQBankStatus: (questionId: string, status: QBankStatus | null) => void;
   setQBankPos: (track: TrackKey, idx: number) => void;
   addRubricEntry: (entry: Partial<RubricEntry>) => void;
+  /** Patch fields on an existing entry (gap status chips, close-on-retest, etc.). */
+  patchRubricEntry: (id: string, patch: Partial<RubricEntry>) => void;
+  /** Merge or replace rubric assessments (multi-JSON import). */
+  importRubricEntries: (list: RubricEntry[], mode?: "merge" | "replace") => void;
   deleteRubricEntry: (id: string) => void;
   upsertApplication: (app: Application) => void;
   deleteApplication: (id: string) => void;
@@ -111,6 +117,24 @@ export const useWaypointStore = create<WaypointStore>()(
           lastUpdated: now(),
         })),
 
+      unmarkDefensePracticed: (id) =>
+        set((s) => ({
+          fileDefense: s.fileDefense.map((f) => {
+            if (f.id !== id) return f;
+            const dates = [...(f.practicedDates || [])];
+            if (!dates.length) return f;
+            const today = todayIso();
+            const withoutToday = dates.filter((d) => d !== today);
+            // Prefer clearing today; else drop the most recent mark
+            const next =
+              withoutToday.length < dates.length
+                ? withoutToday
+                : dates.slice(0, -1);
+            return { ...f, practicedDates: next };
+          }),
+          lastUpdated: now(),
+        })),
+
       setDefenseNotes: (id, notes) =>
         set((s) => ({
           fileDefense: s.fileDefense.map((f) => (f.id === id ? { ...f, notes } : f)),
@@ -129,16 +153,48 @@ export const useWaypointStore = create<WaypointStore>()(
 
       addRubricEntry: (entry) =>
         set((s) => {
-          const e = normaliseEntry({
+          let e = normaliseEntry({
             ...entry,
             id: entry.id || entry.assessmentId || crypto.randomUUID(),
             date: entry.date || todayIso(),
           });
+          // Soft default: tags ⇒ open gap (decision pack capture rule 3).
+          const hasGapSignal =
+            (e.gapTypes?.length ?? 0) > 0 || (e.knowledgeGapTags?.length ?? 0) > 0;
+          if (hasGapSignal && !e.gapClosureStatus?.status) {
+            e = {
+              ...e,
+              gapClosureStatus: {
+                status: "open",
+                openedDate: e.date,
+                retestRequired: true,
+                ...e.gapClosureStatus,
+              },
+            };
+          }
           return {
             rubricEntries: [e, ...s.rubricEntries],
             lastUpdated: now(),
           };
         }),
+
+      patchRubricEntry: (id, patch) =>
+        set((s) => ({
+          rubricEntries: s.rubricEntries.map((e) => {
+            if (e.id !== id && e.assessmentId !== id) return e;
+            return normaliseEntry({ ...e, ...patch, id: e.id, assessmentId: e.assessmentId });
+          }),
+          lastUpdated: now(),
+        })),
+
+      importRubricEntries: (list, mode = "merge") =>
+        set((s) => ({
+          rubricEntries:
+            mode === "replace"
+              ? list.map((e) => normaliseEntry(e))
+              : mergeEntries(s.rubricEntries, list),
+          lastUpdated: now(),
+        })),
 
       deleteRubricEntry: (id) =>
         set((s) => ({
@@ -227,10 +283,13 @@ export const useWaypointStore = create<WaypointStore>()(
           setRhythmNote: _d,
           setProblemStatus: _e,
           markDefensePracticed: _f,
+          unmarkDefensePracticed: _unmarkDef,
           setDefenseNotes: _g,
           setQBankStatus: _h,
           setQBankPos: _i,
           addRubricEntry: _j,
+          patchRubricEntry: _patchR,
+          importRubricEntries: _impR,
           deleteRubricEntry: _delR,
           upsertApplication: _k,
           deleteApplication: _l,
@@ -247,6 +306,8 @@ export const useWaypointStore = create<WaypointStore>()(
     }),
     {
       name: "waypoint-v1",
+      // Must match serverStorage.getItem envelope (`version: 1`).
+      version: 1,
       storage: createJSONStorage(() => serverStorage),
       partialize: (s) => ({
         phase: s.phase,

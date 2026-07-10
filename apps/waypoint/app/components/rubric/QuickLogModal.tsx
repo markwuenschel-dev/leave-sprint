@@ -26,6 +26,12 @@ export function QuickLogModal({ task, track, onClose, onLogged }: QuickLogModalP
   const band = scoreBand(score);
 
   const save = () => {
+    if (score < 70) {
+      const proceed = window.confirm(
+        "Score looks weak (<70). Prefer a full Grade with a gap type for the Gaps board.\n\nOK = quick-log anyway · Cancel = go back.",
+      );
+      if (!proceed) return;
+    }
     addEntry({
       task: task.length > 100 ? task.slice(0, 97) + "…" : task,
       taskType: map.taskType,

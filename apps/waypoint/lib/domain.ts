@@ -3,8 +3,42 @@ import type { RubricEntry } from "@waypoint/rubric";
 import type { QBankStatus, TrackKey } from "@waypoint/qbank";
 
 export type Phase = "B" | "A";
-export type RoleFilter = "ALL" | "SWE" | "MLE";
+/**
+ * Role scope for the analytics boards (matrix, gaps, retest, performance).
+ * Mirrors the roles the role×level matrix tracks (SWE/MLE primary + DS/DE
+ * escape) plus "ALL". This is a display filter only — it never feeds the
+ * evidence-green floor, which is fixed to the two primary roles.
+ */
+export type RoleFilter = "ALL" | "SWE" | "MLE" | "DS" | "DE";
 export type PrimaryRole = "SWE_FS_II" | "MLE_II";
+
+/** Single source of truth for the header role-scope control. */
+export const ROLE_FILTER_OPTIONS: { value: RoleFilter; label: string }[] = [
+  { value: "ALL", label: "All roles" },
+  { value: "SWE", label: "SWE only" },
+  { value: "MLE", label: "MLE only" },
+  { value: "DS", label: "DS only" },
+  { value: "DE", label: "DE only" },
+];
+
+const ROLE_FILTER_VALUES: ReadonlySet<string> = new Set(
+  ROLE_FILTER_OPTIONS.map((o) => o.value),
+);
+
+/** True when `v` is a known RoleFilter value. */
+export function isRoleFilter(v: unknown): v is RoleFilter {
+  return typeof v === "string" && ROLE_FILTER_VALUES.has(v);
+}
+
+/** Narrow an untrusted (persisted / imported) value to a RoleFilter, else "ALL". */
+export function coerceRoleFilter(v: unknown): RoleFilter {
+  return isRoleFilter(v) ? v : "ALL";
+}
+
+/** Short label for a role scope, e.g. "All roles" / "SWE only". */
+export function roleFilterLabel(f: RoleFilter): string {
+  return ROLE_FILTER_OPTIONS.find((o) => o.value === f)?.label ?? "All roles";
+}
 
 export type TargetRole =
   | "SWE_FS_II"
