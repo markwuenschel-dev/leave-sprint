@@ -42,7 +42,7 @@ export function grokProvider(opts: { apiKey: string; model?: string }): Intervie
   return openAICompatible({
     id: "grok",
     apiKey: opts.apiKey,
-    model: opts.model ?? "grok-4.3",
+    model: opts.model ?? "grok-4.5",
     baseURL: "https://api.x.ai/v1",
   });
 }
