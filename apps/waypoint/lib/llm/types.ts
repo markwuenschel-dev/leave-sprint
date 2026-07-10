@@ -22,7 +22,10 @@ export interface InterviewProvider {
   readonly id: ProviderId;
   /** Exact model id — stamped as `calibration.graderModel` provenance. */
   readonly model: string;
+  /** Structured grade: raw Observations constrained to OBSERVATIONS_JSON_SCHEMA. */
   grade(input: GradeInput): Promise<Observations>;
+  /** Free-text completion — question generation and probing (no structured output). */
+  complete(input: GradeInput): Promise<string>;
 }
 
 /** Merge the retry note into the user turn. */

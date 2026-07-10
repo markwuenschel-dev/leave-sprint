@@ -43,3 +43,26 @@ export function buildGradeInput(args: GradeArgs): GradeInput {
 
   return { system, user };
 }
+
+/** Prompt to generate one interview question — the "ask" side (ADR-0003). */
+export function buildQuestionPrompt(args: {
+  role: string;
+  domain: string;
+  seed?: string;
+  avoid?: string[];
+}): GradeInput {
+  const system = `You are a senior technical interviewer for a ${args.role} role. Ask ONE focused interview question on ${args.domain}. It should be answerable verbally in 1–3 minutes, probe real understanding rather than trivia, and suit a mid-level candidate. Output only the question — no preamble, no answer, no numbering.`;
+  let user = `Generate one ${args.domain} interview question.`;
+  if (args.seed) user += `\n\nSame topic area, for inspiration (do not copy verbatim): ${args.seed}`;
+  if (args.avoid?.length) {
+    user += `\n\nDo not repeat any of these already-asked questions:\n- ${args.avoid.join("\n- ")}`;
+  }
+  return { system, user };
+}
+
+/** Prompt for one adaptive follow-up probe, or DONE when further probing adds little. */
+export function buildProbePrompt(transcript: string): GradeInput {
+  const system = `You are a technical interviewer probing a candidate's answer. Ask ONE short, pointed follow-up that tests depth, an edge case, a tradeoff, or a specific claim they made — the kind that separates a memorised answer from real understanding. If the exchange is already thorough and a further probe would add little, reply with exactly DONE. Output only the follow-up question, or DONE.`;
+  const user = `Interview so far:\n\n${transcript}\n\nYour next follow-up (or DONE):`;
+  return { system, user };
+}

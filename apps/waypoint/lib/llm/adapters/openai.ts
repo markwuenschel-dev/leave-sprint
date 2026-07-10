@@ -31,6 +31,16 @@ function openAICompatible(opts: {
       });
       return parseObservations(res.choices[0]?.message?.content ?? "");
     },
+    async complete(input: GradeInput) {
+      const res = await client.chat.completions.create({
+        model: opts.model,
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: userContent(input) },
+        ],
+      });
+      return res.choices[0]?.message?.content ?? "";
+    },
   };
 }
 
