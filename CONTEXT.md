@@ -4,6 +4,10 @@
 
 The personal career transition hub product (successor identity to Leave Sprint Twin). Arc: readiness rebuild (**phase B**), then land a role (**phase A**). Code slug: `waypoint` (`apps/waypoint`, `@waypoint/*`). Not a leave-sprint countdown product.
 
+## Local-first
+
+Data and app sovereignty — your assessment data lives in embedded PGlite on your own server/machine, owned by you, with no third-party host of record. It is **not** offline-purity: the app may make server-side calls to external services (e.g., the AI Interviewer's chosen LLM provider, keys never exposed to the browser), but your data stays yours.
+
 ## Leave Sprint Twin
 
 Archived predecessor dashboard for a fixed 29-day leave sprint. Not a living product; reference/import source only.
@@ -15,6 +19,14 @@ Archived predecessor dashboard for a fixed 29-day leave sprint. Not a living pro
 ## Hybrid gate / evidence floor
 
 **Evidence green** means the checkable floor is met: practice solidity (~80% Solid on a core list), interview performance (≥2 solid mocks or scored sessions), and core stories/file defense cold — for **both** primary roles (SWE Full Stack II and MLE II). Secondary and escape roles do not block. Applications, network, resume polish, and full-bank completion are not floor criteria. Crossing evidence green does not auto-start Phase A; the human still decides the go/no-go.
+
+## AI Interviewer
+
+An LLM-driven examiner that probes knowledge across the Q-bank tracks and produces rubric grades. It is an **augmenting** evidence source, not the source of truth: its grades enter the rubric record and flow into gaps, retest, and readiness like any grade, while manual grading and the mastered→log bridge remain. One selected provider is **active per session** and plays the whole role — ask, probe, grade — with your answers **unaided by default**. Every grade carries **provenance**: which model asked, which graded. Not the same as the **Interview** shell tab (a nav surface) or a human mock.
+
+## Coaching mode
+
+An opt-in AI Interviewer mode where the model helps you *during* the answer (hints, scaffolding) rather than only examining. It stamps `llmIndependence.llmUsed: true` and lowers the evidence weight, keeping the readiness floor honest. Distinct from **post-grade teaching** — feedback after a grade lands, which does not affect evidence.
 
 ## Rhythm
 
