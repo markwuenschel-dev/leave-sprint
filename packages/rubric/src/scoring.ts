@@ -62,7 +62,7 @@ export function subTotal(subScores: UniversalSubScores | null | undefined): numb
 export function avgSubPct(entries: Pick<RubricEntry, 'universalSubScores'>[]): (number | null)[] | null {
   const withScores = entries.filter((e) => e.universalSubScores && subTotal(e.universalSubScores) !== null);
   if (!withScores.length) return null;
-  const totals = new Array(RD.universalDims.length).fill(0);
+  const totals = Array.from({ length: RD.universalDims.length }, () => 0);
   withScores.forEach((e) => {
     subPct(e.universalSubScores).forEach((p, i) => {
       totals[i] += p ?? 0;

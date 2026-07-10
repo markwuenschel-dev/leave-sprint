@@ -104,7 +104,7 @@ export function InterviewSurface({
   }, []);
 
   useEffect(() => {
-    setRevealed(new Array(layers.length).fill(false));
+    setRevealed(Array.from({ length: layers.length }, () => false));
   }, [q?.id, layers.length]);
 
   const totalQ = TRACK_ORDER.reduce((s, t) => s + QBANK[t].questions.length, 0);

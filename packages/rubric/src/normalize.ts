@@ -239,5 +239,5 @@ export function normaliseEntry(input: Partial<RubricEntry> | RawEntry): RubricEn
 /** Flatten `extra` back to top level so an exported record matches the schema. */
 export function flattenForExport(entry: RubricEntry): Record<string, unknown> {
   const { extra, ...rest } = entry;
-  return { ...rest, ...(extra || {}) };
+  return { ...rest, ...extra };
 }
