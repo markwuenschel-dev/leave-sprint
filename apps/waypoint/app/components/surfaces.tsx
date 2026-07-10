@@ -5,4 +5,5 @@ export { DefenseSurface } from "./surfaces/DefenseSurface";
 export { InterviewSurface } from "./surfaces/InterviewSurface";
 export { ApplicationsSurface } from "./surfaces/ApplicationsSurface";
 export { WeeklySurface } from "./surfaces/WeeklySurface";
+export { MockSurface } from "./surfaces/MockSurface";
 export { MoreSurface } from "./surfaces/MoreSurface";
