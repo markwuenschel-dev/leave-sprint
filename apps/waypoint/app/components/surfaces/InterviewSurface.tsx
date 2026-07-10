@@ -21,6 +21,7 @@ import { GapsBoard } from "../rubric/GapsBoard";
 import { RetestQueue } from "../rubric/RetestQueue";
 import { PerformancePanel } from "../rubric/PerformancePanel";
 import { SurfaceHero, card } from "./shared";
+import { filterByGrader, graderModelsIn } from "@/lib/graderFilter";
 
 const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
 
@@ -69,6 +70,12 @@ export function InterviewSurface({
   const setStatus = useWaypointStore((s) => s.setQBankStatus);
   const entries = useWaypointStore((s) => s.rubricEntries);
   const roleFilter = useWaypointStore((s) => s.roleFilter);
+  const graderModels = useMemo(() => graderModelsIn(entries), [entries]);
+  const [graderFilter, setGraderFilter] = useState<string>("all");
+  const filtered = useMemo(
+    () => filterByGrader(entries, graderFilter),
+    [entries, graderFilter],
+  );
   const trackKey = (TRACK_ORDER.includes(pos.track) ? pos.track : "swe") as TrackKey;
   const track = QBANK[trackKey];
   const idx = Math.min(pos.idx, Math.max(0, track.questions.length - 1));
@@ -197,11 +204,39 @@ export function InterviewSurface({
       </div>
 
       {tab === "grade" ? <GradeForm onLogged={() => setTab("history")} /> : null}
-      {tab === "history" ? <RubricHistory /> : null}
-      {tab === "gaps" ? <GapsBoard entries={entries} roleFilter={roleFilter} /> : null}
-      {tab === "retest" ? <RetestQueue entries={entries} roleFilter={roleFilter} /> : null}
+
+      {/* Grader-provenance filter (ADR-0002 trust-parity): slice the analytics
+          boards by who graded — AI vs manual, or a specific model — to spot a
+          lenient grader. Shown only once AI grades exist. */}
+      {(tab === "history" || tab === "gaps" || tab === "retest" || tab === "performance") &&
+      graderModels.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-3 py-2 text-xs text-[var(--text-dim)]">
+          <span className="uppercase tracking-wider">Graded by</span>
+          <select
+            value={graderFilter}
+            onChange={(e) => setGraderFilter(e.target.value)}
+            className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--text)] focus:border-[var(--cyan)] focus:outline-none"
+          >
+            <option value="all">All graders</option>
+            <option value="ai">AI (all models)</option>
+            <option value="manual">Manual</option>
+            {graderModels.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <span className="ml-auto font-mono text-[var(--text-mid)]">
+            {filtered.length}/{entries.length}
+          </span>
+        </div>
+      ) : null}
+
+      {tab === "history" ? <RubricHistory entries={filtered} /> : null}
+      {tab === "gaps" ? <GapsBoard entries={filtered} roleFilter={roleFilter} /> : null}
+      {tab === "retest" ? <RetestQueue entries={filtered} roleFilter={roleFilter} /> : null}
       {tab === "performance" ? (
-        <PerformancePanel entries={entries} roleFilter={roleFilter} />
+        <PerformancePanel entries={filtered} roleFilter={roleFilter} />
       ) : null}
 
       {tab === "qbank" ? (
