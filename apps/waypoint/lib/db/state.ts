@@ -138,27 +138,6 @@ export async function loadState(): Promise<LoadedState> {
   };
 }
 
-async function upsertAll<T extends { id?: string } | Record<string, unknown>>(
-  db: Awaited<ReturnType<typeof getDb>>,
-  table: any,
-  rows: T[],
-  pk: string,
-) {
-  if (rows.length === 0) {
-    // delete all
-    await db.delete(table);
-    return;
-  }
-  for (const row of rows) {
-    await db.insert(table).values(row as any).onConflictDoUpdate({
-      target: table[pk],
-      set: row as any,
-    });
-  }
-  const ids = rows.map((r) => (r as any)[pk] as string);
-  await db.delete(table).where(notInArray(table[pk], ids));
-}
-
 export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: string }> {
   const db = await getDb();
   const lastUpdated = slice.lastUpdated || new Date().toISOString();

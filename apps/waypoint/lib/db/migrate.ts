@@ -24,7 +24,6 @@ async function main() {
   for (const f of files) {
     const sql = fs.readFileSync(path.join(dir, f), "utf8");
     // pglite execute
-    const anyDb = db as unknown as { session?: { client?: { exec: (s: string) => Promise<unknown> } } };
     const client = (db as any).$client ?? (db as any).session?.client;
     if (client?.exec) {
       await client.exec(sql);
@@ -51,7 +50,7 @@ async function bootstrap(db: Awaited<ReturnType<typeof getDb>>) {
     for (const stmt of sql.split(/;\s*\n/).filter((s) => s.trim() && !s.trim().startsWith("--"))) {
       try {
         await (db as any).execute(stmt);
-      } catch (e) {
+      } catch {
         // ignore already exists
       }
     }

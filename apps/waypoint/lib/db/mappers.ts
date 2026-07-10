@@ -55,7 +55,7 @@ export function rubricEntryToRow(e: RubricEntry): RubricRow {
 
 export function rowToRubricEntry(row: RubricRow): RubricEntry {
   return normaliseEntry({
-    ...(row.diagnostic ?? {}),
+    ...row.diagnostic,
     id: row.id,
     rubricVersion: row.rubricVersion,
     date: row.date,
