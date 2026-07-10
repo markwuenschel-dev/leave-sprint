@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { availableProviders, getProvider, gradeToEntry, type ProviderId } from "@/lib/llm";
-import { buildGradeInput } from "@/lib/interview/prompt";
+import { buildGradeInput, buildQuestionPrompt, buildProbePrompt } from "@/lib/interview/prompt";
 import type { ObservationContext } from "@waypoint/rubric";
 
 export const runtime = "nodejs";
@@ -23,43 +23,66 @@ export async function GET() {
   );
 }
 
-interface GradeBody {
+interface InterviewBody {
+  action?: "question" | "probe" | "grade";
   provider: ProviderId;
-  /** Classification + provenance from the Q-bank question (graderModel is added by the seam). */
-  ctx: Omit<ObservationContext, "graderModel">;
-  question: string;
-  answer: string;
+  // action: "question"
+  role?: string;
+  domain?: string;
+  seed?: string;
+  avoid?: string[];
+  // action: "probe"
+  transcript?: string;
+  // action: "grade" — classification + provenance (graderModel is added by the seam)
+  ctx?: Omit<ObservationContext, "graderModel">;
+  question?: string;
+  answer?: string;
   probingTranscript?: string;
   knownTags?: string[];
 }
 
 export async function POST(req: Request) {
-  let body: GradeBody;
+  let body: InterviewBody;
   try {
-    body = (await req.json()) as GradeBody;
+    body = (await req.json()) as InterviewBody;
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const { provider, ctx, question, answer, probingTranscript, knownTags } = body ?? {};
-  if (!provider || !ctx || !question || !answer) {
-    return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-  }
+  const provider = body?.provider;
+  if (!provider) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   if (!availableProviders().includes(provider)) {
     return NextResponse.json({ error: "provider_unavailable", provider }, { status: 400 });
   }
 
+  const action = body.action ?? "grade";
   try {
-    const result = await gradeToEntry(
-      getProvider(provider),
-      buildGradeInput({ question, answer, probingTranscript, knownTags }),
-      ctx,
-    );
+    const p = getProvider(provider);
+
+    if (action === "question") {
+      if (!body.role || !body.domain) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+      const text = await p.complete(
+        buildQuestionPrompt({ role: body.role, domain: body.domain, seed: body.seed, avoid: body.avoid }),
+      );
+      return NextResponse.json({ question: text.trim() });
+    }
+
+    if (action === "probe") {
+      if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+      const text = (await p.complete(buildProbePrompt(body.transcript))).trim();
+      // A DONE sentinel means the model judges further probing unhelpful.
+      return NextResponse.json({ probe: /^done\.?$/i.test(text) ? null : text });
+    }
+
+    // action: "grade"
+    const { ctx, question, answer, probingTranscript, knownTags } = body;
+    if (!ctx || !question || !answer) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+    const result = await gradeToEntry(p, buildGradeInput({ question, answer, probingTranscript, knownTags }), ctx);
     return NextResponse.json(result);
   } catch (err) {
     console.error("POST /api/interview failed:", err);
     return NextResponse.json(
-      { error: "grade_failed", message: String((err as Error).message).slice(0, 300) },
+      { error: `${action}_failed`, message: String((err as Error).message).slice(0, 300) },
       { status: 502 },
     );
   }

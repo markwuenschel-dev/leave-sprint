@@ -20,5 +20,15 @@ export function anthropicProvider(opts: { apiKey: string; model?: string }): Int
       const text = res.content.find((b) => b.type === "text");
       return parseObservations(text && "text" in text ? text.text : "");
     },
+    async complete(input: GradeInput) {
+      const res = await client.messages.create({
+        model,
+        max_tokens: 1024,
+        system: input.system,
+        messages: [{ role: "user", content: userContent(input) }],
+      });
+      const text = res.content.find((b) => b.type === "text");
+      return text && "text" in text ? text.text : "";
+    },
   };
 }

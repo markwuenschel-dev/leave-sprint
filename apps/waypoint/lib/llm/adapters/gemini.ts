@@ -21,5 +21,13 @@ export function geminiProvider(opts: { apiKey: string; model?: string }): Interv
       });
       return parseObservations(res.text ?? "");
     },
+    async complete(input: GradeInput) {
+      const res = await ai.models.generateContent({
+        model,
+        contents: userContent(input),
+        config: { systemInstruction: input.system },
+      });
+      return res.text ?? "";
+    },
   };
 }
