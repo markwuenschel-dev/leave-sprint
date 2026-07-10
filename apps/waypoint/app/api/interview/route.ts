@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { availableProviders, getProvider, gradeToEntry, type ProviderId } from "@/lib/llm";
-import { buildGradeInput, buildQuestionPrompt, buildProbePrompt } from "@/lib/interview/prompt";
+import { buildGradeInput, buildQuestionPrompt, buildProbePrompt, buildHintPrompt } from "@/lib/interview/prompt";
 import type { ObservationContext } from "@waypoint/rubric";
 
 export const runtime = "nodejs";
@@ -24,7 +24,7 @@ export async function GET() {
 }
 
 interface InterviewBody {
-  action?: "question" | "slate" | "probe" | "grade";
+  action?: "question" | "slate" | "probe" | "hint" | "grade";
   provider: ProviderId;
   // action: "question" | "slate"
   role?: string;
@@ -88,6 +88,12 @@ export async function POST(req: Request) {
       const text = (await p.complete(buildProbePrompt(body.transcript))).trim();
       // A DONE sentinel means the model judges further probing unhelpful.
       return NextResponse.json({ probe: /^done\.?$/i.test(text) ? null : text });
+    }
+
+    if (action === "hint") {
+      if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+      const hint = (await p.complete(buildHintPrompt(body.transcript))).trim();
+      return NextResponse.json({ hint });
     }
 
     // action: "grade"

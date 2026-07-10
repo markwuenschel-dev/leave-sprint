@@ -66,3 +66,10 @@ export function buildProbePrompt(transcript: string): GradeInput {
   const user = `Interview so far:\n\n${transcript}\n\nYour next follow-up (or DONE):`;
   return { system, user };
 }
+
+/** Coaching hint mid-answer — a nudge, not the answer (coaching mode). */
+export function buildHintPrompt(transcript: string): GradeInput {
+  const system = `You are a supportive interview coach. The candidate is mid-answer and wants a hint. Give ONE short nudge — point at what to consider next, a missing angle, or a leading sub-question — WITHOUT giving the full answer. One or two sentences.`;
+  const user = `Interview so far:\n\n${transcript}\n\nGive one coaching hint (do not answer for them):`;
+  return { system, user };
+}

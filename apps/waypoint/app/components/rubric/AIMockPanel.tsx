@@ -24,11 +24,14 @@ interface GradeResult {
   flagged: boolean;
   droppedTags: string[];
 }
-type Turn = { who: "ai" | "you"; text: string };
+type Turn = { who: "ai" | "you" | "hint"; text: string };
 type Phase = "idle" | "answering" | "busy" | "graded";
 
 function transcript(turns: Turn[]): string {
-  return turns.map((t) => `${t.who === "ai" ? "Interviewer" : "Candidate"}: ${t.text}`).join("\n\n");
+  return turns
+    .filter((t) => t.who !== "hint") // hints are coaching, not part of the graded exchange
+    .map((t) => `${t.who === "ai" ? "Interviewer" : "Candidate"}: ${t.text}`)
+    .join("\n\n");
 }
 
 export function AIMockPanel() {
@@ -44,6 +47,8 @@ export function AIMockPanel() {
   const [asked, setAsked] = useState<string[]>([]);
   const [candidates, setCandidates] = useState<{ provider: string; question: string }[] | null>(null);
   const [qSource, setQSource] = useState("");
+  const [coaching, setCoaching] = useState(false);
+  const [usedHint, setUsedHint] = useState(false);
   const [result, setResult] = useState<GradeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -89,6 +94,7 @@ export function AIMockPanel() {
     setTurns([]);
     setCandidates(null);
     setProbeCount(0);
+    setUsedHint(false);
     setPhase("busy");
     try {
       const seed = QBANK[track].questions[asked.length % QBANK[track].questions.length]?.q;
@@ -112,6 +118,7 @@ export function AIMockPanel() {
     setTurns([]);
     setCandidates(null);
     setProbeCount(0);
+    setUsedHint(false);
     setPhase("busy");
     try {
       const seed = QBANK[track].questions[asked.length % QBANK[track].questions.length]?.q;
@@ -130,8 +137,29 @@ export function AIMockPanel() {
     setTurns([{ who: "ai", text: c.question }]);
     setAsked((a) => [...a, c.question]);
     setProbeCount(0);
+    setUsedHint(false);
     setResult(null);
     setPhase("answering");
+  }
+
+  /** Coaching mode: request a hint mid-answer (flags the session as coached). */
+  async function getHint() {
+    if (busy) return;
+    setError(null);
+    setPhase("busy");
+    try {
+      const ctx = draft.trim() ? `${transcript(turns)}\n\nCandidate (drafting): ${draft.trim()}` : transcript(turns);
+      const j = await post({ action: "hint", transcript: ctx });
+      const hint = String(j.hint || "").trim();
+      if (hint) {
+        setTurns((t) => [...t, { who: "hint", text: hint }]);
+        setUsedHint(true);
+      }
+    } catch (e) {
+      setError(String((e as Error).message));
+    } finally {
+      setPhase("answering");
+    }
   }
 
   async function doGrade(finalTurns: Turn[]) {
@@ -153,6 +181,7 @@ export function AIMockPanel() {
           questionSource: qSource || `generated:${provider}`,
           assessmentMode: "mock interview",
           followUpsAsked: probeCount,
+          coached: usedHint,
         },
         question,
         answer,
@@ -238,6 +267,18 @@ export function AIMockPanel() {
             ))}
           </select>
         </label>
+        <label
+          className="flex items-center gap-1.5 text-xs text-[var(--text-dim)]"
+          title="Let the model give hints mid-answer. Coached grades are flagged and do not count toward your readiness floor."
+        >
+          <input
+            type="checkbox"
+            checked={coaching}
+            onChange={(e) => setCoaching(e.target.checked)}
+            className="accent-[var(--cyan)]"
+          />
+          Coaching
+        </label>
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
@@ -296,11 +337,30 @@ export function AIMockPanel() {
       {turns.length ? (
         <div className={`${box} space-y-3 p-4`}>
           {turns.map((t, i) => (
-            <div key={i} className={t.who === "ai" ? "" : "pl-4"}>
+            <div
+              key={i}
+              className={
+                t.who === "you"
+                  ? "pl-4"
+                  : t.who === "hint"
+                    ? "rounded-xl border border-[var(--cyan)]/25 bg-[var(--cyan)]/5 p-2.5"
+                    : ""
+              }
+            >
               <div className="mb-0.5 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">
-                {t.who === "ai" ? "Interviewer" : "You"}
+                {t.who === "ai" ? "Interviewer" : t.who === "hint" ? "Coach hint" : "You"}
               </div>
-              <div className={t.who === "ai" ? "text-[var(--text)]" : "text-[var(--text-mid)]"}>{t.text}</div>
+              <div
+                className={
+                  t.who === "you"
+                    ? "text-[var(--text-mid)]"
+                    : t.who === "hint"
+                      ? "text-sm italic text-[var(--cyan)]"
+                      : "text-[var(--text)]"
+                }
+              >
+                {t.text}
+              </div>
             </div>
           ))}
           {busy ? (
@@ -343,6 +403,11 @@ export function AIMockPanel() {
                 Grade now →
               </button>
             ) : null}
+            {coaching ? (
+              <button type="button" onClick={getHint} disabled={busy} className="btn text-[var(--cyan)] disabled:opacity-50">
+                Get a hint
+              </button>
+            ) : null}
             <span className="ml-auto font-mono text-[10px] text-[var(--text-dim)]">
               probe {probeCount}/{MAX_PROBES}
             </span>
@@ -366,6 +431,9 @@ export function AIMockPanel() {
               graded by <span className="font-mono text-[var(--text-mid)]">{result.entry.calibration?.graderModel}</span>
               {" · "}confidence {result.entry.calibration?.calibrationConfidence}
               {result.flagged ? <span className="ml-1 text-[#f59e0b]">· flagged (non-monotonic)</span> : null}
+              {result.entry.llmIndependence?.llmUsed ? (
+                <span className="ml-1 text-[#f59e0b]">· coached (excluded from readiness floor)</span>
+              ) : null}
             </div>
           </div>
           {result.entry.gapTypes?.length ? (

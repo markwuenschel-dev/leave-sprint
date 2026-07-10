@@ -82,6 +82,9 @@ export interface ObservationContext {
   questionSource: string;
   assessmentMode?: AssessmentMode['mode'];
   followUpsAsked?: number;
+  /** Coaching mode: the model helped during the answer. Flags llmUsed + lowers
+   *  the evidence class so a coached session can't inflate the readiness floor. */
+  coached?: boolean;
 }
 
 export interface IntakeResult {
@@ -260,7 +263,8 @@ export function intakeObservations(
     problemLevel: ctx.problemLevel,
     difficulty: Math.max(0, Math.min(5, Math.round(num(ctx.difficulty)))) as Difficulty,
     assistanceLevel: 0, // unaided by default (ADR-0003)
-    evidenceClass: 'prospective', // live capture (ADR-0003)
+    // Coached sessions get a lower evidence class (classB 0.4 vs prospective 1.0).
+    evidenceClass: ctx.coached ? 'classB' : 'prospective',
     loggingMode: 'fast',
     universalSubScores,
     levelScores,
@@ -285,7 +289,10 @@ export function intakeObservations(
       followUpsAsked: ctx.followUpsAsked ?? 0,
     },
     scoreUncertainty: { range: scoreRange, reason: obs.scoreUncertainty?.reason ?? '' },
-    llmIndependence: { llmUsed: false }, // examiner grades; the answer is unaided (ADR-0001/0003)
+    // Unaided by default; coaching mode records that the model helped (ADR-0001/0003).
+    llmIndependence: ctx.coached
+      ? { llmUsed: true, llmUseType: ['coaching (mid-answer help)'] }
+      : { llmUsed: false },
   };
 
   return { entry: normaliseEntry(input), monotonicOk, flagged, droppedTags: dropped };
