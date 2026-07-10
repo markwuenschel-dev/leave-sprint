@@ -184,6 +184,8 @@ export interface AssessmentMode {
   notesAllowed?: Nullable<boolean>;
   followUpsAsked?: number;
   pressureLevel?: (typeof LMH)[number];
+  /** AI Interviewer provenance: question author — 'qbank' | 'generated:<model>' | 'slate:<model>' (ADR-0004). */
+  questionSource?: string;
 }
 
 export interface Calibration {
@@ -191,6 +193,8 @@ export interface Calibration {
   humanReviewed?: boolean;
   realInterviewSignal?: boolean;
   calibrationConfidence?: (typeof CONFIDENCE)[number];
+  /** AI Interviewer provenance: exact grading model id, e.g. 'claude-opus-4-8' (ADR-0004). */
+  graderModel?: string;
 }
 
 export interface RetestPlan {
