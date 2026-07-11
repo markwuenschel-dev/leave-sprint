@@ -49,11 +49,15 @@ async function flush(): Promise<void> {
   pending = null;
   setSaveState({ status: "saving" });
   try {
+    // NOTE: no `keepalive` here. Browsers cap keepalive request bodies at 64KB and
+    // *throw* over that; our save carries the whole catalog + every rubric entry's
+    // diagnostic blob, so it crosses 64KB after ~15 grades — which surfaced as a
+    // permanent "Save error" and lost writes. Unload durability is handled
+    // separately by beaconFlush (sendBeacon), so a normal debounced save needs no cap.
     const res = await fetch(ENDPOINT, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...(body as object), __authoritative: hydrated }),
-      keepalive: true,
     });
     if (res.status === 401) {
       if (pending == null) pending = body;
