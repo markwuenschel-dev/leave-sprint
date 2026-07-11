@@ -9,10 +9,10 @@ export function serverWasEmpty(): boolean {
   return serverEmpty;
 }
 
-// True once we have successfully READ server state at least once. Until then we
-// must never PUT: the store still holds the empty seed during async hydration, and
-// saveState treats an empty slice as "delete every row" — so persisting a
-// not-yet-hydrated state (or after a failed GET) would wipe the whole server DB.
+// True once we have successfully READ server state at least once. Saves before
+// this still go out (so an import always persists) but are flagged NON-authoritative,
+// so the server treats them as upsert-only and never deletes/wipes. After a
+// confirmed read, saves are authoritative and may apply deletions.
 let hydrated = false;
 
 export type SaveState = {
@@ -52,7 +52,7 @@ async function flush(): Promise<void> {
     const res = await fetch(ENDPOINT, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...(body as object), __authoritative: hydrated }),
       keepalive: true,
     });
     if (res.status === 401) {
@@ -89,7 +89,7 @@ function beaconFlush(): void {
   try {
     const ok = navigator.sendBeacon(
       ENDPOINT,
-      new Blob([JSON.stringify(body)], { type: "application/json" }),
+      new Blob([JSON.stringify({ ...(body as object), __authoritative: hydrated })], { type: "application/json" }),
     );
     if (ok) pending = null;
   } catch {
@@ -106,22 +106,27 @@ if (typeof window !== "undefined") {
 
 export const serverStorage: StateStorage = {
   getItem: async (): Promise<string | null> => {
-    try {
-      const res = await fetch(ENDPOINT, { cache: "no-store" });
-      if (!res.ok) return null;
-      const data = (await res.json()) as Record<string, unknown> & { empty?: boolean };
-      serverEmpty = !!data.empty;
-      hydrated = true; // read succeeded (even if empty) — safe to persist from here
-      const { empty: _e, driver: _d, ...slice } = data;
-      return JSON.stringify({ state: slice, version: 1 });
-    } catch {
-      return null;
+    // Retry transient failures — the API is briefly not ready right after a deploy,
+    // and reliable hydration is what lets later saves apply real deletes.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const res = await fetch(ENDPOINT, { cache: "no-store" });
+        if (res.ok) {
+          const data = (await res.json()) as Record<string, unknown> & { empty?: boolean };
+          serverEmpty = !!data.empty;
+          hydrated = true; // confirmed read — subsequent saves are authoritative
+          const { empty: _e, driver: _d, ...slice } = data;
+          return JSON.stringify({ state: slice, version: 1 });
+        }
+        if (res.status === 401) return null; // auth gate, not transient
+      } catch {
+        /* network — retry */
+      }
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
     }
+    return null; // gave up; saves still go out, just non-authoritative (upsert-only)
   },
   setItem: async (_name: string, value: string): Promise<void> => {
-    // Guard: never write before a successful hydration. Prevents the empty seed
-    // (or a state left empty by a failed GET) from being PUT and wiping the DB.
-    if (!hydrated) return;
     try {
       const parsed = JSON.parse(value) as { state?: unknown };
       pending = parsed.state ?? parsed;

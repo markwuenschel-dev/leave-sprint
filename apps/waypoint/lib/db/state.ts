@@ -138,7 +138,20 @@ export async function loadState(): Promise<LoadedState> {
   };
 }
 
-export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: string }> {
+/**
+ * Persist a state slice.
+ *
+ * `authoritative` gates ALL row deletions. A non-authoritative save (the client
+ * has not confirmed a successful hydration yet) is upsert-only: it can add/update
+ * rows but never delete — so an empty or seed slice can never wipe the server.
+ * Only a confirmed authoritative save applies deletions (removed items, and the
+ * intentional "clear everything"). This is what makes an import always persist
+ * while still keeping real deletes and the Clear-log button working.
+ */
+export async function saveState(
+  slice: PersistedSlice,
+  authoritative = false,
+): Promise<{ lastUpdated: string }> {
   const db = await getDb();
   const lastUpdated = slice.lastUpdated || new Date().toISOString();
 
@@ -175,12 +188,12 @@ export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: s
       energy: d.energy ?? null,
       lastUpdated: d.lastUpdated ?? null,
     }));
-    if (rRows.length === 0) await tx.delete(rhythmDays);
-    else {
-      for (const row of rRows) {
-        await tx.insert(rhythmDays).values(row).onConflictDoUpdate({ target: rhythmDays.date, set: row });
-      }
-      await tx.delete(rhythmDays).where(notInArray(rhythmDays.date, rRows.map((r) => r.date)));
+    for (const row of rRows) {
+      await tx.insert(rhythmDays).values(row).onConflictDoUpdate({ target: rhythmDays.date, set: row });
+    }
+    if (authoritative) {
+      if (rRows.length) await tx.delete(rhythmDays).where(notInArray(rhythmDays.date, rRows.map((r) => r.date)));
+      else await tx.delete(rhythmDays);
     }
 
     const wRows = Object.values(slice.weeklyReviews).map((w) => ({
@@ -191,12 +204,12 @@ export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: s
       done: w.done,
       lastUpdated: w.lastUpdated ?? null,
     }));
-    if (wRows.length === 0) await tx.delete(weeklyReviews);
-    else {
-      for (const row of wRows) {
-        await tx.insert(weeklyReviews).values(row).onConflictDoUpdate({ target: weeklyReviews.weekStart, set: row });
-      }
-      await tx.delete(weeklyReviews).where(notInArray(weeklyReviews.weekStart, wRows.map((r) => r.weekStart)));
+    for (const row of wRows) {
+      await tx.insert(weeklyReviews).values(row).onConflictDoUpdate({ target: weeklyReviews.weekStart, set: row });
+    }
+    if (authoritative) {
+      if (wRows.length) await tx.delete(weeklyReviews).where(notInArray(weeklyReviews.weekStart, wRows.map((r) => r.weekStart)));
+      else await tx.delete(weeklyReviews);
     }
 
     const pRows = slice.problems.map((p) => ({
@@ -210,12 +223,12 @@ export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: s
       core: !!p.core,
       roleTrack: p.roleTrack ?? null,
     }));
-    if (pRows.length === 0) await tx.delete(problems);
-    else {
-      for (const row of pRows) {
-        await tx.insert(problems).values(row).onConflictDoUpdate({ target: problems.id, set: row });
-      }
-      await tx.delete(problems).where(notInArray(problems.id, pRows.map((r) => r.id)));
+    for (const row of pRows) {
+      await tx.insert(problems).values(row).onConflictDoUpdate({ target: problems.id, set: row });
+    }
+    if (authoritative) {
+      if (pRows.length) await tx.delete(problems).where(notInArray(problems.id, pRows.map((r) => r.id)));
+      else await tx.delete(problems);
     }
 
     const fRows = slice.fileDefense.map((f) => ({
@@ -229,30 +242,30 @@ export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: s
       core: !!f.core,
       roleTrack: f.roleTrack ?? null,
     }));
-    if (fRows.length === 0) await tx.delete(fileDefense);
-    else {
-      for (const row of fRows) {
-        await tx.insert(fileDefense).values(row).onConflictDoUpdate({ target: fileDefense.id, set: row });
-      }
-      await tx.delete(fileDefense).where(notInArray(fileDefense.id, fRows.map((r) => r.id)));
+    for (const row of fRows) {
+      await tx.insert(fileDefense).values(row).onConflictDoUpdate({ target: fileDefense.id, set: row });
+    }
+    if (authoritative) {
+      if (fRows.length) await tx.delete(fileDefense).where(notInArray(fileDefense.id, fRows.map((r) => r.id)));
+      else await tx.delete(fileDefense);
     }
 
     const rubRows = slice.rubricEntries.map(rubricEntryToRow);
-    if (rubRows.length === 0) await tx.delete(rubricEntries);
-    else {
-      for (const row of rubRows) {
-        await tx.insert(rubricEntries).values(row).onConflictDoUpdate({ target: rubricEntries.id, set: row });
-      }
-      await tx.delete(rubricEntries).where(notInArray(rubricEntries.id, rubRows.map((r) => r.id)));
+    for (const row of rubRows) {
+      await tx.insert(rubricEntries).values(row).onConflictDoUpdate({ target: rubricEntries.id, set: row });
+    }
+    if (authoritative) {
+      if (rubRows.length) await tx.delete(rubricEntries).where(notInArray(rubricEntries.id, rubRows.map((r) => r.id)));
+      else await tx.delete(rubricEntries);
     }
 
     const qbRows = Object.entries(slice.qbankStatus).map(([questionId, status]) => ({ questionId, status }));
-    if (qbRows.length === 0) await tx.delete(qbankStatus);
-    else {
-      for (const row of qbRows) {
-        await tx.insert(qbankStatus).values(row).onConflictDoUpdate({ target: qbankStatus.questionId, set: row });
-      }
-      await tx.delete(qbankStatus).where(notInArray(qbankStatus.questionId, qbRows.map((r) => r.questionId)));
+    for (const row of qbRows) {
+      await tx.insert(qbankStatus).values(row).onConflictDoUpdate({ target: qbankStatus.questionId, set: row });
+    }
+    if (authoritative) {
+      if (qbRows.length) await tx.delete(qbankStatus).where(notInArray(qbankStatus.questionId, qbRows.map((r) => r.questionId)));
+      else await tx.delete(qbankStatus);
     }
 
     const aRows = slice.applications.map((a) => ({
@@ -269,12 +282,12 @@ export async function saveState(slice: PersistedSlice): Promise<{ lastUpdated: s
       createdAt: a.createdAt,
       updatedAt: a.updatedAt,
     }));
-    if (aRows.length === 0) await tx.delete(applications);
-    else {
-      for (const row of aRows) {
-        await tx.insert(applications).values(row).onConflictDoUpdate({ target: applications.id, set: row });
-      }
-      await tx.delete(applications).where(notInArray(applications.id, aRows.map((r) => r.id)));
+    for (const row of aRows) {
+      await tx.insert(applications).values(row).onConflictDoUpdate({ target: applications.id, set: row });
+    }
+    if (authoritative) {
+      if (aRows.length) await tx.delete(applications).where(notInArray(applications.id, aRows.map((r) => r.id)));
+      else await tx.delete(applications);
     }
   });
 
