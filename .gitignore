@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Local dev database (PGlite)
 .pglite/
+
+# Personal assessment data (grades) — keep out of the shared repo
+data/assessments/
