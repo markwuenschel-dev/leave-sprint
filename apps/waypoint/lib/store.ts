@@ -61,6 +61,46 @@ export interface WaypointStore extends WaypointState {
 
 const seed = (): WaypointState => JSON.parse(JSON.stringify(SEED)) as WaypointState;
 
+const unionById = <T extends { id: string }>(server: T[], local: T[]): T[] => {
+  const byId = new Map(server.map((x) => [x.id, x]));
+  for (const x of local) byId.set(x.id, x); // local (live edit) wins on conflict
+  return Array.from(byId.values());
+};
+
+const unionStr = (a: string[] = [], b: string[] = []): string[] =>
+  Array.from(new Set([...a, ...b]));
+
+/**
+ * Rehydration merge that preserves un-synced local edits.
+ *
+ * The server snapshot is fetched asynchronously; the store is interactive (and
+ * saving) the whole time. zustand's default merge *replaces* each key with the
+ * server value, so anything logged during that window — a grade, a Q-bank mark,
+ * an application — is dropped from the store, and the follow-up authoritative
+ * save then deletes it server-side. Every user-data collection seeds EMPTY, so
+ * during hydration `current` holds only live edits: we union those over the
+ * server value (local wins on id/key conflict). `problems`/`fileDefense` seed
+ * from the catalog (mergeCatalog re-expands after), and scalars stay
+ * server-authoritative, so both come straight from the persisted snapshot.
+ */
+const mergeHydration = (persisted: unknown, current: WaypointStore): WaypointStore => {
+  const p = persisted as Partial<WaypointState> | undefined;
+  if (!p) return current;
+  return {
+    ...current,
+    ...p,
+    rhythmDays: { ...p.rhythmDays, ...current.rhythmDays },
+    weeklyReviews: { ...p.weeklyReviews, ...current.weeklyReviews },
+    qbankStatus: { ...p.qbankStatus, ...current.qbankStatus },
+    rubricEntries: mergeEntries(p.rubricEntries ?? [], current.rubricEntries),
+    applications: unionById(p.applications ?? [], current.applications),
+    solidInterviewLogs: {
+      SWE_FS_II: unionStr(p.solidInterviewLogs?.SWE_FS_II, current.solidInterviewLogs.SWE_FS_II),
+      MLE_II: unionStr(p.solidInterviewLogs?.MLE_II, current.solidInterviewLogs.MLE_II),
+    },
+  };
+};
+
 export const useWaypointStore = create<WaypointStore>()(
   persist(
     (set, get) => ({
@@ -309,6 +349,7 @@ export const useWaypointStore = create<WaypointStore>()(
       // Must match serverStorage.getItem envelope (`version: 1`).
       version: 1,
       storage: createJSONStorage(() => serverStorage),
+      merge: (persisted, current) => mergeHydration(persisted, current as WaypointStore),
       partialize: (s) => ({
         phase: s.phase,
         roleFilter: s.roleFilter,
