@@ -7,6 +7,7 @@ import {
   RD,
   gapBoard,
   retestSchedule,
+  levelTrends,
   type GapBoardView,
   type RetestItem,
   type RubricEntry,
@@ -301,6 +302,125 @@ export function qualifyingRateTrend(
     return win.length ? Math.round((win.reduce((s, v) => s + v, 0) / win.length) * 100) : null;
   });
   return { labels: tl.map((p) => p.date), rate };
+}
+
+/* ── Summary KPIs (Readiness stat tiles) ────────────────────────────────── */
+const isQual = (q: RubricEntry["qualifyingDemonstratedLevel"]) => q === "L1" || q === "L2" || q === "L3";
+const avg = (ns: number[]) => (ns.length ? Math.round(ns.reduce((a, b) => a + b, 0) / ns.length) : null);
+
+export interface PerfSummary {
+  graded: number;
+  avgFinal: number | null;
+  qualifyingRate: number; // %
+  passRate: number; // % scoring >= 70
+  bestLevel: { L1: number; L2: number; L3: number; none: number };
+  avgProof: number | null; // 0–1
+  coverage: { taskType: string; label: string; color: string; count: number }[];
+}
+
+export function performanceSummary(entries: RubricEntry[], roleFilter: RoleFilter = "ALL"): PerfSummary {
+  const es = filterEntriesByRole(entries, roleFilter);
+  const graded = es.length;
+  const finals = es.map((e) => e.finalScore).filter((n): n is number => typeof n === "number");
+  const qual = es.filter((e) => isQual(e.qualifyingDemonstratedLevel)).length;
+  const pass = finals.filter((n) => n >= 70).length;
+  const bestLevel = { L1: 0, L2: 0, L3: 0, none: 0 };
+  es.forEach((e) => {
+    const q = e.qualifyingDemonstratedLevel;
+    if (q === "L1" || q === "L2" || q === "L3") bestLevel[q] += 1;
+    else bestLevel.none += 1;
+  });
+  const proofs = es.map((e) => e.proofStrength?.score).filter((n): n is number => typeof n === "number");
+  return {
+    graded,
+    avgFinal: avg(finals),
+    qualifyingRate: graded ? Math.round((qual / graded) * 100) : 0,
+    passRate: graded ? Math.round((pass / graded) * 100) : 0,
+    bestLevel,
+    avgProof: proofs.length ? +(proofs.reduce((a, b) => a + b, 0) / proofs.length).toFixed(2) : null,
+    coverage: RD.taskTypes.map((tt) => ({
+      taskType: tt.id,
+      label: tt.label,
+      color: tt.color,
+      count: es.filter((e) => e.taskType === tt.id).length,
+    })),
+  };
+}
+
+/* ── Ranked avg-final by skill area (bar chart) ─────────────────────────── */
+export interface SkillAreaStat {
+  taskType: string;
+  label: string;
+  color: string;
+  avgFinal: number | null;
+  count: number;
+}
+export function skillAreaAverages(entries: RubricEntry[], roleFilter: RoleFilter = "ALL"): SkillAreaStat[] {
+  const es = filterEntriesByRole(entries, roleFilter);
+  return RD.taskTypes
+    .map((tt) => {
+      const rows = es.filter((e) => e.taskType === tt.id);
+      const finals = rows.map((e) => e.finalScore).filter((n): n is number => typeof n === "number");
+      return { taskType: tt.id, label: tt.label, color: tt.color, avgFinal: avg(finals), count: rows.length };
+    })
+    .filter((s) => s.count > 0)
+    .sort((a, b) => (b.avgFinal ?? -1) - (a.avgFinal ?? -1));
+}
+
+/* ── Avg-final by technical domain (radar) ──────────────────────────────── */
+export interface DomainStat {
+  domain: string;
+  avg: number;
+  count: number;
+}
+export function domainAverages(entries: RubricEntry[], roleFilter: RoleFilter = "ALL", topN = 8): DomainStat[] {
+  const es = filterEntriesByRole(entries, roleFilter);
+  const map = new Map<string, { sum: number; n: number }>();
+  es.forEach((e) => {
+    const d = e.primaryDomain;
+    const f = e.finalScore;
+    if (!d || typeof f !== "number") return;
+    const m = map.get(d) ?? { sum: 0, n: 0 };
+    m.sum += f;
+    m.n += 1;
+    map.set(d, m);
+  });
+  return [...map.entries()]
+    .map(([domain, { sum, n }]) => ({ domain, avg: Math.round(sum / n), count: n }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, topN);
+}
+
+/* ── Final-score distribution (histogram) ───────────────────────────────── */
+export interface HistBin {
+  label: string;
+  lo: number;
+  hi: number;
+  count: number;
+  band: "fail" | "borderline" | "pass";
+}
+export function scoreHistogram(entries: RubricEntry[], roleFilter: RoleFilter = "ALL"): HistBin[] {
+  const es = filterEntriesByRole(entries, roleFilter);
+  const edges: [number, number, HistBin["band"]][] = [
+    [0, 50, "fail"],
+    [50, 60, "fail"],
+    [60, 70, "borderline"],
+    [70, 80, "pass"],
+    [80, 90, "pass"],
+    [90, 101, "pass"],
+  ];
+  return edges.map(([lo, hi, band]) => ({
+    label: hi > 100 ? `${lo}+` : `${lo}–${hi - 1}`,
+    lo,
+    hi,
+    band,
+    count: es.filter((e) => typeof e.finalScore === "number" && e.finalScore >= lo && e.finalScore < hi).length,
+  }));
+}
+
+/* ── Gate pass/partial/fail (stacked bars) — reuse the dashboard compute ─── */
+export function gateBars(entries: RubricEntry[], roleFilter: RoleFilter = "ALL") {
+  return levelTrends(filterEntriesByRole(entries, roleFilter)).gatePassRates;
 }
 
 export type GapClosureStatusValue =

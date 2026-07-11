@@ -10,11 +10,16 @@ import {
   rollingAverage,
   trendsByTaskType,
   qualifyingRateTrend,
+  skillAreaAverages,
+  gateBars,
+  domainAverages,
+  scoreHistogram,
 } from "@/lib/gaps";
 import { roleFilterLabel, type RoleFilter } from "@/lib/domain";
 import { RoleLevelMatrixView } from "./RoleLevelMatrix";
 import { TrendChart } from "./TrendChart";
 import { TaskTypeSparklines } from "./TaskTypeSparklines";
+import { SkillAreaBars, GateBars, DomainRadar, ScoreHistogram } from "./AnalyticsPanels";
 import { ProgressRing } from "../ui/ProgressRing";
 import { card } from "../surfaces/shared";
 
@@ -122,6 +127,10 @@ export function PerformancePanel({
     () => [{ key: "rate", label: "Qualifying rate %", color: "var(--cyan)", values: rateTrend.rate }],
     [rateTrend],
   );
+  const skillBars = useMemo(() => skillAreaAverages(entries, roleFilter), [entries, roleFilter]);
+  const gates = useMemo(() => gateBars(entries, roleFilter), [entries, roleFilter]);
+  const domains = useMemo(() => domainAverages(entries, roleFilter), [entries, roleFilter]);
+  const hist = useMemo(() => scoreHistogram(entries, roleFilter), [entries, roleFilter]);
   const totalQual = cumQual.length ? cumQual[cumQual.length - 1] : 0;
   const totalAttempts = weeks.reduce((s, w) => s + w.count, 0);
   // Motivational “proof density” — not a floor score
@@ -232,6 +241,53 @@ export function PerformancePanel({
           <TaskTypeSparklines trends={ttTrends} />
         </div>
       ) : null}
+
+      {/* Snapshot dashboard — non-line views of where you stand right now */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className={`${card} sm:p-6`}>
+          <div className="mb-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+              Where you stand
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">
+              Average final score by task type (dashed line = 70 pass).
+            </div>
+          </div>
+          <SkillAreaBars data={skillBars} />
+        </div>
+
+        <div className={`${card} sm:p-6`}>
+          <div className="mb-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+              Score distribution
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">How your final scores are spread.</div>
+          </div>
+          <ScoreHistogram data={hist} />
+        </div>
+
+        <div className={`${card} sm:p-6`}>
+          <div className="mb-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+              Gate pass rate
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">
+              Pass / partial / fail across the mandatory gates.
+            </div>
+          </div>
+          <GateBars data={gates} />
+        </div>
+
+        <div className={`${card} sm:p-6`}>
+          <div className="mb-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+              Domain strength
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">Average score across your technical domains.</div>
+          </div>
+          <DomainRadar data={domains} />
+        </div>
+      </div>
 
       <RoleLevelMatrixView matrix={matrix} />
 

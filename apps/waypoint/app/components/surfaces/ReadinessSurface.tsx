@@ -3,10 +3,11 @@
 import { useMemo } from "react";
 import { useWaypointStore } from "@/lib/store";
 import { computeReadiness } from "@/lib/readiness";
-import { buildRoleLevelMatrix, openHighGapCount } from "@/lib/gaps";
+import { buildRoleLevelMatrix, openHighGapCount, performanceSummary } from "@/lib/gaps";
 import type { PrimaryRole } from "@/lib/domain";
 import { ProgressRing } from "../ui/ProgressRing";
 import { RoleLevelMatrixView } from "../rubric/RoleLevelMatrix";
+import { ReadinessKPIs } from "../rubric/AnalyticsPanels";
 import { card } from "./shared";
 
 function DimBar({
@@ -58,6 +59,10 @@ export function ReadinessSurface() {
     () => buildRoleLevelMatrix(state.rubricEntries, roleFilter),
     [state.rubricEntries, roleFilter],
   );
+  const summary = useMemo(
+    () => performanceSummary(state.rubricEntries, roleFilter),
+    [state.rubricEntries, roleFilter],
+  );
 
   function enterA() {
     if (!snap.evidenceGreen) {
@@ -106,6 +111,9 @@ export function ReadinessSurface() {
         Hybrid gate: checkable floor for both primaries + your go/no-go. Today checkboxes do not
         auto-green this board.
       </p>
+
+      <ReadinessKPIs s={summary} />
+
       <div className="grid gap-4 lg:grid-cols-2">
         {snap.roles.map((r) => (
           <div key={r.role} className={card}>
