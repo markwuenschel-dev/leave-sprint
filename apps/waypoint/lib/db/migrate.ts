@@ -150,7 +150,14 @@ CREATE TABLE IF NOT EXISTS wp_app_meta (
 );
 `;
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// PGlite's embedded WASM runtime keeps the event loop alive, so the process never
+// exits on its own after migrations finish. In `pnpm db:migrate && next start` that
+// hangs the migrate step forever and `next start` never runs (container serves nothing
+// → 502). Exit explicitly once migrations complete. Queries are already awaited, so the
+// file-backed DB is durably flushed by this point (verified: survives even SIGKILL).
+main()
+  .then(() => process.exit(0))
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
