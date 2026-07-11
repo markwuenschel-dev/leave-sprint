@@ -183,6 +183,23 @@ export function MoreSurface() {
           >
             Refresh catalog
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Clear the entire assessment log? This removes all graded assessments from History. You can re-import a rubric JSON to restore them.",
+                )
+              ) {
+                importRubricEntries([], "replace");
+                setLastMsg("Assessment log cleared — import a rubric JSON to repopulate.");
+              }
+            }}
+            className="rounded-lg border border-[#ef4444] px-3 py-1.5 text-sm text-[#ef4444]"
+            title="Remove all graded assessments (rubric entries) from the log"
+          >
+            Clear log
+          </button>
         </div>
         <p className="mt-2 text-xs text-[var(--text-dim)]">
           Multi-select supported. App backups merge fields; arrays /{" "}

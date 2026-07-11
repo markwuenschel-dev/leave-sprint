@@ -9,6 +9,12 @@ export function serverWasEmpty(): boolean {
   return serverEmpty;
 }
 
+// True once we have successfully READ server state at least once. Until then we
+// must never PUT: the store still holds the empty seed during async hydration, and
+// saveState treats an empty slice as "delete every row" — so persisting a
+// not-yet-hydrated state (or after a failed GET) would wipe the whole server DB.
+let hydrated = false;
+
 export type SaveState = {
   status: "idle" | "saving" | "saved" | "error";
   auth?: boolean;
@@ -105,6 +111,7 @@ export const serverStorage: StateStorage = {
       if (!res.ok) return null;
       const data = (await res.json()) as Record<string, unknown> & { empty?: boolean };
       serverEmpty = !!data.empty;
+      hydrated = true; // read succeeded (even if empty) — safe to persist from here
       const { empty: _e, driver: _d, ...slice } = data;
       return JSON.stringify({ state: slice, version: 1 });
     } catch {
@@ -112,6 +119,9 @@ export const serverStorage: StateStorage = {
     }
   },
   setItem: async (_name: string, value: string): Promise<void> => {
+    // Guard: never write before a successful hydration. Prevents the empty seed
+    // (or a state left empty by a failed GET) from being PUT and wiping the DB.
+    if (!hydrated) return;
     try {
       const parsed = JSON.parse(value) as { state?: unknown };
       pending = parsed.state ?? parsed;

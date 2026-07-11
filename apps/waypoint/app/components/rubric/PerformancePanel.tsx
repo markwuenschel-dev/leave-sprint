@@ -6,9 +6,15 @@ import {
   buildRoleLevelMatrix,
   weeklyAssessmentBuckets,
   cumulativeQualifying,
+  scoreTimeline,
+  rollingAverage,
+  trendsByTaskType,
+  qualifyingRateTrend,
 } from "@/lib/gaps";
 import { roleFilterLabel, type RoleFilter } from "@/lib/domain";
 import { RoleLevelMatrixView } from "./RoleLevelMatrix";
+import { TrendChart } from "./TrendChart";
+import { TaskTypeSparklines } from "./TaskTypeSparklines";
 import { ProgressRing } from "../ui/ProgressRing";
 import { card } from "../surfaces/shared";
 
@@ -94,6 +100,28 @@ export function PerformancePanel({
     [entries, roleFilter],
   );
   const cumQual = useMemo(() => cumulativeQualifying(weeks), [weeks]);
+  const timeline = useMemo(() => scoreTimeline(entries, roleFilter), [entries, roleFilter]);
+  const labels = useMemo(() => timeline.map((p) => p.date), [timeline]);
+  const levelSeries = useMemo(
+    () => [
+      { key: "L1", label: "Level I", color: "var(--cyan)", values: rollingAverage(timeline.map((p) => p.levelScores.L1)) },
+      { key: "L2", label: "Level II", color: "var(--orange)", values: rollingAverage(timeline.map((p) => p.levelScores.L2)) },
+      { key: "L3", label: "Level III", color: "var(--magenta)", values: rollingAverage(timeline.map((p) => p.levelScores.L3)) },
+    ],
+    [timeline],
+  );
+  const finalSeries = useMemo(
+    () => [
+      { key: "final", label: "Final (avg)", color: "var(--violet)", values: rollingAverage(timeline.map((p) => p.final)) },
+    ],
+    [timeline],
+  );
+  const ttTrends = useMemo(() => trendsByTaskType(entries, roleFilter), [entries, roleFilter]);
+  const rateTrend = useMemo(() => qualifyingRateTrend(entries, roleFilter), [entries, roleFilter]);
+  const rateSeries = useMemo(
+    () => [{ key: "rate", label: "Qualifying rate %", color: "var(--cyan)", values: rateTrend.rate }],
+    [rateTrend],
+  );
   const totalQual = cumQual.length ? cumQual[cumQual.length - 1] : 0;
   const totalAttempts = weeks.reduce((s, w) => s + w.count, 0);
   // Motivational “proof density” — not a floor score
@@ -152,6 +180,58 @@ export function PerformancePanel({
           </div>
         </div>
       </div>
+
+      {/* Trends over time — score trajectory across graded assessments */}
+      {timeline.length > 0 ? (
+        <div className={`${card} sm:p-6`}>
+          <div className="mb-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+              Trends over time
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">
+              Score trajectory across your {timeline.length} graded assessment
+              {timeline.length === 1 ? "" : "s"} (5-log rolling average, oldest → newest).
+            </div>
+          </div>
+          <div className="space-y-7">
+            <TrendChart
+              title="Level scores (I / II / III)"
+              subtitle="Rolling average of the three controlling scores per assessment."
+              series={levelSeries}
+              labels={labels}
+              threshold={{ y: 70, label: "pass 70" }}
+            />
+            <TrendChart
+              title="Final score"
+              subtitle="Overall band, 5-log rolling average."
+              series={finalSeries}
+              labels={labels}
+              threshold={{ y: 70, label: "pass 70" }}
+            />
+            <TrendChart
+              title="Qualifying rate (rolling 10)"
+              subtitle="Share of the last 10 assessments that earned a qualifying level."
+              series={rateSeries}
+              labels={rateTrend.labels}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {/* By skill area — final-score trajectory per task type (small multiples) */}
+      {ttTrends.length > 0 ? (
+        <div className={`${card} sm:p-6`}>
+          <div className="mb-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
+              By skill area
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-mid)]">
+              Final-score trajectory per task type (rolling average; dashed line = 70 pass).
+            </div>
+          </div>
+          <TaskTypeSparklines trends={ttTrends} />
+        </div>
+      ) : null}
 
       <RoleLevelMatrixView matrix={matrix} />
 

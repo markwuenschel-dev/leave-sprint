@@ -4,6 +4,7 @@
  */
 
 import {
+  RD,
   gapBoard,
   retestSchedule,
   type GapBoardView,
@@ -206,6 +207,100 @@ export function cumulativeQualifying(buckets: WeekBucket[]): number[] {
     run += b.qualifying.L1 + b.qualifying.L2 + b.qualifying.L3;
     return run;
   });
+}
+
+/* ── Score-over-time timeline (per assessment, chronological) ──────────────
+   Dates are lumpy (bursts of same-day imports), so downstream charts plot by
+   attempt index, not a true time axis — that keeps the trajectory readable. */
+export interface TimelinePoint {
+  id: string;
+  date: string;
+  taskType: RubricEntry["taskType"];
+  task: string;
+  levelScores: RubricEntry["levelScores"];
+  final: number | null;
+  qualifying: RubricEntry["qualifyingDemonstratedLevel"];
+}
+
+export function scoreTimeline(
+  entries: RubricEntry[],
+  roleFilter: RoleFilter = "ALL",
+): TimelinePoint[] {
+  return filterEntriesByRole(entries, roleFilter)
+    .filter((e) => !!e.date)
+    .map((e) => ({
+      id: e.id,
+      date: e.date,
+      taskType: e.taskType,
+      task: e.task,
+      levelScores: e.levelScores,
+      final: typeof e.finalScore === "number" ? e.finalScore : null,
+      qualifying: e.qualifyingDemonstratedLevel,
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+
+/** Trailing rolling average (window w) over a numeric-or-null series; nulls skipped. */
+export function rollingAverage(values: (number | null)[], w = 5): (number | null)[] {
+  return values.map((_, i) => {
+    const win = values
+      .slice(Math.max(0, i - w + 1), i + 1)
+      .filter((v): v is number => v !== null);
+    return win.length ? Math.round(win.reduce((s, v) => s + v, 0) / win.length) : null;
+  });
+}
+
+/* ── Per-task-type trajectory (small multiples) ─────────────────────────── */
+export interface TaskTypeTrend {
+  taskType: string;
+  label: string;
+  color: string;
+  labels: string[]; // dates for this task type's own chronological sequence
+  final: (number | null)[]; // rolling average of final score over that sequence
+  count: number;
+}
+
+export function trendsByTaskType(
+  entries: RubricEntry[],
+  roleFilter: RoleFilter = "ALL",
+  w = 5,
+): TaskTypeTrend[] {
+  const tl = scoreTimeline(entries, roleFilter);
+  return RD.taskTypes
+    .map((tt) => {
+      const pts = tl.filter((p) => p.taskType === tt.id);
+      return {
+        taskType: tt.id,
+        label: tt.label,
+        color: tt.color,
+        labels: pts.map((p) => p.date),
+        final: rollingAverage(pts.map((p) => p.final), w),
+        count: pts.length,
+      };
+    })
+    .filter((t) => t.count > 0);
+}
+
+/* ── Rolling qualifying rate (share of trailing window that earned L1/L2/L3) ── */
+export interface RateTrend {
+  labels: string[];
+  rate: (number | null)[]; // percent 0–100
+}
+
+export function qualifyingRateTrend(
+  entries: RubricEntry[],
+  roleFilter: RoleFilter = "ALL",
+  window = 10,
+): RateTrend {
+  const tl = scoreTimeline(entries, roleFilter);
+  const hit: number[] = tl.map((p) =>
+    p.qualifying === "L1" || p.qualifying === "L2" || p.qualifying === "L3" ? 1 : 0,
+  );
+  const rate = hit.map((_, i) => {
+    const win = hit.slice(Math.max(0, i - window + 1), i + 1);
+    return win.length ? Math.round((win.reduce((s, v) => s + v, 0) / win.length) * 100) : null;
+  });
+  return { labels: tl.map((p) => p.date), rate };
 }
 
 export type GapClosureStatusValue =
