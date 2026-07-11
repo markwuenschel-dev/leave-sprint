@@ -98,8 +98,10 @@ CREATE TABLE IF NOT EXISTS wp_file_defense (
   practiced_dates jsonb NOT NULL DEFAULT '[]',
   notes text,
   core boolean NOT NULL DEFAULT false,
-  role_track text
+  role_track text,
+  project text
 );
+ALTER TABLE wp_file_defense ADD COLUMN IF NOT EXISTS project text;
 CREATE TABLE IF NOT EXISTS wp_rubric_entries (
   id text PRIMARY KEY,
   rubric_version text,

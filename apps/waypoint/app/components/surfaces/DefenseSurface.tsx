@@ -6,6 +6,15 @@ import { useWaypointStore } from "@/lib/store";
 import { ProgressRing } from "../ui/ProgressRing";
 import { SurfaceHero, card } from "./shared";
 
+/** Slugs that read wrong in title case → uppercase (matches ingest humanizer). */
+const ACR = new Set(["rag", "api", "http", "sql", "ui", "llm", "cli", "dto", "json", "id", "ci", "cd"]);
+function projectLabel(key: string): string {
+  return key
+    .split("-")
+    .map((w) => (ACR.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
 /**
  * Defense = file/story cold walkthroughs for the hybrid evidence floor.
  * Green needs core stories practiced ≥1× cold (per primary). Not a second problem bank.
@@ -19,15 +28,22 @@ export function DefenseSurface() {
   const [mode, setMode] = useState<"drill" | "list">("drill");
   const [idx, setIdx] = useState(0);
   const [showHints, setShowHints] = useState(false);
+  const [projectFilter, setProjectFilter] = useState<string>("ALL");
+
+  const projects = useMemo(
+    () => Array.from(new Set(items.map((i) => i.project).filter(Boolean) as string[])).sort(),
+    [items],
+  );
 
   const list = useMemo(
     () =>
       items.filter((p) => {
-        if (filter === "ALL") return true;
-        if (!p.roleTrack || p.roleTrack === "BOTH") return true;
-        return p.roleTrack === filter;
+        const roleOk =
+          filter === "ALL" || !p.roleTrack || p.roleTrack === "BOTH" || p.roleTrack === filter;
+        const projOk = projectFilter === "ALL" || p.project === projectFilter;
+        return roleOk && projOk;
       }),
-    [items, filter],
+    [items, filter, projectFilter],
   );
 
   // Drill prefers unpracticed core, then unpracticed, then rest
@@ -119,6 +135,25 @@ export function DefenseSurface() {
             </button>
           ))}
         </div>
+        {projects.length > 1 ? (
+          <select
+            value={projectFilter}
+            onChange={(e) => {
+              setProjectFilter(e.target.value);
+              setIdx(0);
+              setShowHints(false);
+            }}
+            className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-2.5 py-1.5 text-sm text-[var(--text-mid)]"
+            aria-label="Filter by project"
+          >
+            <option value="ALL">All projects</option>
+            {projects.map((k) => (
+              <option key={k} value={k}>
+                {projectLabel(k)}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <span className="text-xs text-[var(--text-dim)]">
           {practiced}/{list.length} practiced overall
         </span>
@@ -136,6 +171,7 @@ export function DefenseSurface() {
                 Card {safeIdx + 1}/{drillOrder.length}
                 {current.core ? " · core" : ""}
                 {current.roleTrack ? ` · ${current.roleTrack}` : ""}
+                {current.project ? ` · ${projectLabel(current.project)}` : ""}
               </span>
               <span className="font-mono normal-case tracking-normal">
                 {(current.practicedDates?.length ?? 0) > 0

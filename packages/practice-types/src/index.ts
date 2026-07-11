@@ -28,6 +28,8 @@ export interface FileDefenseItem {
   /** When true, counts toward readiness defense floor. */
   core?: boolean;
   roleTrack?: 'SWE' | 'MLE' | 'BOTH' | 'OTHER';
+  /** Project this card belongs to (slug). Drives per-project grouping/filtering. */
+  project?: string;
 }
 
 export type Energy = 'low' | 'medium' | 'high' | undefined;

@@ -288,7 +288,7 @@ export const useWaypointStore = create<WaypointStore>()(
           const fp = (ps: typeof problems, fs: typeof fileDefense) =>
             ps.map((p) => `${p.id}|${p.title}|${p.tier}|${p.pattern}|${p.core}|${p.roleTrack}|${p.leetcodeSlug ?? ""}`).join(";") +
             "#" +
-            fs.map((f) => `${f.id}|${f.title}|${f.why}|${f.core}|${f.roleTrack}`).join(";");
+            fs.map((f) => `${f.id}|${f.title}|${f.why}|${f.core}|${f.roleTrack}|${f.project ?? ""}`).join(";");
           if (fp(problems, fileDefense) === fp(s.problems, s.fileDefense)) return s;
           return { problems, fileDefense, lastUpdated: now() };
         }),

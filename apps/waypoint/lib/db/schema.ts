@@ -44,6 +44,7 @@ export const fileDefense = pgTable("wp_file_defense", {
   notes: text("notes"),
   core: boolean("core").notNull().default(false),
   roleTrack: text("role_track"),
+  project: text("project"),
 });
 
 export const rubricEntries = pgTable(

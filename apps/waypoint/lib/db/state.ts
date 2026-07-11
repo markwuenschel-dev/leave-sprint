@@ -100,6 +100,7 @@ export async function loadState(): Promise<LoadedState> {
     ...(r.notes != null ? { notes: r.notes } : {}),
     core: r.core,
     ...(r.roleTrack != null ? { roleTrack: r.roleTrack as FileDefenseItem["roleTrack"] } : {}),
+    ...(r.project != null ? { project: r.project } : {}),
   }));
 
   const qbOut: Record<string, QBankStatus> = {};
@@ -241,6 +242,7 @@ export async function saveState(
       notes: f.notes ?? null,
       core: !!f.core,
       roleTrack: f.roleTrack ?? null,
+      project: f.project ?? null,
     }));
     for (const row of fRows) {
       await tx.insert(fileDefense).values(row).onConflictDoUpdate({ target: fileDefense.id, set: row });

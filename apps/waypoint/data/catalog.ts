@@ -5,6 +5,7 @@
  */
 
 import type { FileDefenseItem, Problem, Tier } from "@waypoint/practice-types";
+import { DEFENSE as CQ_RAG_DEFENSE } from "./portfolio/compounding-quality-rag.defense.gen";
 
 type RoleTrack = NonNullable<Problem["roleTrack"]>;
 
@@ -36,26 +37,6 @@ function problem(
     core: !!opts.core,
     ...(opts.roleTrack ? { roleTrack: opts.roleTrack } : {}),
     ...(opts.leetcodeSlug ? { leetcodeSlug: opts.leetcodeSlug } : {}),
-  };
-}
-
-function defense(
-  title: string,
-  why: string,
-  terminology: string,
-  interviewLine: string,
-  opts: { id?: string; core?: boolean; roleTrack?: RoleTrack } = {},
-): FileDefenseItem {
-  return {
-    id: opts.id ?? `f-${slug(title)}`,
-    title,
-    why,
-    terminology,
-    interviewLine: interviewLine.replace(/^["']|["']$/g, ""),
-    practicedDates: [],
-    notes: "",
-    core: !!opts.core,
-    ...(opts.roleTrack ? { roleTrack: opts.roleTrack } : {}),
   };
 }
 
@@ -218,149 +199,9 @@ export const CATALOG_PROBLEMS: Problem[] = [
   }),
 ];
 
-/** 20-file defense map (portfolio talk tracks). */
-export const CATALOG_DEFENSE: FileDefenseItem[] = [
-  defense(
-    "demoCases.ts",
-    "Reusable typed synthetic demo data; prefilled reviewer findings. Keeps demo data outside components.",
-    "Separation of concerns · fixtures · synthetic-data boundary",
-    "Demo data lives outside components so UI logic stays testable and the demo is repeatable without typing.",
-    { core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "DemoToolbar.tsx",
-    "Operator controls: case selector, load, start-over. Not product core — demo tooling.",
-    "Component composition · operator tooling · fixture injection",
-    "Not product core — demo tooling that reduces live-demo risk.",
-    { id: "f-demotoolbar", core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "reviewApi.ts",
-    "Transport boundary to Spring; typed AsyncState returns; error mapping; no React state.",
-    "API client · DTO · discriminated union · unknown vs any",
-    "Fetch logic should not scatter across presentational components — this boundary prevents that.",
-    { core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "types.ts",
-    "Shared DTO and UI types; AsyncState<T> discriminated union; ApiError.",
-    "Discriminated union · exhaustive switch · impossible states · generics",
-    "Types make state explicit at compile time; runtime validation still matters at the network boundary.",
-    { core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "ConcernInputForm.tsx",
-    "Controlled concern textarea with 5k counter, validation, disabled-while-loading submit.",
-    "Controlled component · single source of truth · form validation · accessibility",
-    "Controlled inputs support predictable submission.",
-    { core: false, roleTrack: "SWE" },
-  ),
-  defense(
-    "ChecklistPanel.tsx",
-    "Renders checklist items, metric cards, evidence cards, takeaway, missing info, limitations.",
-    "Presentational component · empty/loading/error states · conditional rendering",
-    "Makes retrieved output reviewable rather than chatbot-like.",
-    { core: false, roleTrack: "SWE" },
-  ),
-  defense(
-    "EvidencePanel / EvidenceCard",
-    "Citation display: source ID, title, section, score, matched terms, snippet, selection state.",
-    "RAG grounding · evidence-aware UI · trust boundary · citation",
-    "Evidence cards are the UI expression of RAG grounding.",
-    { core: true, roleTrack: "BOTH" },
-  ),
-  defense(
-    "ReviewSummaryForm.tsx",
-    "Two-column form capturing reviewer-confirmed findings; prefill-and-edit from demo cases.",
-    "Human-in-the-loop · reviewer confirmation · controlled form",
-    "The model proposes; the reviewer owns confirmed facts — this form is the boundary.",
-    { core: true, roleTrack: "BOTH" },
-  ),
-  defense(
-    "FinalAssessmentPanel.tsx",
-    "Displays classification, handling path, risk lane, escalation triggers, limitations, clipboard copy.",
-    "Side effect · async feedback · accessible status · refusal state",
-    "Separates final structured output from evidence; keeps limitations visible.",
-    { core: false, roleTrack: "SWE" },
-  ),
-  defense(
-    "assessmentSummary.ts",
-    "Pure function: deterministic plain-text serialization of the final assessment for clipboard.",
-    "Pure function · deterministic serialization · side-effect isolation",
-    "Export logic is isolated so the panel owns UI feedback but not formatting.",
-    { core: false, roleTrack: "SWE" },
-  ),
-  defense(
-    "Spring Controller classes",
-    "HTTP routes, request binding, validation trigger, response status codes. No domain logic.",
-    "@RestController · @Valid · DTO binding · status code semantics",
-    "Controllers translate HTTP into use cases — no business logic lives here.",
-    { core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "Spring DTO classes",
-    "Request/response contracts; decouple API shape from internal domain objects.",
-    "DTO · serialization · schema evolution · API contract",
-    "DTOs stop internal shapes leaking into the public API.",
-    { core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "Spring Service layer",
-    "Orchestrates use cases; calls RagEngineClient; maps between DTOs and RAG results.",
-    "Orchestration · testability · dependency injection · use case layer",
-    "The service owns workflow orchestration, not the controller.",
-    { core: true, roleTrack: "SWE" },
-  ),
-  defense(
-    "RagEngineClient (interface)",
-    "Stable Java abstraction for the Python engine. Hides subprocess details.",
-    "Polymorphism · dependency inversion · interface · contract",
-    "Controllers depend on the contract, not subprocess details — swapping to HTTP later doesn't change the controller.",
-    { id: "f-ragengineclient", core: true, roleTrack: "BOTH" },
-  ),
-  defense(
-    "PythonProcessRagEngineClient",
-    "Subprocess launch, JSON stdin/stdout, exit-code handling, timeout, error envelope parsing, UTF-8.",
-    "Adapter pattern · process boundary · error envelope · timeout handling",
-    "All Java-to-Python integration risk is isolated here.",
-    { core: true, roleTrack: "BOTH" },
-  ),
-  defense(
-    "GlobalExceptionHandler",
-    "@RestControllerAdvice mapping all exceptions to structured ApiErrorResponse with requestId.",
-    "Cross-cutting concern · exception mapping · stable error contract · correlation ID",
-    "Clients need stable error shapes, not stack traces.",
-    { core: false, roleTrack: "SWE" },
-  ),
-  defense(
-    "api_runner.py",
-    "Process bridge: reads one JSON from stdin, routes to domain functions, writes one JSON to stdout.",
-    "Process boundary · protocol discipline · adapter · subprocess",
-    "Lets Spring wrap the tested engine without rewriting it.",
-    { core: true, roleTrack: "BOTH" },
-  ),
-  defense(
-    "retrieval.py",
-    "Retriever protocol, KeywordRetriever, EmbeddingRetriever; SearchResult contract; Recall@k eval.",
-    "Strategy pattern · protocol · cosine similarity · top-k · retrieval metrics",
-    "Retrieval quality drives answer quality more than prompt polish.",
-    { core: true, roleTrack: "MLE" },
-  ),
-  defense(
-    "refusal.py",
-    "Three boundary types: external drug ref, internal record access, clinical/legal conclusion.",
-    "Guardrail · boundary detection · fail-safe · controlled vocabulary",
-    "The correct answer can be 'I do not have enough evidence.'",
-    { core: true, roleTrack: "MLE" },
-  ),
-  defense(
-    "final_assessment.py",
-    "Deterministic routing from ReviewSummary to DerivedAssessment; severe triggers only from structured field.",
-    "Deterministic routing · structured extraction · safety-critical decision · fail-safe defaults",
-    "Final assessment depends on reviewer-confirmed facts, not inference from prose.",
-    { core: true, roleTrack: "MLE" },
-  ),
-];
+/** File-defense cards — generated per project from data/portfolio/ hand-offs.
+ * Catalog is authoritative for defense (mergeCatalogLists drops stale ids). */
+export const CATALOG_DEFENSE: FileDefenseItem[] = [...CQ_RAG_DEFENSE];
 
 /** Merge catalog metadata into persisted lists; keep status / practiced / notes. */
 export function mergeCatalogLists(
@@ -382,6 +223,10 @@ export function mergeCatalogLists(
     if (!CATALOG_PROBLEMS.some((c) => c.id === p.id)) mergedProblems.push(p);
   }
 
+  // Defense is catalog-authoritative: cards come only from the catalog (generated
+  // per project in data/portfolio/). Preserve practice progress by id, and DROP
+  // persisted rows no longer in the catalog — e.g. a project's pre-refactor cards
+  // after a re-ingest. There is no "add defense card" UI, so nothing is user-owned.
   const fMap = new Map(fileDefense.map((f) => [f.id, f]));
   const mergedDefense = CATALOG_DEFENSE.map((cat) => {
     const existing = fMap.get(cat.id);
@@ -392,9 +237,6 @@ export function mergeCatalogLists(
       notes: existing.notes ?? "",
     };
   });
-  for (const f of fileDefense) {
-    if (!CATALOG_DEFENSE.some((c) => c.id === f.id)) mergedDefense.push(f);
-  }
 
   return { problems: mergedProblems, fileDefense: mergedDefense };
 }

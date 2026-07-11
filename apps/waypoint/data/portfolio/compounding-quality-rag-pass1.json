@@ -1,0 +1,497 @@
+{
+  "project": {
+    "key": "compounding-quality-rag",
+    "label": "Compounding Quality RAG",
+    "summary": "A local-first, human-in-the-loop review-support system combining a React workflow, Spring Boot service boundary, and Python RAG engine. It emphasizes strict contracts, deterministic safety policy, grounded LLM extraction, and cross-service traceability.",
+    "roleTracks": [
+      "BOTH"
+    ]
+  },
+  "files": [
+    {
+      "path": "rag-engine-python/app/review_pipeline.py",
+      "title": "Review Pipeline Orchestrator",
+      "role": "service",
+      "responsibility": "Centralizes validation, refusal screening, collaborator injection, and stage ordering for checklist, retrieval, extraction, and final assessment across every transport adapter.",
+      "interviewLine": "I centralized review sequencing here so HTTP, CLI, and bridge adapters cannot drift on validation, refusal, or stage order.",
+      "boundary": false,
+      "core": true,
+      "roleTrack": "BOTH",
+      "concepts": [
+        "application-service",
+        "dependency-injection",
+        "fail-fast-validation",
+        "policy-enforcement",
+        "separation-of-concerns"
+      ],
+      "evidence": [
+        "ReviewRefused",
+        "_screened_text",
+        "run_checklist",
+        "run_retrieve",
+        "run_final_assessment",
+        "run_extract_review_summary"
+      ],
+      "confidence": 0.98,
+      "provenance": [
+        "code",
+        "comment"
+      ]
+    },
+    {
+      "path": "rag-engine-python/app/schemas.py",
+      "title": "Canonical Domain Schemas",
+      "role": "model",
+      "responsibility": "Defines strict Pydantic contracts, domain enums, nested review outputs, and cross-field invariants that reject unknown fields and invalid classification or resolution combinations.",
+      "interviewLine": "I use strict schemas and cross-field validators to make invalid domain states and silent contract drift fail immediately.",
+      "boundary": true,
+      "core": true,
+      "roleTrack": "BOTH",
+      "concepts": [
+        "data-validation",
+        "domain-modeling",
+        "design-by-contract",
+        "invariant-enforcement",
+        "schema-evolution"
+      ],
+      "evidence": [
+        "StrictBaseModel",
+        "RawIntake.validate_customer_review_fields",
+        "DerivedAssessment.validate_category_rules",
+        "DerivedAssessment.validate_resolution_rules",
+        "ExpectedStructuredOutput"
+      ],
+      "confidence": 0.98,
+      "provenance": [
+        "code",
+        "comment"
+      ]
+    },
+    {
+      "path": "rag-engine-python/app/retrieval_query_strategy.py",
+      "title": "Retrieval Query Strategies",
+      "role": "service",
+      "responsibility": "Implements interchangeable query-construction strategies, semantic-intent derivation, deterministic expansion, validated query results, and a versioned cache keyed by content and model identity.",
+      "interviewLine": "I separated query interpretation behind strategy objects so retrieval approaches can be compared without changing the retriever itself.",
+      "boundary": false,
+      "core": true,
+      "roleTrack": "MLE",
+      "concepts": [
+        "strategy-pattern",
+        "protocol-oriented-design",
+        "semantic-retrieval",
+        "cache-key-design",
+        "deterministic-fallback"
+      ],
+      "evidence": [
+        "RetrievalQueryStrategy",
+        "RawQueryStrategy",
+        "DeterministicExpansionStrategy",
+        "RuleIntentQueryStrategy",
+        "NanoIntentQueryStrategy",
+        "RetrievalIntentCache"
+      ],
+      "confidence": 0.95,
+      "provenance": [
+        "code",
+        "readme"
+      ]
+    },
+    {
+      "path": "rag-engine-python/app/review_summary_extraction.py",
+      "title": "Grounded Summary Extraction",
+      "role": "service",
+      "responsibility": "Converts LLM JSON into validated review summaries, normalizes payloads, applies deterministic evidence grounding, detects negation and support, and isolates the model behind a narrow protocol.",
+      "interviewLine": "I treat the model as an untrusted proposer, then validate, normalize, and ground every structured finding against the pharmacist's narrative.",
+      "boundary": true,
+      "core": true,
+      "roleTrack": "MLE",
+      "concepts": [
+        "llm-output-validation",
+        "grounded-generation",
+        "ports-and-adapters",
+        "defensive-parsing",
+        "deterministic-postprocessing"
+      ],
+      "evidence": [
+        "LLMClient",
+        "ReviewSummaryExtractionError",
+        "ReviewSummaryGroundingError",
+        "extract_review_summary",
+        "enforce_review_summary_grounding",
+        "normalize_review_summary_payload"
+      ],
+      "confidence": 0.97,
+      "provenance": [
+        "code",
+        "comment",
+        "test"
+      ]
+    },
+    {
+      "path": "rag-engine-python/app/final_assessment.py",
+      "title": "Final Assessment Policy",
+      "role": "pure-fn",
+      "responsibility": "Maps checklist evidence and reviewer-confirmed structured findings into deterministic risk lanes, classifications, scopes, escalation paths, resolution options, and rationale.",
+      "interviewLine": "I keep final disposition deterministic and driven by reviewer-confirmed triggers rather than letting raw model text make escalation decisions.",
+      "boundary": false,
+      "core": true,
+      "roleTrack": "BOTH",
+      "concepts": [
+        "decision-table",
+        "pure-function",
+        "deterministic-policy",
+        "human-in-the-loop",
+        "risk-classification"
+      ],
+      "evidence": [
+        "build_final_assessment",
+        "determine_final_risk_lane",
+        "build_derived_assessment",
+        "infer_product_context",
+        "infer_escalation_triggers"
+      ],
+      "confidence": 0.97,
+      "provenance": [
+        "code",
+        "readme",
+        "test"
+      ]
+    },
+    {
+      "path": "rag-engine-python/app/server.py",
+      "title": "FastAPI Transport Boundary",
+      "role": "controller",
+      "responsibility": "Exposes validated HTTP endpoints, delegates all domain sequencing to the review pipeline, translates domain failures into status codes, reports readiness, and propagates request correlation.",
+      "interviewLine": "This adapter owns HTTP concerns only and delegates review behavior to the shared pipeline, preserving one domain path across transports.",
+      "boundary": true,
+      "core": true,
+      "roleTrack": "BOTH",
+      "concepts": [
+        "transport-adapter",
+        "exception-translation",
+        "request-correlation",
+        "health-readiness",
+        "thin-controller"
+      ],
+      "evidence": [
+        "log_request_correlation",
+        "ChecklistRequest",
+        "RetrieveRequest",
+        "readiness",
+        "checklist",
+        "retrieve_evidence",
+        "final_assessment",
+        "extract_review_summary"
+      ],
+      "confidence": 0.98,
+      "provenance": [
+        "code",
+        "readme"
+      ]
+    },
+    {
+      "path": "services/review-api/src/main/java/com/compoundingquality/reviewapi/rag/HttpRagEngineClient.java",
+      "title": "Python Engine HTTP Adapter",
+      "role": "adapter",
+      "responsibility": "Implements the Java-to-Python port with explicit request records, snake-case wire mapping, bounded timeouts, request-ID forwarding, health probing, response decoding, and typed exception translation.",
+      "interviewLine": "I isolated the cross-language HTTP contract here, including wire-name translation, timeouts, correlation headers, and typed failure handling.",
+      "boundary": true,
+      "core": true,
+      "roleTrack": "SWE",
+      "concepts": [
+        "adapter-pattern",
+        "cross-language-contract",
+        "serialization-boundary",
+        "timeout-management",
+        "request-correlation"
+      ],
+      "evidence": [
+        "HttpRagEngineClient",
+        "postJson",
+        "encodeRequest",
+        "decodeResponse",
+        "PythonChecklistRequest",
+        "PythonFinalAssessmentRequest",
+        "checkHealth"
+      ],
+      "confidence": 0.99,
+      "provenance": [
+        "code",
+        "comment",
+        "test",
+        "commit"
+      ]
+    },
+    {
+      "path": "services/review-api/src/test/java/com/compoundingquality/reviewapi/rag/RagEngineWireContractTest.java",
+      "title": "RAG Wire Contract Tests",
+      "role": "test",
+      "responsibility": "Drives the real Java adapter against an in-process capturing HTTP stub and asserts exact Python-facing JSON keys for all four cross-language RPC requests.",
+      "interviewLine": "These tests pin the exact JSON wire names so independent Java and Python refactors cannot silently break their shared contract.",
+      "boundary": true,
+      "core": false,
+      "roleTrack": "SWE",
+      "concepts": [
+        "contract-testing",
+        "cross-language-contract",
+        "test-double",
+        "serialization-boundary",
+        "regression-testing"
+      ],
+      "evidence": [
+        "RagEngineWireContractTest",
+        "checklistRequestUsesSnakeCaseWireKeys",
+        "retrieveRequestRenamesQueryTextToQuery",
+        "finalAssessmentRequestUsesSnakeCaseWireKeys",
+        "extractRequestRenamesPharmacistNotesToReviewerNote",
+        "capture"
+      ],
+      "confidence": 0.99,
+      "provenance": [
+        "code",
+        "comment",
+        "commit",
+        "test"
+      ]
+    },
+    {
+      "path": "apps/review-ui/src/hooks/useReviewWorkflow.ts",
+      "title": "Review Workflow State Machine",
+      "role": "component",
+      "responsibility": "Owns typed asynchronous states and transitions for checklist, retrieval, extraction, and final assessment, including invalidation, retry, reset, demo loading, and backend-readiness guards.",
+      "interviewLine": "I modeled the UI workflow as explicit typed states and transitions so stale downstream results are invalidated when upstream inputs change.",
+      "boundary": false,
+      "core": true,
+      "roleTrack": "SWE",
+      "concepts": [
+        "state-machine",
+        "discriminated-union",
+        "async-state-management",
+        "dependency-invalidation",
+        "separation-of-concerns"
+      ],
+      "evidence": [
+        "RequestState",
+        "useReviewWorkflow",
+        "submitChecklist",
+        "runRetrieval",
+        "changePharmacistNotes",
+        "submitExtraction",
+        "submitFinalAssessment",
+        "toWorkflowError"
+      ],
+      "confidence": 0.98,
+      "provenance": [
+        "code",
+        "comment",
+        "test"
+      ]
+    },
+    {
+      "path": "infra/docker-compose.yml",
+      "title": "Health-Gated Service Composition",
+      "role": "config",
+      "responsibility": "Composes the UI, Spring API, and Python engine on one network with explicit environment configuration, service-specific health checks, and dependency startup gated on healthy upstream services.",
+      "interviewLine": "I use health-gated composition so dependent services start only after their upstream boundary is actually responsive.",
+      "boundary": true,
+      "core": false,
+      "roleTrack": "SWE",
+      "concepts": [
+        "service-orchestration",
+        "health-readiness",
+        "configuration-management",
+        "dependency-ordering",
+        "container-networking"
+      ],
+      "evidence": [
+        "services.review-api",
+        "services.rag-engine",
+        "services.review-ui",
+        "condition: service_healthy",
+        "compounding-quality-net"
+      ],
+      "confidence": 0.96,
+      "provenance": [
+        "code",
+        "readme"
+      ]
+    }
+  ],
+  "concepts": [
+    {
+      "concept": "application-service",
+      "filePath": "rag-engine-python/app/review_pipeline.py",
+      "claim": "The run_* entry points form an application-service seam that coordinates domain collaborators while keeping transport-specific status codes and response shapes outside the module.",
+      "strength": 0.97
+    },
+    {
+      "concept": "dependency-injection",
+      "filePath": "rag-engine-python/app/review_pipeline.py",
+      "claim": "Pipeline functions accept callable collaborators with production defaults, allowing deterministic tests and adapter-specific resource wiring without global mutation.",
+      "strength": 0.98
+    },
+    {
+      "concept": "fail-fast-validation",
+      "filePath": "rag-engine-python/app/review_pipeline.py",
+      "claim": "_screened_text rejects blank input and invalid top_k before executing retrieval or assessment work, while extraction explicitly validates malformed input before refusal screening.",
+      "strength": 0.96
+    },
+    {
+      "concept": "policy-enforcement",
+      "filePath": "rag-engine-python/app/review_pipeline.py",
+      "claim": "The module applies the refusal boundary from one shared location, preventing HTTP, CLI, and bridge entry points from implementing inconsistent safety policy.",
+      "strength": 0.98
+    },
+    {
+      "concept": "data-validation",
+      "filePath": "rag-engine-python/app/schemas.py",
+      "claim": "StrictBaseModel forbids unknown fields, Field constraints validate local values, and model validators enforce relationships spanning multiple fields.",
+      "strength": 0.99
+    },
+    {
+      "concept": "domain-modeling",
+      "filePath": "rag-engine-python/app/schemas.py",
+      "claim": "Enums and nested Pydantic models represent intake, product context, investigation requirements, reviewer findings, and derived assessment as explicit domain vocabulary.",
+      "strength": 0.98
+    },
+    {
+      "concept": "invariant-enforcement",
+      "filePath": "rag-engine-python/app/schemas.py",
+      "claim": "Validators require QRE category data, forbid category data for general questions, and reject resolution options when resolution review is false.",
+      "strength": 0.99
+    },
+    {
+      "concept": "strategy-pattern",
+      "filePath": "rag-engine-python/app/retrieval_query_strategy.py",
+      "claim": "Raw, deterministic-expansion, rule-intent, and Nano-intent implementations share the RetrievalQueryStrategy build contract while varying query construction independently.",
+      "strength": 0.98
+    },
+    {
+      "concept": "protocol-oriented-design",
+      "filePath": "rag-engine-python/app/retrieval_query_strategy.py",
+      "claim": "RetrievalQueryStrategy defines the minimal behavioral contract needed by callers, allowing implementations to vary without inheritance or retriever changes.",
+      "strength": 0.95
+    },
+    {
+      "concept": "cache-key-design",
+      "filePath": "rag-engine-python/app/retrieval_query_strategy.py",
+      "claim": "RetrievalIntentCache keys entries using question identity, input content, model identity, and schema version, preventing stale semantic-intent reuse across meaningful changes.",
+      "strength": 0.95
+    },
+    {
+      "concept": "llm-output-validation",
+      "filePath": "rag-engine-python/app/review_summary_extraction.py",
+      "claim": "The extraction path parses model JSON, normalizes fields, validates against ReviewSummary, and raises domain-specific errors when the output violates the contract.",
+      "strength": 0.99
+    },
+    {
+      "concept": "grounded-generation",
+      "filePath": "rag-engine-python/app/review_summary_extraction.py",
+      "claim": "Model-proposed findings are passed through deterministic grounding that checks narrative support, negation, and evidence status before returning structured output.",
+      "strength": 0.99
+    },
+    {
+      "concept": "ports-and-adapters",
+      "filePath": "rag-engine-python/app/review_summary_extraction.py",
+      "claim": "LLMClient is a narrow protocol that keeps provider SDK behavior outside the domain extraction logic and enables network-free tests.",
+      "strength": 0.98
+    },
+    {
+      "concept": "deterministic-policy",
+      "filePath": "rag-engine-python/app/final_assessment.py",
+      "claim": "Risk lane, review scope, handling path, escalation, and resolution options are selected by explicit code branches over structured checklist and reviewer-summary values.",
+      "strength": 0.99
+    },
+    {
+      "concept": "human-in-the-loop",
+      "filePath": "rag-engine-python/app/final_assessment.py",
+      "claim": "Severe escalation depends on review_summary.severe_triggers_observed, making reviewer-confirmed structured findings the decision input rather than raw model text alone.",
+      "strength": 0.98
+    },
+    {
+      "concept": "transport-adapter",
+      "filePath": "rag-engine-python/app/server.py",
+      "claim": "FastAPI handlers validate transport models, invoke shared pipeline functions, and convert domain outcomes to HTTP responses without reimplementing review sequencing.",
+      "strength": 0.99
+    },
+    {
+      "concept": "exception-translation",
+      "filePath": "rag-engine-python/app/server.py",
+      "claim": "Handlers map ReviewRefused, ValueError, LLM client failures, and unexpected exceptions to distinct HTTP status categories at the service boundary.",
+      "strength": 0.98
+    },
+    {
+      "concept": "request-correlation",
+      "filePath": "rag-engine-python/app/server.py",
+      "claim": "HTTP middleware reads X-Request-Id, logs it with method, path, and status, then echoes it on the response.",
+      "strength": 0.99
+    },
+    {
+      "concept": "adapter-pattern",
+      "filePath": "services/review-api/src/main/java/com/compoundingquality/reviewapi/rag/HttpRagEngineClient.java",
+      "claim": "HttpRagEngineClient implements RagEngineClient while encapsulating Java HTTP, JSON serialization, Python endpoint paths, and engine-specific error handling.",
+      "strength": 0.99
+    },
+    {
+      "concept": "serialization-boundary",
+      "filePath": "services/review-api/src/main/java/com/compoundingquality/reviewapi/rag/HttpRagEngineClient.java",
+      "claim": "Private request records and JsonProperty annotations explicitly translate Java names to the snake_case contract expected by strict Python request models.",
+      "strength": 0.99
+    },
+    {
+      "concept": "timeout-management",
+      "filePath": "services/review-api/src/main/java/com/compoundingquality/reviewapi/rag/HttpRagEngineClient.java",
+      "claim": "Separate request and health-probe clients use bounded connect and per-request timeouts, reflecting different latency expectations for work and liveness checks.",
+      "strength": 0.98
+    },
+    {
+      "concept": "contract-testing",
+      "filePath": "services/review-api/src/test/java/com/compoundingquality/reviewapi/rag/RagEngineWireContractTest.java",
+      "claim": "An in-process HTTP stub captures real adapter requests and assertions pin required snake_case keys while rejecting leaked camelCase names.",
+      "strength": 0.99
+    },
+    {
+      "concept": "test-double",
+      "filePath": "services/review-api/src/test/java/com/compoundingquality/reviewapi/rag/RagEngineWireContractTest.java",
+      "claim": "The capture helper creates a focused HTTP stub that records outbound bodies, allowing the production client to be tested without a running Python service.",
+      "strength": 0.98
+    },
+    {
+      "concept": "state-machine",
+      "filePath": "apps/review-ui/src/hooks/useReviewWorkflow.ts",
+      "claim": "The hook represents each stage with idle, loading, success, or error states and defines explicit transitions for submit, retry, reset, and upstream edits.",
+      "strength": 0.99
+    },
+    {
+      "concept": "discriminated-union",
+      "filePath": "apps/review-ui/src/hooks/useReviewWorkflow.ts",
+      "claim": "RequestState<T> uses the status discriminator so success data and error details are available only in their valid states.",
+      "strength": 0.99
+    },
+    {
+      "concept": "dependency-invalidation",
+      "filePath": "apps/review-ui/src/hooks/useReviewWorkflow.ts",
+      "claim": "Editing pharmacist notes after successful extraction clears extraction and final-assessment state, preventing stale downstream conclusions from remaining visible.",
+      "strength": 0.98
+    },
+    {
+      "concept": "service-orchestration",
+      "filePath": "infra/docker-compose.yml",
+      "claim": "Compose defines three independently built services, one shared network, and explicit service dependencies matching the runtime architecture.",
+      "strength": 0.97
+    },
+    {
+      "concept": "health-readiness",
+      "filePath": "infra/docker-compose.yml",
+      "claim": "Each service has a concrete health command, and dependent services use service_healthy conditions rather than relying only on process startup.",
+      "strength": 0.99
+    },
+    {
+      "concept": "dependency-ordering",
+      "filePath": "infra/docker-compose.yml",
+      "claim": "The API waits for the engine health check, and the UI waits for the API health check, encoding startup order from actual service readiness.",
+      "strength": 0.99
+    }
+  ]
+}

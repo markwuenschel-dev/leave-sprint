@@ -1,0 +1,123 @@
+{
+  "items": [
+    {
+      "id": "f-compounding-quality-rag-review-pipeline-orchestrator",
+      "title": "Review Pipeline Orchestrator",
+      "why": "Centralizes validation, refusal screening, collaborator injection, and stage ordering for checklist, retrieval, extraction, and final assessment across every transport adapter.",
+      "terminology": "Application service · Dependency injection · Fail fast validation · Policy enforcement · Separation of concerns",
+      "interviewLine": "I centralized review sequencing here so HTTP, CLI, and bridge adapters cannot drift on validation, refusal, or stage order.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "BOTH",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-canonical-domain-schemas",
+      "title": "Canonical Domain Schemas",
+      "why": "Defines strict Pydantic contracts, domain enums, nested review outputs, and cross-field invariants that reject unknown fields and invalid classification or resolution combinations.",
+      "terminology": "Data validation · Domain modeling · Design by contract · Invariant enforcement · Schema evolution",
+      "interviewLine": "I use strict schemas and cross-field validators to make invalid domain states and silent contract drift fail immediately.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "BOTH",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-retrieval-query-strategies",
+      "title": "Retrieval Query Strategies",
+      "why": "Implements interchangeable query-construction strategies, semantic-intent derivation, deterministic expansion, validated query results, and a versioned cache keyed by content and model identity.",
+      "terminology": "Strategy pattern · Protocol oriented design · Semantic retrieval · Cache key design · Deterministic fallback",
+      "interviewLine": "I separated query interpretation behind strategy objects so retrieval approaches can be compared without changing the retriever itself.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "MLE",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-grounded-summary-extraction",
+      "title": "Grounded Summary Extraction",
+      "why": "Converts LLM JSON into validated review summaries, normalizes payloads, applies deterministic evidence grounding, detects negation and support, and isolates the model behind a narrow protocol.",
+      "terminology": "LLM output validation · Grounded generation · Ports and adapters · Defensive parsing · Deterministic postprocessing",
+      "interviewLine": "I treat the model as an untrusted proposer, then validate, normalize, and ground every structured finding against the pharmacist's narrative.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "MLE",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-final-assessment-policy",
+      "title": "Final Assessment Policy",
+      "why": "Maps checklist evidence and reviewer-confirmed structured findings into deterministic risk lanes, classifications, scopes, escalation paths, resolution options, and rationale.",
+      "terminology": "Decision table · Pure function · Deterministic policy · Human in the loop · Risk classification",
+      "interviewLine": "I keep final disposition deterministic and driven by reviewer-confirmed triggers rather than letting raw model text make escalation decisions.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "BOTH",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-fastapi-transport-boundary",
+      "title": "FastAPI Transport Boundary",
+      "why": "Exposes validated HTTP endpoints, delegates all domain sequencing to the review pipeline, translates domain failures into status codes, reports readiness, and propagates request correlation.",
+      "terminology": "Transport adapter · Exception translation · Request correlation · Health readiness · Thin controller",
+      "interviewLine": "This adapter owns HTTP concerns only and delegates review behavior to the shared pipeline, preserving one domain path across transports.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "BOTH",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-python-engine-http-adapter",
+      "title": "Python Engine HTTP Adapter",
+      "why": "Implements the Java-to-Python port with explicit request records, snake-case wire mapping, bounded timeouts, request-ID forwarding, health probing, response decoding, and typed exception translation.",
+      "terminology": "Adapter pattern · Cross language contract · Serialization boundary · Timeout management · Request correlation",
+      "interviewLine": "I isolated the cross-language HTTP contract here, including wire-name translation, timeouts, correlation headers, and typed failure handling.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "SWE",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-rag-wire-contract-tests",
+      "title": "RAG Wire Contract Tests",
+      "why": "Drives the real Java adapter against an in-process capturing HTTP stub and asserts exact Python-facing JSON keys for all four cross-language RPC requests.",
+      "terminology": "Contract testing · Cross language contract · Test double · Serialization boundary · Regression testing",
+      "interviewLine": "These tests pin the exact JSON wire names so independent Java and Python refactors cannot silently break their shared contract.",
+      "practicedDates": [],
+      "notes": "",
+      "roleTrack": "SWE",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-review-workflow-state-machine",
+      "title": "Review Workflow State Machine",
+      "why": "Owns typed asynchronous states and transitions for checklist, retrieval, extraction, and final assessment, including invalidation, retry, reset, demo loading, and backend-readiness guards.",
+      "terminology": "State machine · Discriminated union · Async state management · Dependency invalidation · Separation of concerns",
+      "interviewLine": "I modeled the UI workflow as explicit typed states and transitions so stale downstream results are invalidated when upstream inputs change.",
+      "practicedDates": [],
+      "notes": "",
+      "core": true,
+      "roleTrack": "SWE",
+      "project": "compounding-quality-rag"
+    },
+    {
+      "id": "f-compounding-quality-rag-health-gated-service-composition",
+      "title": "Health-Gated Service Composition",
+      "why": "Composes the UI, Spring API, and Python engine on one network with explicit environment configuration, service-specific health checks, and dependency startup gated on healthy upstream services.",
+      "terminology": "Service orchestration · Health readiness · Configuration management · Dependency ordering · Container networking",
+      "interviewLine": "I use health-gated composition so dependent services start only after their upstream boundary is actually responsive.",
+      "practicedDates": [],
+      "notes": "",
+      "roleTrack": "SWE",
+      "project": "compounding-quality-rag"
+    }
+  ],
+  "provisional": []
+}
