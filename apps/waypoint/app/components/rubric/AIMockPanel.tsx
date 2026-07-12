@@ -1,21 +1,25 @@
 "use client";
 
 /**
- * AI Mock — a conversational interview loop (Wayfinder #27 + #29). The active
- * provider generates a question, you answer, it probes with adaptive follow-ups,
- * then grades how the answer held up — the entry lands in your rubric. Talks to
- * /api/interview over fetch only (never imports @/lib/llm, so SDKs stay server-side).
+ * AI Questions — a leveled interview ladder (Wayfinder #27 + #29). One Q Bank
+ * question drives a session that climbs Level I → II → III: at each level the
+ * provider generates a question, you answer, it probes with up to two adaptive
+ * follow-ups that STAY at the current level, then grades the whole level as one
+ * rubric entry. Passing a level (finalScore ≥ LEVEL_PASS) escalates; falling
+ * short ends the session. Talks to /api/interview over fetch only (never imports
+ * @/lib/llm, so SDKs stay server-side).
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { QBANK, QB_TRACK_MAP, type TrackKey } from "@waypoint/qbank";
+import { QBANK, QB_TRACK_MAP, type TrackKey, type QBankQuestion } from "@waypoint/qbank";
 import { useWaypointStore } from "@/lib/store";
 import { todayIso } from "@/lib/domain";
 import type { RubricEntry } from "@waypoint/rubric";
 import { Loader2, Sparkles, Send, Mic, MicOff } from "lucide-react";
 
 const TRACKS: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
-const MAX_PROBES = 2;
+const MAX_ADAPTIVE = 2; // adaptive follow-ups per level, at the model's discretion
+const LEVEL_PASS = 70; // finalScore needed to escalate to the next level
 const box = "rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)]";
 
 interface GradeResult {
@@ -24,8 +28,13 @@ interface GradeResult {
   flagged: boolean;
   droppedTags: string[];
 }
+interface LevelOutcome {
+  level: 1 | 2 | 3;
+  result: GradeResult;
+  passed: boolean;
+}
 type Turn = { who: "ai" | "you" | "hint" | "feedback"; text: string };
-type Phase = "idle" | "answering" | "busy" | "graded";
+type Phase = "idle" | "answering" | "busy" | "done";
 
 function transcript(turns: Turn[]): string {
   return turns
@@ -33,6 +42,13 @@ function transcript(turns: Turn[]): string {
     .filter((t) => t.who !== "hint" && t.who !== "feedback")
     .map((t) => `${t.who === "ai" ? "Interviewer" : "Candidate"}: ${t.text}`)
     .join("\n\n");
+}
+
+/** The Q Bank text that seeds a given rung of the ladder (falls back down when a stretch is absent). */
+function levelSeed(item: QBankQuestion, level: 1 | 2 | 3): string | undefined {
+  if (level === 1) return item.q;
+  if (level === 2) return item.l2q ?? item.q;
+  return item.l3q ?? item.l2q ?? item.q;
 }
 
 /** First MediaRecorder audio container this browser supports (webm on Chrome/Edge, mp4 on Safari). */
@@ -52,22 +68,141 @@ function gateTone(v: string): string {
   return "border-[#f59e0b]/40 text-[#f59e0b]";
 }
 
+/** One level's grade, with the full breakdown that makes the demonstrated level explainable. */
+function LevelGradeCard({ level, result, passed }: { level: number; result: GradeResult; passed: boolean }) {
+  const e = result.entry;
+  return (
+    <div className={`${box} space-y-3 p-4`}>
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        <div className="flex items-baseline gap-2">
+          <span className="rounded-md border border-[var(--hairline)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-dim)]">
+            Level {level}
+          </span>
+          <span className="font-mono text-3xl font-semibold text-[var(--cyan)]">{e.finalScore}</span>
+          <span className="text-sm text-[var(--text-mid)]">{e.demonstratedLevel || "—"}</span>
+          <span
+            className={`rounded-lg border px-2 py-0.5 text-[11px] ${
+              passed ? "border-[#10b981]/40 text-[#10b981]" : "border-[#ef4444]/40 text-[#ef4444]"
+            }`}
+          >
+            {passed ? "passed" : "did not pass"}
+          </span>
+        </div>
+        <div className="text-xs text-[var(--text-dim)]">
+          graded by <span className="font-mono text-[var(--text-mid)]">{e.calibration?.graderModel}</span>
+          {" · "}confidence {e.calibration?.calibrationConfidence}
+          {result.flagged ? <span className="ml-1 text-[#f59e0b]">· flagged (non-monotonic)</span> : null}
+          {e.llmIndependence?.llmUsed ? (
+            <span className="ml-1 text-[#f59e0b]">· coached (excluded from readiness floor)</span>
+          ) : null}
+        </div>
+      </div>
+      {/* Level scores — the controlling scores the verdict derives from */}
+      <div>
+        <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Level scores</div>
+        <div className="flex flex-wrap gap-4">
+          {(["L1", "L2", "L3"] as const).map((lv) => (
+            <div key={lv} className="flex items-baseline gap-1.5">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-dim)]">{lv}</span>
+              <span className="font-mono text-lg text-[var(--text)]">{e.levelScores?.[lv] ?? "—"}</span>
+              {e.levelVerdicts?.[lv] ? (
+                <span className="text-[10px] text-[var(--text-dim)]">{e.levelVerdicts[lv]}</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Gates — a Partial/Fail on Correctness silently caps the level */}
+      {e.gates && Object.keys(e.gates).length ? (
+        <div>
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Gates</div>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(e.gates).map(([g, v]) => (
+              <span key={g} className={`rounded-lg border px-2 py-0.5 text-[11px] ${gateTone(String(v))}`}>
+                {g}: {v}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {e.mainReasonNextLevelNotReached ? (
+        <p className="text-sm text-[var(--text-mid)]">
+          <span className="text-[var(--text-dim)]">Why not higher: </span>
+          {e.mainReasonNextLevelNotReached}
+        </p>
+      ) : null}
+      {e.nextTarget ? (
+        <p className="text-sm text-[var(--text-mid)]">
+          <span className="text-[var(--text-dim)]">Next target: </span>
+          {e.nextTarget}
+        </p>
+      ) : null}
+      {e.strengths ? (
+        <p className="text-sm text-[var(--text-mid)]">
+          <span className="text-[#10b981]">Strengths: </span>
+          {e.strengths}
+        </p>
+      ) : null}
+      {e.weaknesses ? (
+        <p className="text-sm text-[var(--text-mid)]">
+          <span className="text-[#f59e0b]">Weaknesses: </span>
+          {e.weaknesses}
+        </p>
+      ) : null}
+      {e.universalSubScores && Object.keys(e.universalSubScores).length ? (
+        <div>
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Universal sub-scores</div>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(e.universalSubScores).map(([d, s]) => (
+              <span key={d} className="rounded-lg border border-[var(--hairline)] px-2 py-0.5 text-[11px] text-[var(--text-mid)]">
+                {d} <span className="font-mono text-[var(--text)]">{s}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {e.gapTypes?.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {e.gapTypes.map((g) => (
+            <span key={g} className="rounded-lg border border-[var(--hairline)] px-2 py-0.5 text-[11px] text-[var(--text-mid)]">
+              {g}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {e.surviveProbing ? (
+        <p className="text-xs text-[var(--text-dim)]">
+          <span className="uppercase tracking-wider">Under probing:</span> {e.surviveProbing}
+        </p>
+      ) : null}
+      {e.scoreUncertainty?.range ? (
+        <p className="text-xs text-[var(--text-dim)]">
+          Uncertainty {e.scoreUncertainty.range[0]}–{e.scoreUncertainty.range[1]}
+          {e.scoreUncertainty.reason ? ` — ${e.scoreUncertainty.reason}` : ""}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AIMockPanel() {
   const addRubricEntry = useWaypointStore((s) => s.addRubricEntry);
 
   const [providers, setProviders] = useState<string[] | null>(null);
   const [provider, setProvider] = useState<string>("");
   const [track, setTrack] = useState<TrackKey>("swe");
+  const [qItem, setQItem] = useState<QBankQuestion | null>(null);
+  const [level, setLevel] = useState<1 | 2 | 3>(1);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [probeCount, setProbeCount] = useState(0);
+  const [adaptiveCount, setAdaptiveCount] = useState(0);
   const [asked, setAsked] = useState<string[]>([]);
-  const [candidates, setCandidates] = useState<{ provider: string; question: string }[] | null>(null);
+  const [sessionSeq, setSessionSeq] = useState(0);
   const [qSource, setQSource] = useState("");
   const [coaching, setCoaching] = useState(false);
   const [usedHint, setUsedHint] = useState(false);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  const [levelResults, setLevelResults] = useState<LevelOutcome[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -77,6 +212,7 @@ export function AIMockPanel() {
 
   const map = useMemo(() => QB_TRACK_MAP[track], [track]);
   const busy = phase === "busy";
+  const active = phase === "answering" || phase === "busy";
   const noProviders = providers !== null && providers.length === 0;
   // Dictation is OpenAI-only (gpt-4o-transcribe), independent of the chosen grader.
   const canDictate = !!providers?.includes("openai");
@@ -98,7 +234,7 @@ export function AIMockPanel() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns, result]);
+  }, [turns, levelResults]);
 
   async function post(bodyExtra: Record<string, unknown>) {
     const res = await fetch("/api/interview", {
@@ -111,62 +247,54 @@ export function AIMockPanel() {
     return j;
   }
 
-  async function startInterview() {
-    if (!provider || busy) return;
-    setError(null);
-    setResult(null);
-    setTurns([]);
-    setCandidates(null);
-    setProbeCount(0);
-    setUsedHint(false);
+  /** Pick one Q Bank question for the session — prefer ones that carry L2/L3 stretches. */
+  function pickQItem(): QBankQuestion {
+    const all = QBANK[track].questions;
+    const withLadder = all.filter((q) => q.l2q && q.l3q);
+    const pool = withLadder.length ? withLadder : all;
+    return pool[sessionSeq % pool.length];
+  }
+
+  /** Generate and post the opening question for a level, then hand off to answering. */
+  async function askLevel(item: QBankQuestion, lvl: 1 | 2 | 3) {
     setPhase("busy");
     try {
-      const seed = QBANK[track].questions[asked.length % QBANK[track].questions.length]?.q;
-      const j = await post({ action: "question", role: map.role, domain: map.domain, seed, avoid: asked });
+      const j = await post({
+        action: "question",
+        role: map.role,
+        domain: map.domain,
+        level: lvl,
+        seed: levelSeed(item, lvl),
+        avoid: asked,
+      });
       const question = String(j.question || "").trim();
-      setQSource(`generated:${provider}`);
       setTurns([{ who: "ai", text: question }]);
       setAsked((a) => [...a, question]);
+      setAdaptiveCount(0);
+      setUsedHint(false);
+      setDraft("");
       setPhase("answering");
     } catch (e) {
       setError(String((e as Error).message));
-      setPhase("idle");
+      // A failure on level 1 means no session started; mid-ladder we end with what we have.
+      setPhase(lvl === 1 ? "idle" : "done");
     }
   }
 
-  /** Fan question generation across all providers; the user picks one (ADR-0002). */
-  async function getOptions() {
+  /** Start a fresh session at Level I with a newly picked Q Bank question. */
+  async function startSession() {
     if (!provider || busy) return;
     setError(null);
-    setResult(null);
-    setTurns([]);
-    setCandidates(null);
-    setProbeCount(0);
-    setUsedHint(false);
-    setPhase("busy");
-    try {
-      const seed = QBANK[track].questions[asked.length % QBANK[track].questions.length]?.q;
-      const j = await post({ action: "slate", role: map.role, domain: map.domain, seed, avoid: asked });
-      setCandidates(j.candidates ?? []);
-    } catch (e) {
-      setError(String((e as Error).message));
-    } finally {
-      setPhase("idle");
-    }
+    const item = pickQItem();
+    setQItem(item);
+    setLevel(1);
+    setLevelResults([]);
+    setSessionSeq((n) => n + 1);
+    setQSource(`generated:${provider}`);
+    await askLevel(item, 1);
   }
 
-  function pickCandidate(c: { provider: string; question: string }) {
-    setCandidates(null);
-    setQSource(`slate:${c.provider}`); // question author ≠ grader
-    setTurns([{ who: "ai", text: c.question }]);
-    setAsked((a) => [...a, c.question]);
-    setProbeCount(0);
-    setUsedHint(false);
-    setResult(null);
-    setPhase("answering");
-  }
-
-  /** Coaching mode: request a hint mid-answer (flags the session as coached). */
+  /** Coaching mode: request a hint mid-answer (flags this level's grade as coached). */
   async function getHint() {
     if (busy) return;
     setError(null);
@@ -243,12 +371,13 @@ export function AIMockPanel() {
     }
   }
 
-  async function doGrade(finalTurns: Turn[]) {
+  /** Grade the current level as one entry, then gate: pass → escalate, fall short → end. */
+  async function gradeLevel(levelTurns: Turn[]) {
     setPhase("busy");
     try {
-      const question = finalTurns[0]?.text ?? "";
-      const answer = finalTurns[1]?.text ?? "";
-      const probing = finalTurns.length > 2 ? transcript(finalTurns.slice(2)) : undefined;
+      const question = levelTurns[0]?.text ?? "";
+      const answer = levelTurns[1]?.text ?? "";
+      const probing = levelTurns.length > 2 ? transcript(levelTurns.slice(2)) : undefined;
       const j: GradeResult = await post({
         action: "grade",
         ctx: {
@@ -257,20 +386,29 @@ export function AIMockPanel() {
           taskType: map.taskType,
           domain: map.domain,
           primaryRole: map.role,
-          problemLevel: "L2",
-          difficulty: 2,
+          problemLevel: `L${level}`,
+          difficulty: level,
           questionSource: qSource || `generated:${provider}`,
           assessmentMode: "mock interview",
-          followUpsAsked: probeCount,
+          followUpsAsked: adaptiveCount,
           coached: usedHint,
         },
         question,
         answer,
         probingTranscript: probing,
       });
-      setResult(j);
       addRubricEntry(j.entry);
-      setPhase("graded");
+      const passed = (j.entry.finalScore ?? 0) >= LEVEL_PASS;
+      setLevelResults((r) => [...r, { level, result: j, passed }]);
+      // Gate: escalate only if this level passed and a harder rung remains.
+      if (passed && level < 3 && qItem) {
+        const nextLevel = (level + 1) as 1 | 2 | 3;
+        setLevel(nextLevel);
+        await askLevel(qItem, nextLevel);
+      } else {
+        setTurns([]);
+        setPhase("done");
+      }
     } catch (e) {
       setError(String((e as Error).message));
       setPhase("answering");
@@ -284,21 +422,21 @@ export function AIMockPanel() {
     setTurns(next);
     setDraft("");
 
-    // Always fetch a per-answer verdict first (even on the last answer, where `final`
-    // tells the model to give feedback but no follow-up), so every answer gets feedback.
-    const atMax = probeCount >= MAX_PROBES;
+    // Always fetch a per-answer verdict first (even on the last answer of a level, where
+    // `final` tells the model to give feedback but no follow-up), so every answer gets feedback.
+    const atMax = adaptiveCount >= MAX_ADAPTIVE;
     setPhase("busy");
     try {
-      const j = await post({ action: "probe", transcript: transcript(next), final: atMax });
+      const j = await post({ action: "probe", transcript: transcript(next), final: atMax, level });
       const feedback = j.feedback ? String(j.feedback).trim() : "";
       const probe = j.probe ? String(j.probe).trim() : null;
       const shown = feedback ? [...next, { who: "feedback" as const, text: feedback }] : next;
       if (atMax || !probe) {
         setTurns(shown);
-        await doGrade(next); // grade the pre-feedback turns; transcript() strips feedback anyway
+        await gradeLevel(next); // grade the pre-feedback turns; transcript() strips feedback anyway
       } else {
         setTurns([...shown, { who: "ai", text: probe }]);
-        setProbeCount((c) => c + 1);
+        setAdaptiveCount((c) => c + 1);
         setPhase("answering");
       }
     } catch (e) {
@@ -312,15 +450,18 @@ export function AIMockPanel() {
     const next = draft.trim() ? [...turns, { who: "you" as const, text: draft.trim() }] : turns;
     setDraft("");
     setTurns(next);
-    if (next.length >= 2) void doGrade(next);
+    if (next.length >= 2) void gradeLevel(next);
   }
+
+  const lastOutcome = levelResults.length ? levelResults[levelResults.length - 1] : null;
+  const clearedAll = levelResults.length === 3 && !!lastOutcome?.passed;
 
   return (
     <div className="space-y-4">
       {/* Controls */}
       <div className={`${box} flex flex-wrap items-center gap-3 p-3`}>
         <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--cyan)]">
-          <Sparkles size={15} aria-hidden /> AI Mock
+          <Sparkles size={15} aria-hidden /> AI Questions
         </div>
         <label className="flex items-center gap-1.5 text-xs text-[var(--text-dim)]">
           Provider
@@ -328,7 +469,7 @@ export function AIMockPanel() {
             className="rounded-lg border border-[var(--hairline)] bg-[var(--bg)] px-2 py-1 text-xs text-[var(--text)]"
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
-            disabled={!providers?.length || phase === "answering" || busy}
+            disabled={!providers?.length || active}
           >
             {providers?.length ? (
               providers.map((p) => <option key={p} value={p}>{p}</option>)
@@ -343,7 +484,7 @@ export function AIMockPanel() {
             className="rounded-lg border border-[var(--hairline)] bg-[var(--bg)] px-2 py-1 text-xs text-[var(--text)]"
             value={track}
             onChange={(e) => setTrack(e.target.value as TrackKey)}
-            disabled={phase === "answering" || busy}
+            disabled={active}
           >
             {TRACKS.map((t) => (
               <option key={t} value={t}>{QBANK[t].short} · {QB_TRACK_MAP[t].role}</option>
@@ -365,21 +506,12 @@ export function AIMockPanel() {
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            onClick={getOptions}
-            disabled={!provider || busy || noProviders || phase === "answering"}
-            className="btn inline-flex items-center gap-1.5 disabled:opacity-50"
-            title="Each configured provider proposes a question — you pick one"
-          >
-            Get options
-          </button>
-          <button
-            type="button"
-            onClick={startInterview}
+            onClick={startSession}
             disabled={!provider || busy || noProviders}
             className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
           >
             {busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
-            {turns.length ? "New question" : "Start"}
+            {levelResults.length || active ? "Restart" : "Start"}
           </button>
         </div>
       </div>
@@ -392,32 +524,24 @@ export function AIMockPanel() {
         </div>
       ) : null}
 
-      {/* Candidate slate */}
-      {candidates && !turns.length ? (
-        <div className={`${box} space-y-2 p-4`}>
-          <div className="text-[10px] uppercase tracking-wider text-[var(--text-dim)]">
-            Pick a question · {candidates.length} proposed
-          </div>
-          {candidates.length ? (
-            candidates.map((c) => (
-              <button
-                key={c.provider}
-                type="button"
-                onClick={() => pickCandidate(c)}
-                className="block w-full rounded-xl border border-[var(--hairline)] p-3 text-left text-sm text-[var(--text)] transition hover:border-[var(--hairline-strong)] hover:bg-[var(--surface)]"
-              >
-                <span className="font-mono text-[10px] text-[var(--cyan)]">{c.provider}</span>
-                <div className="mt-0.5">{c.question}</div>
-              </button>
-            ))
-          ) : (
-            <div className="text-sm text-[var(--text-dim)]">No candidates returned.</div>
-          )}
+      {/* Level progress */}
+      {active ? (
+        <div className={`${box} flex items-center gap-2 p-3 text-xs`}>
+          <span className="font-mono uppercase tracking-wider text-[var(--cyan)]">Level {level} of 3</span>
+          {[1, 2, 3].map((n) => (
+            <span
+              key={n}
+              className={`h-1.5 w-8 rounded-full ${
+                n < level ? "bg-[#10b981]" : n === level ? "bg-[var(--cyan)]" : "bg-[var(--hairline)]"
+              }`}
+            />
+          ))}
+          <span className="ml-2 text-[var(--text-dim)]">{QBANK[track].short} · {map.role} · pass ≥ {LEVEL_PASS} to climb</span>
         </div>
       ) : null}
 
-      {/* Transcript */}
-      {turns.length ? (
+      {/* Transcript (current level only) */}
+      {active && turns.length ? (
         <div className={`${box} space-y-3 p-4`}>
           {turns.map((t, i) => (
             <div
@@ -463,13 +587,13 @@ export function AIMockPanel() {
           ) : null}
           <div ref={endRef} />
         </div>
-      ) : candidates ? null : (
+      ) : phase === "idle" ? (
         <div className={`${box} p-6 text-center text-sm text-[var(--text-dim)]`}>
-          Pick a provider and track, then <strong className="text-[var(--text-mid)]">Start</strong> — or{" "}
-          <strong className="text-[var(--text-mid)]">Get options</strong> to have each provider propose one. The
-          interviewer asks, probes your answer, and grades it into your rubric.
+          Pick a provider and track, then <strong className="text-[var(--text-mid)]">Start</strong>. One question climbs a
+          three-level ladder — Level I → II → III. Each level asks, probes with up to two adaptive follow-ups, then grades
+          into your rubric. Pass a level ({LEVEL_PASS}+) to climb; fall short and the session ends there.
         </div>
-      )}
+      ) : null}
 
       {/* Answer box */}
       {phase === "answering" ? (
@@ -489,7 +613,7 @@ export function AIMockPanel() {
               className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
             >
               <Send size={14} aria-hidden />
-              {probeCount >= MAX_PROBES ? "Submit & grade" : "Submit answer"}
+              {adaptiveCount >= MAX_ADAPTIVE ? "Submit & grade level" : "Submit answer"}
             </button>
             {canDictate ? (
               <button
@@ -510,8 +634,8 @@ export function AIMockPanel() {
               </button>
             ) : null}
             {turns.length >= 1 ? (
-              <button type="button" onClick={gradeNow} className="btn">
-                Grade now →
+              <button type="button" onClick={gradeNow} className="btn" title="Grade this level now">
+                Grade level →
               </button>
             ) : null}
             {coaching ? (
@@ -525,7 +649,7 @@ export function AIMockPanel() {
               </button>
             ) : null}
             <span className="ml-auto font-mono text-[10px] text-[var(--text-dim)]">
-              probe {probeCount}/{MAX_PROBES}
+              L{level} · adaptive {adaptiveCount}/{MAX_ADAPTIVE}
             </span>
           </div>
         </>
@@ -535,110 +659,22 @@ export function AIMockPanel() {
         <div className="rounded-2xl border border-[#ef4444]/40 bg-[#ef4444]/5 p-3 text-sm text-[#ef4444]">{error}</div>
       ) : null}
 
-      {/* Result */}
-      {result ? (
-        <div className={`${box} space-y-3 p-4`}>
-          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-            <div>
-              <span className="font-mono text-3xl font-semibold text-[var(--cyan)]">{result.entry.finalScore}</span>
-              <span className="ml-2 text-sm text-[var(--text-mid)]">{result.entry.demonstratedLevel || "—"}</span>
-            </div>
-            <div className="text-xs text-[var(--text-dim)]">
-              graded by <span className="font-mono text-[var(--text-mid)]">{result.entry.calibration?.graderModel}</span>
-              {" · "}confidence {result.entry.calibration?.calibrationConfidence}
-              {result.flagged ? <span className="ml-1 text-[#f59e0b]">· flagged (non-monotonic)</span> : null}
-              {result.entry.llmIndependence?.llmUsed ? (
-                <span className="ml-1 text-[#f59e0b]">· coached (excluded from readiness floor)</span>
-              ) : null}
-            </div>
-          </div>
-          {/* Level scores — the controlling scores the verdict derives from */}
-          <div>
-            <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Level scores</div>
-            <div className="flex flex-wrap gap-4">
-              {(["L1", "L2", "L3"] as const).map((lv) => (
-                <div key={lv} className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-dim)]">{lv}</span>
-                  <span className="font-mono text-lg text-[var(--text)]">{result.entry.levelScores?.[lv] ?? "—"}</span>
-                  {result.entry.levelVerdicts?.[lv] ? (
-                    <span className="text-[10px] text-[var(--text-dim)]">{result.entry.levelVerdicts[lv]}</span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Gates — a Partial/Fail on Correctness silently caps the level */}
-          {result.entry.gates && Object.keys(result.entry.gates).length ? (
-            <div>
-              <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Gates</div>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(result.entry.gates).map(([g, v]) => (
-                  <span key={g} className={`rounded-lg border px-2 py-0.5 text-[11px] ${gateTone(String(v))}`}>
-                    {g}: {v}
-                  </span>
-                ))}
-              </div>
+      {/* Session summary + per-level grades */}
+      {levelResults.length ? (
+        <div className="space-y-3">
+          {phase === "done" ? (
+            <div className={`${box} p-3 text-sm text-[var(--text-mid)]`}>
+              Session complete — {levelResults.length} level{levelResults.length > 1 ? "s" : ""} graded and logged to your
+              rubric.{" "}
+              {clearedAll
+                ? "You cleared all three levels."
+                : `Stopped at Level ${lastOutcome?.level} — did not pass (needs ${LEVEL_PASS}+).`}{" "}
+              Hit <strong>Restart</strong> to go again.
             </div>
           ) : null}
-          {result.entry.mainReasonNextLevelNotReached ? (
-            <p className="text-sm text-[var(--text-mid)]">
-              <span className="text-[var(--text-dim)]">Why not higher: </span>
-              {result.entry.mainReasonNextLevelNotReached}
-            </p>
-          ) : null}
-          {result.entry.nextTarget ? (
-            <p className="text-sm text-[var(--text-mid)]">
-              <span className="text-[var(--text-dim)]">Next target: </span>
-              {result.entry.nextTarget}
-            </p>
-          ) : null}
-          {result.entry.strengths ? (
-            <p className="text-sm text-[var(--text-mid)]">
-              <span className="text-[#10b981]">Strengths: </span>
-              {result.entry.strengths}
-            </p>
-          ) : null}
-          {result.entry.weaknesses ? (
-            <p className="text-sm text-[var(--text-mid)]">
-              <span className="text-[#f59e0b]">Weaknesses: </span>
-              {result.entry.weaknesses}
-            </p>
-          ) : null}
-          {result.entry.universalSubScores && Object.keys(result.entry.universalSubScores).length ? (
-            <div>
-              <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Universal sub-scores</div>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(result.entry.universalSubScores).map(([d, s]) => (
-                  <span key={d} className="rounded-lg border border-[var(--hairline)] px-2 py-0.5 text-[11px] text-[var(--text-mid)]">
-                    {d} <span className="font-mono text-[var(--text)]">{s}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {result.entry.gapTypes?.length ? (
-            <div className="flex flex-wrap gap-1.5">
-              {result.entry.gapTypes.map((g) => (
-                <span key={g} className="rounded-lg border border-[var(--hairline)] px-2 py-0.5 text-[11px] text-[var(--text-mid)]">
-                  {g}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          {result.entry.surviveProbing ? (
-            <p className="text-xs text-[var(--text-dim)]">
-              <span className="uppercase tracking-wider">Under probing:</span> {result.entry.surviveProbing}
-            </p>
-          ) : null}
-          {result.entry.scoreUncertainty?.range ? (
-            <p className="text-xs text-[var(--text-dim)]">
-              Uncertainty {result.entry.scoreUncertainty.range[0]}–{result.entry.scoreUncertainty.range[1]}
-              {result.entry.scoreUncertainty.reason ? ` — ${result.entry.scoreUncertainty.reason}` : ""}
-            </p>
-          ) : null}
-          <div className="text-[11px] text-[var(--text-dim)]">
-            Logged to your rubric — it now counts toward readiness, gaps, and retest. Hit <strong>New question</strong> to go again.
-          </div>
+          {levelResults.map((r) => (
+            <LevelGradeCard key={r.level} level={r.level} result={r.result} passed={r.passed} />
+          ))}
         </div>
       ) : null}
     </div>

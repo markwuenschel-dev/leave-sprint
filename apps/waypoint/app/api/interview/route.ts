@@ -37,9 +37,11 @@ interface InterviewBody {
   domain?: string;
   seed?: string;
   avoid?: string[];
+  /** question/probe: which rung of the L1→L2→L3 ladder this turn is at. */
+  level?: 1 | 2 | 3;
   // action: "probe"
   transcript?: string;
-  /** probe: true when this is the candidate's last answer — feedback only, no follow-up. */
+  /** probe: true when this is the candidate's last answer for the level — feedback only, no follow-up. */
   final?: boolean;
   // action: "grade" — classification + provenance (graderModel is added by the seam)
   ctx?: Omit<ObservationContext, "graderModel">;
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
     if (action === "question") {
       if (!body.role || !body.domain) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
       const text = await p.complete(
-        buildQuestionPrompt({ role: body.role, domain: body.domain, seed: body.seed, avoid: body.avoid }),
+        buildQuestionPrompt({ role: body.role, domain: body.domain, level: body.level, seed: body.seed, avoid: body.avoid }),
       );
       return NextResponse.json({ question: text.trim() });
     }
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
 
     if (action === "probe") {
       if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-      const raw = await p.complete(buildProbePrompt(body.transcript, body.final));
+      const raw = await p.complete(buildProbePrompt(body.transcript, body.final, body.level));
       // Verdict-only feedback + one follow-up; probe is null on a DONE sentinel.
       const { feedback, probe } = parseProbeReply(raw);
       return NextResponse.json({ feedback, probe });

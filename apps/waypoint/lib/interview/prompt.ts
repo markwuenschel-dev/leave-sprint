@@ -44,15 +44,27 @@ export function buildGradeInput(args: GradeArgs): GradeInput {
   return { system, user };
 }
 
-/** Prompt to generate one interview question — the "ask" side (ADR-0003). */
+/**
+ * The three-level difficulty ladder (mirrors the Q Bank's q / l2q / l3q). Each
+ * interview session climbs L1 → L2 → L3, generating a question at each level.
+ */
+export const LEVEL_BRIEF: Record<1 | 2 | 3, string> = {
+  1: "a foundational question a competent mid-level candidate should answer comfortably — core concepts and correct fundamentals",
+  2: "a harder stretch that goes a level deeper — tradeoffs, edge cases, and the 'why' behind the fundamentals, the kind that separates memorisation from real understanding",
+  3: "an advanced, senior-level question — systems thinking, design at scale, failure modes, and nuanced judgment",
+};
+
+/** Prompt to generate one interview question at a given ladder level — the "ask" side (ADR-0003). */
 export function buildQuestionPrompt(args: {
   role: string;
   domain: string;
+  level?: 1 | 2 | 3;
   seed?: string;
   avoid?: string[];
 }): GradeInput {
-  const system = `You are a senior technical interviewer for a ${args.role} role. Ask ONE focused interview question on ${args.domain}. It should be answerable verbally in 1–3 minutes, probe real understanding rather than trivia, and suit a mid-level candidate. Output only the question — no preamble, no answer, no numbering.`;
-  let user = `Generate one ${args.domain} interview question.`;
+  const level = args.level ?? 1;
+  const system = `You are a senior technical interviewer for a ${args.role} role. Ask ONE focused interview question on ${args.domain}, pitched at Level ${level} of a three-level ladder: ${LEVEL_BRIEF[level]}. It should be answerable verbally in 1–3 minutes and probe real understanding rather than trivia. Output only the question — no preamble, no answer, no numbering.`;
+  let user = `Generate one Level ${level} ${args.domain} interview question.`;
   if (args.seed) user += `\n\nSame topic area, for inspiration (do not copy verbatim): ${args.seed}`;
   if (args.avoid?.length) {
     user += `\n\nDo not repeat any of these already-asked questions:\n- ${args.avoid.join("\n- ")}`;
@@ -66,13 +78,13 @@ export function buildQuestionPrompt(args: {
  * showing it in an unaided run leaks no content and is not coaching (ADR-0003).
  * `final` = the candidate's last answer: give feedback only, force FOLLOWUP: DONE.
  */
-export function buildProbePrompt(transcript: string, final = false): GradeInput {
-  const system = `You are a technical interviewer evaluating a candidate mid-interview. Respond in EXACTLY this two-line format and nothing else:
+export function buildProbePrompt(transcript: string, final = false, level = 1): GradeInput {
+  const system = `You are a technical interviewer evaluating a candidate mid-interview at Level ${level} of a three-level difficulty ladder. Any follow-up you ask MUST stay at Level ${level} difficulty — probe within this level (depth, an edge case, a tradeoff, or a specific claim they made); do NOT escalate to a harder level. Respond in EXACTLY this two-line format and nothing else:
 FEEDBACK: <one short sentence on how the answer landed — e.g. "Solid, that holds up." or "Not fully there yet.". Give a VERDICT ONLY: never reveal what they missed, hint at the answer, or name a concept to add.>
-FOLLOWUP: <ONE short, pointed follow-up that tests depth, an edge case, a tradeoff, or a specific claim they made — the kind that separates a memorised answer from real understanding${final ? "" : ", OR the single word DONE if the exchange is already thorough and a further probe would add little"}.>${
-    final ? "\nThis is the candidate's FINAL answer — output FOLLOWUP: DONE regardless." : ""
+FOLLOWUP: <ONE short, pointed Level ${level} follow-up${final ? "" : ", OR the single word DONE if the exchange is already thorough and a further probe would add little"}.>${
+    final ? "\nThis is the candidate's FINAL answer for this level — output FOLLOWUP: DONE regardless." : ""
   }`;
-  const user = `Interview so far:\n\n${transcript}\n\nYour response (FEEDBACK then FOLLOWUP):`;
+  const user = `Interview so far (Level ${level}):\n\n${transcript}\n\nYour response (FEEDBACK then FOLLOWUP):`;
   return { system, user };
 }
 

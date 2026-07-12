@@ -9,12 +9,13 @@ export function MockSurface() {
     <div className="space-y-5">
       <SurfaceHero
         eyebrow="AI interviewer · graded"
-        title="Mock"
+        title="AI Questions"
         accent="cyan"
         subtitle={
           <>
-            Answer a question and an LLM grades it against the rubric — the result flows into
-            readiness, gaps, and retest like any assessment. Pick any provider you&apos;ve configured.
+            One question climbs a three-level ladder — Level I → II → III. Each level asks, probes with
+            adaptive follow-ups, and grades into your rubric; pass a level to climb, fall short and it ends
+            there. Pick any provider you&apos;ve configured.
           </>
         }
       />
