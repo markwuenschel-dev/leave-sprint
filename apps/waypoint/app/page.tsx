@@ -46,7 +46,7 @@ const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "interview", label: "Interview", icon: Mic2 },
   { id: "applications", label: "Applications", icon: Briefcase },
   { id: "weekly", label: "Weekly", icon: CalendarRange },
-  { id: "mock", label: "Mock", icon: Sparkles },
+  { id: "mock", label: "AI Questions", icon: Sparkles },
   { id: "more", label: "More", icon: MoreHorizontal },
 ];
 
