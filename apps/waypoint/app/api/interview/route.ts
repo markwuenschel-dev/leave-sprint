@@ -9,7 +9,13 @@
 
 import { NextResponse } from "next/server";
 import { availableProviders, getProvider, gradeToEntry, type ProviderId } from "@/lib/llm";
-import { buildGradeInput, buildQuestionPrompt, buildProbePrompt, buildHintPrompt } from "@/lib/interview/prompt";
+import {
+  buildGradeInput,
+  buildQuestionPrompt,
+  buildProbePrompt,
+  buildHintPrompt,
+  parseProbeReply,
+} from "@/lib/interview/prompt";
 import type { ObservationContext } from "@waypoint/rubric";
 
 export const runtime = "nodejs";
@@ -33,6 +39,8 @@ interface InterviewBody {
   avoid?: string[];
   // action: "probe"
   transcript?: string;
+  /** probe: true when this is the candidate's last answer — feedback only, no follow-up. */
+  final?: boolean;
   // action: "grade" — classification + provenance (graderModel is added by the seam)
   ctx?: Omit<ObservationContext, "graderModel">;
   question?: string;
@@ -85,9 +93,10 @@ export async function POST(req: Request) {
 
     if (action === "probe") {
       if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-      const text = (await p.complete(buildProbePrompt(body.transcript))).trim();
-      // A DONE sentinel means the model judges further probing unhelpful.
-      return NextResponse.json({ probe: /^done\.?$/i.test(text) ? null : text });
+      const raw = await p.complete(buildProbePrompt(body.transcript, body.final));
+      // Verdict-only feedback + one follow-up; probe is null on a DONE sentinel.
+      const { feedback, probe } = parseProbeReply(raw);
+      return NextResponse.json({ feedback, probe });
     }
 
     if (action === "hint") {

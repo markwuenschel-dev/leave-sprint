@@ -60,11 +60,34 @@ export function buildQuestionPrompt(args: {
   return { system, user };
 }
 
-/** Prompt for one adaptive follow-up probe, or DONE when further probing adds little. */
-export function buildProbePrompt(transcript: string): GradeInput {
-  const system = `You are a technical interviewer probing a candidate's answer. Ask ONE short, pointed follow-up that tests depth, an edge case, a tradeoff, or a specific claim they made — the kind that separates a memorised answer from real understanding. If the exchange is already thorough and a further probe would add little, reply with exactly DONE. Output only the follow-up question, or DONE.`;
-  const user = `Interview so far:\n\n${transcript}\n\nYour next follow-up (or DONE):`;
+/**
+ * Per-answer verdict + one adaptive follow-up (or DONE). The FEEDBACK line is
+ * verdict-only — it says whether the answer landed, never what was missing — so
+ * showing it in an unaided run leaks no content and is not coaching (ADR-0003).
+ * `final` = the candidate's last answer: give feedback only, force FOLLOWUP: DONE.
+ */
+export function buildProbePrompt(transcript: string, final = false): GradeInput {
+  const system = `You are a technical interviewer evaluating a candidate mid-interview. Respond in EXACTLY this two-line format and nothing else:
+FEEDBACK: <one short sentence on how the answer landed — e.g. "Solid, that holds up." or "Not fully there yet.". Give a VERDICT ONLY: never reveal what they missed, hint at the answer, or name a concept to add.>
+FOLLOWUP: <ONE short, pointed follow-up that tests depth, an edge case, a tradeoff, or a specific claim they made — the kind that separates a memorised answer from real understanding${final ? "" : ", OR the single word DONE if the exchange is already thorough and a further probe would add little"}.>${
+    final ? "\nThis is the candidate's FINAL answer — output FOLLOWUP: DONE regardless." : ""
+  }`;
+  const user = `Interview so far:\n\n${transcript}\n\nYour response (FEEDBACK then FOLLOWUP):`;
   return { system, user };
+}
+
+/**
+ * Parse a FEEDBACK/FOLLOWUP reply tolerantly (the probe uses plain completion, not
+ * structured output). probe = null when the follow-up is DONE or absent; if neither
+ * label is present, the whole reply is treated as feedback with no follow-up.
+ */
+export function parseProbeReply(raw: string): { feedback: string; probe: string | null } {
+  const fb = raw.match(/FEEDBACK:\s*([\s\S]*?)(?:\n\s*FOLLOWUP:|$)/i);
+  const fu = raw.match(/FOLLOWUP:\s*([\s\S]*)$/i);
+  const feedback = (fb?.[1] ?? (fu ? "" : raw)).trim();
+  let probe: string | null = fu ? fu[1].trim() : null;
+  if (probe && /^done\.?$/i.test(probe)) probe = null;
+  return { feedback, probe };
 }
 
 /** Coaching hint mid-answer — a nudge, not the answer (coaching mode). */
