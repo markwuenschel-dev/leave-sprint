@@ -45,13 +45,32 @@ docker compose logs --tail=$Tail leave-sprint || echo "(log tail failed - check 
 if ($DryRun) { Write-Host $remote; exit 0 }
 
 if (-not (Test-Path $SshKey)) { throw "SSH key not found: $SshKey" }
+
+# ssh ships with Windows but isn't always on PATH; fall back to the bundled OpenSSH location.
+$ssh = (Get-Command ssh -ErrorAction SilentlyContinue).Source
+if (-not $ssh) { $ssh = Join-Path $env:WINDIR "System32\OpenSSH\ssh.exe" }
+if (-not (Test-Path $ssh)) { throw "ssh client not found (looked on PATH and in $env:WINDIR\System32\OpenSSH)" }
+
 # PowerShell's pipe to a native command appends CRLF to the FINAL line (and a CRLF checkout of this
 # file would put \r on every line), so bash on the box would see 'leave-sprint\r' — "no such
 # service". Strip CRs on the remote side before bash reads the script.
-$remote | ssh -i $SshKey $BoxHost "tr -d '\r' | bash -s"
+$remote | & $ssh -i $SshKey $BoxHost "tr -d '\r' | bash -s"
 if ($LASTEXITCODE -ne 0) { throw "deploy failed (ssh exit $LASTEXITCODE)" }
 
 # Prove the public URL serves the new build — logs alone don't show what Caddy is fronting.
-$code = & curl.exe -fsSL -o NUL -w "%{http_code}" --max-time 30 "$Url/"
-if ($LASTEXITCODE -ne 0) { throw "deployed, but the health check against $Url failed" }
+# Invoke-WebRequest (not curl.exe, which isn't guaranteed on PATH). The freshly recreated container
+# runs `db:migrate && next start` on boot, so Caddy returns 502 for a few seconds until the upstream
+# is ready — retry through that warmup window before declaring the deploy unhealthy.
+$code = $null
+$lastErr = ""
+foreach ($attempt in 1..12) {
+  try {
+    $code = (Invoke-WebRequest -Uri "$Url/" -MaximumRedirection 5 -TimeoutSec 30 -UseBasicParsing).StatusCode
+    break
+  } catch {
+    $lastErr = $_.Exception.Message
+    Start-Sleep -Seconds 5
+  }
+}
+if (-not $code) { throw "deployed, but the health check against $Url never came up: $lastErr" }
 Write-Host "$Url -> HTTP $code"
