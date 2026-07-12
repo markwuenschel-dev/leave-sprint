@@ -13,4 +13,6 @@ export const SEED: WaypointState = {
   qbankPos: { track: "swe", idx: 0 },
   applications: [],
   solidInterviewLogs: { SWE_FS_II: [], MLE_II: [] },
+  mockSeq: 0,
+  mockAsked: [],
 };

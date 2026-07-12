@@ -117,6 +117,14 @@ export interface WaypointState {
   applications: Application[];
   /** Manually marked solid mocks/scored sessions per primary (count can also derive from rubric). */
   solidInterviewLogs: Record<PrimaryRole, string[]>; // ISO dates or entry ids
+  /**
+   * AI Mock cross-session memory so a fresh page load doesn't regenerate the same
+   * opening question. `seq` rotates which Q Bank item seeds the next session;
+   * `asked` is the running list of already-generated questions fed to the prompt's
+   * avoid-list (capped in the setter). Both persist through /api/state.
+   */
+  mockSeq: number;
+  mockAsked: string[];
   lastUpdated?: string;
 }
 

@@ -102,6 +102,9 @@ export const appMeta = pgTable("wp_app_meta", {
     .$type<{ SWE_FS_II: string[]; MLE_II: string[] }>()
     .notNull()
     .default({ SWE_FS_II: [], MLE_II: [] }),
+  // AI Mock cross-session memory: rotation counter + recently-asked questions.
+  mockSeq: integer("mock_seq").notNull().default(0),
+  mockAsked: jsonb("mock_asked").$type<string[]>().notNull().default([]),
   lastUpdated: text("last_updated"),
 });
 

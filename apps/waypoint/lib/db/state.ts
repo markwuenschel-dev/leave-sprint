@@ -134,6 +134,8 @@ export async function loadState(): Promise<LoadedState> {
     qbankPos: (m.qbankPos as { track: TrackKey; idx: number }) || { track: "swe", idx: 0 },
     applications: appsOut,
     solidInterviewLogs: m.solidInterviewLogs || { SWE_FS_II: [], MLE_II: [] },
+    mockSeq: m.mockSeq ?? 0,
+    mockAsked: m.mockAsked ?? [],
     lastUpdated: m.lastUpdated ?? undefined,
     empty: false,
   };
@@ -165,6 +167,8 @@ export async function saveState(
         roleFilter: slice.roleFilter,
         qbankPos: slice.qbankPos,
         solidInterviewLogs: slice.solidInterviewLogs,
+        mockSeq: slice.mockSeq,
+        mockAsked: slice.mockAsked,
         lastUpdated,
       })
       .onConflictDoUpdate({
@@ -174,6 +178,8 @@ export async function saveState(
           roleFilter: slice.roleFilter,
           qbankPos: slice.qbankPos,
           solidInterviewLogs: slice.solidInterviewLogs,
+          mockSeq: slice.mockSeq,
+          mockAsked: slice.mockAsked,
           lastUpdated,
         },
       });

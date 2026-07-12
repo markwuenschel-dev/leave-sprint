@@ -187,6 +187,12 @@ function LevelGradeCard({ level, result, passed }: { level: number; result: Grad
 
 export function AIMockPanel() {
   const addRubricEntry = useWaypointStore((s) => s.addRubricEntry);
+  // Cross-session memory (persists via /api/state) so a fresh page load doesn't
+  // regenerate the same opening question. mockSeq rotates the seeding Q Bank item;
+  // mockAsked feeds the prompt's avoid-list across sessions.
+  const mockAsked = useWaypointStore((s) => s.mockAsked);
+  const noteMockQuestion = useWaypointStore((s) => s.noteMockQuestion);
+  const advanceMockSession = useWaypointStore((s) => s.advanceMockSession);
 
   const [providers, setProviders] = useState<string[] | null>(null);
   const [provider, setProvider] = useState<string>("");
@@ -198,7 +204,6 @@ export function AIMockPanel() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [adaptiveCount, setAdaptiveCount] = useState(0);
   const [asked, setAsked] = useState<string[]>([]);
-  const [sessionSeq, setSessionSeq] = useState(0);
   const [qSource, setQSource] = useState("");
   const [coaching, setCoaching] = useState(false);
   const [usedHint, setUsedHint] = useState(false);
@@ -252,7 +257,10 @@ export function AIMockPanel() {
     const all = QBANK[track].questions;
     const withLadder = all.filter((q) => q.l2q && q.l3q);
     const pool = withLadder.length ? withLadder : all;
-    return pool[sessionSeq % pool.length];
+    // Read the freshly-advanced counter from the store (set() is synchronous) so the
+    // rotation survives page reloads instead of restarting at pool[0] every load.
+    const seq = useWaypointStore.getState().mockSeq;
+    return pool[seq % pool.length];
   }
 
   /** Generate and post the opening question for a level, then hand off to answering. */
@@ -265,11 +273,14 @@ export function AIMockPanel() {
         domain: map.domain,
         level: lvl,
         seed: levelSeed(item, lvl),
-        avoid: asked,
+        // Dedup against both this session's questions and prior persisted sessions.
+        avoid: [...new Set([...mockAsked, ...asked])],
       });
       const question = String(j.question || "").trim();
       setTurns([{ who: "ai", text: question }]);
       setAsked((a) => [...a, question]);
+      // Persist immediately so a reload mid-session still avoids repeats next time.
+      if (question) noteMockQuestion(question);
       setAdaptiveCount(0);
       setUsedHint(false);
       setDraft("");
@@ -285,11 +296,13 @@ export function AIMockPanel() {
   async function startSession() {
     if (!provider || busy) return;
     setError(null);
+    // Advance the persisted rotation first so pickQItem seeds off a fresh Q Bank item
+    // (set() is synchronous, so pickQItem reads the new value via getState()).
+    advanceMockSession();
     const item = pickQItem();
     setQItem(item);
     setLevel(1);
     setLevelResults([]);
-    setSessionSeq((n) => n + 1);
     setQSource(`generated:${provider}`);
     await askLevel(item, 1);
   }

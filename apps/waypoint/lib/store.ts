@@ -51,6 +51,10 @@ export interface WaypointStore extends WaypointState {
     patch: Partial<{ whatMoved: string; focusNext: string; pipelineNotes: string; done: boolean }>,
   ) => void;
   logSolidInterview: (role: PrimaryRole, label?: string) => void;
+  /** Remember a generated AI-Mock question so later sessions don't repeat it. */
+  noteMockQuestion: (question: string) => void;
+  /** Advance the AI-Mock Q Bank rotation so the next session seeds off a different item. */
+  advanceMockSession: () => void;
   /** Pull new catalog rows; preserve status / practiced / notes. */
   mergeCatalog: () => void;
   /** One-shot twin import (practice progress + rubric only). Returns summary. */
@@ -98,6 +102,9 @@ const mergeHydration = (persisted: unknown, current: WaypointStore): WaypointSto
       SWE_FS_II: unionStr(p.solidInterviewLogs?.SWE_FS_II, current.solidInterviewLogs.SWE_FS_II),
       MLE_II: unionStr(p.solidInterviewLogs?.MLE_II, current.solidInterviewLogs.MLE_II),
     },
+    // Union so a mock session recorded during the async hydration window survives.
+    mockSeq: Math.max(p.mockSeq ?? 0, current.mockSeq),
+    mockAsked: unionStr(p.mockAsked, current.mockAsked).slice(-40),
   };
 };
 
@@ -282,6 +289,16 @@ export const useWaypointStore = create<WaypointStore>()(
           lastUpdated: now(),
         })),
 
+      noteMockQuestion: (question) =>
+        set((s) => {
+          const q = question.trim();
+          if (!q || s.mockAsked.includes(q)) return s;
+          // Keep the most recent 40 so the avoid-list stays bounded but covers recent sessions.
+          return { mockAsked: [...s.mockAsked, q].slice(-40), lastUpdated: now() };
+        }),
+
+      advanceMockSession: () => set((s) => ({ mockSeq: s.mockSeq + 1, lastUpdated: now() })),
+
       mergeCatalog: () =>
         set((s) => {
           const { problems, fileDefense } = mergeCatalogLists(s.problems, s.fileDefense);
@@ -335,6 +352,8 @@ export const useWaypointStore = create<WaypointStore>()(
           deleteApplication: _l,
           setWeeklyField: _m,
           logSolidInterview: _n,
+          noteMockQuestion: _noteMock,
+          advanceMockSession: _advMock,
           mergeCatalog: _q,
           importTwin: _twin,
           importState: _o,
@@ -362,6 +381,8 @@ export const useWaypointStore = create<WaypointStore>()(
         qbankPos: s.qbankPos,
         applications: s.applications,
         solidInterviewLogs: s.solidInterviewLogs,
+        mockSeq: s.mockSeq,
+        mockAsked: s.mockAsked,
         lastUpdated: s.lastUpdated,
       }),
       onRehydrateStorage: () => (state) => {
