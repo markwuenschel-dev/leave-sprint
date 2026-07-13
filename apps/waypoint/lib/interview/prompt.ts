@@ -95,7 +95,13 @@ export function buildQuestionPrompt(args: {
 export function buildProbePrompt(transcript: string, final = false, level = 1): GradeInput {
   const system = `You are a technical interviewer evaluating a candidate mid-interview at Level ${level} of a three-level difficulty ladder. Any follow-up you ask MUST stay at Level ${level} difficulty — probe within this level (depth, an edge case, a tradeoff, or a specific claim they made); do NOT escalate to a harder level. Respond in EXACTLY this two-line format and nothing else:
 FEEDBACK: <one short sentence on how the answer landed — e.g. "Solid, that holds up." or "Not fully there yet.". Give a VERDICT ONLY: never reveal what they missed, hint at the answer, or name a concept to add.>
-FOLLOWUP: <ONE short, pointed Level ${level} follow-up${final ? "" : ", OR the single word DONE if the exchange is already thorough and a further probe would add little"}.>${
+FOLLOWUP: <${
+    final
+      ? "the single word DONE"
+      : "DEFAULT to the single word DONE. Only ask ONE short, pointed Level " +
+        level +
+        " follow-up when it would MATERIALLY change the grade or resolve a genuine ambiguity in what they said. If the answer already stands on its own, or a further probe would only add marginal detail, output DONE."
+  }>${
     final ? "\nThis is the candidate's FINAL answer for this level — output FOLLOWUP: DONE regardless." : ""
   }`;
   const user = `Interview so far (Level ${level}):\n\n${transcript}\n\nYour response (FEEDBACK then FOLLOWUP):`;
@@ -121,4 +127,82 @@ export function buildHintPrompt(transcript: string): GradeInput {
   const system = `You are a supportive interview coach. The candidate is mid-answer and wants a hint. Give ONE short nudge — point at what to consider next, a missing angle, or a leading sub-question — WITHOUT giving the full answer. One or two sentences.`;
   const user = `Interview so far:\n\n${transcript}\n\nGive one coaching hint (do not answer for them):`;
   return { system, user };
+}
+
+/**
+ * End-of-session debrief (ADR-0003). Generated once, AFTER the whole ladder is graded,
+ * so full candor is safe — nothing leaks into an unaided run. One level per entry.
+ */
+export interface DebriefLevelInput {
+  level: 1 | 2 | 3;
+  finalScore: number;
+  passed: boolean;
+  question: string;
+  answer: string;
+  probing?: string;
+  strengths?: string;
+  weaknesses?: string;
+}
+
+/** The structured debrief the UI renders as a colour-coded card. */
+export interface Debrief {
+  headline: string;
+  overall: string;
+  levels: { level: 1 | 2 | 3; verdict: string; good: string; improve: string; next: string }[];
+}
+
+/** Build the debrief prompt from the graded session. Free-text completion returning strict JSON. */
+export function buildDebriefPrompt(session: DebriefLevelInput[]): GradeInput {
+  const system = `You are a supportive but candid expert interview coach writing a post-interview debrief. The interview is over, so be fully specific — name what to add and how to improve. Return ONLY strict JSON (no prose, no code fences) matching exactly this shape:
+{"headline": string, "overall": string, "levels": [{"level": number, "verdict": string, "good": string, "improve": string, "next": string}]}
+- headline: one short, encouraging line summarising the session.
+- overall: 2–3 sentences on the biggest theme across all levels and where to focus.
+- one levels[] entry per level provided, in order. For each: verdict = one short sentence on how the level landed; good = the strongest thing about the answer; improve = the single most important thing that was thin or missing; next = ONE concrete, actionable step to get better. Keep each field to one sentence. Ground everything in what the candidate actually said.`;
+
+  const user = session
+    .map((s) => {
+      const parts = [
+        `## Level ${s.level} — scored ${s.finalScore} (${s.passed ? "cleared" : "not cleared"})`,
+        `Question: ${s.question}`,
+        `Answer: ${s.answer}`,
+      ];
+      if (s.probing) parts.push(`Follow-ups and responses:\n${s.probing}`);
+      if (s.strengths) parts.push(`Grader noted strengths: ${s.strengths}`);
+      if (s.weaknesses) parts.push(`Grader noted weaknesses: ${s.weaknesses}`);
+      return parts.join("\n");
+    })
+    .join("\n\n");
+
+  return { system, user: `${user}\n\nWrite the debrief JSON now.` };
+}
+
+/**
+ * Tolerantly parse the debrief JSON (strip code fences / surrounding prose, then JSON.parse
+ * and validate). Returns null on any failure so the caller can silently skip the card.
+ */
+export function parseDebriefReply(raw: string): Debrief | null {
+  try {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start === -1 || end === -1 || end <= start) return null;
+    const obj = JSON.parse(raw.slice(start, end + 1)) as Partial<Debrief>;
+    if (!obj || !Array.isArray(obj.levels)) return null;
+    const levels = obj.levels
+      .filter((l): l is Debrief["levels"][number] => !!l && typeof l.level === "number")
+      .map((l) => ({
+        level: (l.level === 2 ? 2 : l.level === 3 ? 3 : 1) as 1 | 2 | 3,
+        verdict: String(l.verdict ?? "").trim(),
+        good: String(l.good ?? "").trim(),
+        improve: String(l.improve ?? "").trim(),
+        next: String(l.next ?? "").trim(),
+      }));
+    if (!levels.length) return null;
+    return {
+      headline: String(obj.headline ?? "").trim(),
+      overall: String(obj.overall ?? "").trim(),
+      levels,
+    };
+  } catch {
+    return null;
+  }
 }

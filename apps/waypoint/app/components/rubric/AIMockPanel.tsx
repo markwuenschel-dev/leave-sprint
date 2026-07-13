@@ -4,10 +4,12 @@
  * AI Questions — a leveled interview ladder (Wayfinder #27 + #29). One Q Bank
  * question drives a session that climbs Level I → II → III: at each level the
  * provider generates a question, you answer, it probes with up to two adaptive
- * follow-ups that STAY at the current level, then grades the whole level as one
- * rubric entry. Passing a level (finalScore ≥ LEVEL_PASS) escalates; falling
- * short ends the session. Talks to /api/interview over fetch only (never imports
- * @/lib/llm, so SDKs stay server-side).
+ * follow-ups (at the model's discretion) that STAY at the current level, then
+ * grades the whole level as one rubric entry. The session always climbs all
+ * three levels and grades each — the per-level score (≥ LEVEL_PASS) marks a
+ * level cleared but no longer gates progression. After the last level a one-shot
+ * end-of-session debrief gives actionable feedback. Talks to /api/interview over
+ * fetch only (never imports @/lib/llm, so SDKs stay server-side).
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +17,17 @@ import { QBANK, QB_TRACK_MAP, type TrackKey, type QBankQuestion } from "@waypoin
 import { useWaypointStore } from "@/lib/store";
 import { todayIso } from "@/lib/domain";
 import type { RubricEntry } from "@waypoint/rubric";
-import { Loader2, Sparkles, Send, Mic, MicOff } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Send,
+  Mic,
+  MicOff,
+  GraduationCap,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+} from "lucide-react";
 
 const TRACKS: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
 const MAX_ADAPTIVE = 2; // adaptive follow-ups per level, at the model's discretion
@@ -32,6 +44,14 @@ interface LevelOutcome {
   level: 1 | 2 | 3;
   result: GradeResult;
   passed: boolean;
+  /** The graded exchange, kept so the end-of-session debrief can reference each level. */
+  exchange: { question: string; answer: string; probing?: string };
+}
+/** Structured debrief the DebriefCard renders (mirrors the server's Debrief shape). */
+interface Debrief {
+  headline: string;
+  overall: string;
+  levels: { level: 1 | 2 | 3; verdict: string; good: string; improve: string; next: string }[];
 }
 type Turn = { who: "ai" | "you" | "hint" | "feedback"; text: string };
 type Phase = "idle" | "answering" | "busy" | "done";
@@ -185,6 +205,60 @@ function LevelGradeCard({ level, result, passed }: { level: number; result: Grad
   );
 }
 
+/** One colour-coded line in the debrief (What worked / What to improve / Do next). */
+function DebriefRow({ icon, color, label, text }: { icon: React.ReactNode; color: string; label: string; text: string }) {
+  return (
+    <div className="flex gap-2">
+      <span className="mt-0.5 shrink-0" style={{ color }} aria-hidden>
+        {icon}
+      </span>
+      <p className="text-sm text-[var(--text-mid)]">
+        <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color }}>
+          {label}:{" "}
+        </span>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/** The end-of-session debrief — the colourful centerpiece of the results. */
+function DebriefCard({ debrief, clearedCount }: { debrief: Debrief; clearedCount: number }) {
+  return (
+    <div className={`${box} overflow-hidden`}>
+      <div className="flex items-center gap-2 border-b border-[var(--hairline)] bg-gradient-to-r from-[var(--cyan)]/15 to-transparent px-4 py-3">
+        <GraduationCap size={18} className="text-[var(--cyan)]" aria-hidden />
+        <span className="font-semibold text-[var(--text)]">{debrief.headline || "Your debrief"}</span>
+        <span className="ml-auto rounded-lg border border-[var(--cyan)]/40 px-2 py-0.5 text-[11px] text-[var(--cyan)]">
+          cleared {clearedCount} of 3
+        </span>
+      </div>
+      <div className="space-y-4 p-4">
+        {debrief.overall ? <p className="text-sm text-[var(--text-mid)]">{debrief.overall}</p> : null}
+        {debrief.levels.map((l) => (
+          <div key={l.level} className={`${box} space-y-2 p-3`}>
+            <div className="flex items-baseline gap-2">
+              <span className="rounded-md border border-[var(--hairline)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[var(--text-dim)]">
+                Level {l.level}
+              </span>
+              {l.verdict ? <span className="text-sm text-[var(--text-mid)]">{l.verdict}</span> : null}
+            </div>
+            {l.good ? (
+              <DebriefRow icon={<CheckCircle2 size={14} />} color="#10b981" label="What worked" text={l.good} />
+            ) : null}
+            {l.improve ? (
+              <DebriefRow icon={<AlertTriangle size={14} />} color="#f59e0b" label="What to improve" text={l.improve} />
+            ) : null}
+            {l.next ? (
+              <DebriefRow icon={<ArrowRight size={14} />} color="var(--cyan)" label="Do next" text={l.next} />
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AIMockPanel() {
   const addRubricEntry = useWaypointStore((s) => s.addRubricEntry);
   // Cross-session memory (persists via /api/state) so a fresh page load doesn't
@@ -208,6 +282,8 @@ export function AIMockPanel() {
   const [coaching, setCoaching] = useState(false);
   const [usedHint, setUsedHint] = useState(false);
   const [levelResults, setLevelResults] = useState<LevelOutcome[]>([]);
+  const [debrief, setDebrief] = useState<Debrief | null>(null);
+  const [debriefLoading, setDebriefLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -303,6 +379,8 @@ export function AIMockPanel() {
     setQItem(item);
     setLevel(1);
     setLevelResults([]);
+    setDebrief(null);
+    setDebriefLoading(false);
     setQSource(`generated:${provider}`);
     await askLevel(item, 1);
   }
@@ -384,7 +462,30 @@ export function AIMockPanel() {
     }
   }
 
-  /** Grade the current level as one entry, then gate: pass → escalate, fall short → end. */
+  /** Generate the end-of-session debrief from the graded ladder (best-effort). */
+  async function runDebrief(results: LevelOutcome[]) {
+    setDebriefLoading(true);
+    try {
+      const session = results.map((o) => ({
+        level: o.level,
+        finalScore: o.result.entry.finalScore ?? 0,
+        passed: o.passed,
+        question: o.exchange.question,
+        answer: o.exchange.answer,
+        probing: o.exchange.probing,
+        strengths: o.result.entry.strengths || undefined,
+        weaknesses: o.result.entry.weaknesses || undefined,
+      }));
+      const j = await post({ action: "debrief", session });
+      if (j?.debrief) setDebrief(j.debrief as Debrief);
+    } catch {
+      // Best-effort: the session is already graded and logged; just skip the card.
+    } finally {
+      setDebriefLoading(false);
+    }
+  }
+
+  /** Grade the current level as one entry, then climb: always advance through L1→L2→L3. */
   async function gradeLevel(levelTurns: Turn[]) {
     setPhase("busy");
     try {
@@ -412,15 +513,19 @@ export function AIMockPanel() {
       });
       addRubricEntry(j.entry);
       const passed = (j.entry.finalScore ?? 0) >= LEVEL_PASS;
-      setLevelResults((r) => [...r, { level, result: j, passed }]);
-      // Gate: escalate only if this level passed and a harder rung remains.
-      if (passed && level < 3 && qItem) {
+      // Build the results synchronously so the debrief sees every level (state is async).
+      const outcome: LevelOutcome = { level, result: j, passed, exchange: { question, answer, probing } };
+      const allResults = [...levelResults, outcome];
+      setLevelResults(allResults);
+      // Always climb — the score marks a level cleared but no longer gates progression.
+      if (level < 3 && qItem) {
         const nextLevel = (level + 1) as 1 | 2 | 3;
         setLevel(nextLevel);
         await askLevel(qItem, nextLevel);
       } else {
         setTurns([]);
         setPhase("done");
+        void runDebrief(allResults);
       }
     } catch (e) {
       setError(String((e as Error).message));
@@ -466,8 +571,8 @@ export function AIMockPanel() {
     if (next.length >= 2) void gradeLevel(next);
   }
 
-  const lastOutcome = levelResults.length ? levelResults[levelResults.length - 1] : null;
-  const clearedAll = levelResults.length === 3 && !!lastOutcome?.passed;
+  const clearedCount = levelResults.filter((o) => o.passed).length;
+  const clearedAll = levelResults.length === 3 && levelResults.every((o) => o.passed);
 
   return (
     <div className="space-y-4">
@@ -549,7 +654,7 @@ export function AIMockPanel() {
               }`}
             />
           ))}
-          <span className="ml-2 text-[var(--text-dim)]">{QBANK[track].short} · {map.role} · pass ≥ {LEVEL_PASS} to climb</span>
+          <span className="ml-2 text-[var(--text-dim)]">{QBANK[track].short} · {map.role} · all 3 levels · {LEVEL_PASS}+ clears a level</span>
         </div>
       ) : null}
 
@@ -603,8 +708,9 @@ export function AIMockPanel() {
       ) : phase === "idle" ? (
         <div className={`${box} p-6 text-center text-sm text-[var(--text-dim)]`}>
           Pick a provider and track, then <strong className="text-[var(--text-mid)]">Start</strong>. One question climbs a
-          three-level ladder — Level I → II → III. Each level asks, probes with up to two adaptive follow-ups, then grades
-          into your rubric. Pass a level ({LEVEL_PASS}+) to climb; fall short and the session ends there.
+          three-level ladder — Level I → II → III. Each level asks, probes with a follow-up or two when it helps, then grades
+          into your rubric. It climbs all three levels and grades each ({LEVEL_PASS}+ clears a level), then hands you an
+          end-of-session debrief.
         </div>
       ) : null}
 
@@ -672,7 +778,7 @@ export function AIMockPanel() {
         <div className="rounded-2xl border border-[#ef4444]/40 bg-[#ef4444]/5 p-3 text-sm text-[#ef4444]">{error}</div>
       ) : null}
 
-      {/* Session summary + per-level grades */}
+      {/* Session summary + debrief + per-level grades */}
       {levelResults.length ? (
         <div className="space-y-3">
           {phase === "done" ? (
@@ -681,10 +787,16 @@ export function AIMockPanel() {
               rubric.{" "}
               {clearedAll
                 ? "You cleared all three levels."
-                : `Stopped at Level ${lastOutcome?.level} — did not pass (needs ${LEVEL_PASS}+).`}{" "}
+                : `Cleared ${clearedCount} of 3 (a level clears at ${LEVEL_PASS}+).`}{" "}
               Hit <strong>Restart</strong> to go again.
             </div>
           ) : null}
+          {debriefLoading ? (
+            <div className={`${box} flex items-center gap-2 p-4 text-sm text-[var(--text-dim)]`}>
+              <Loader2 size={15} className="animate-spin text-[var(--cyan)]" aria-hidden /> Writing your debrief…
+            </div>
+          ) : null}
+          {debrief ? <DebriefCard debrief={debrief} clearedCount={clearedCount} /> : null}
           {levelResults.map((r) => (
             <LevelGradeCard key={r.level} level={r.level} result={r.result} passed={r.passed} />
           ))}

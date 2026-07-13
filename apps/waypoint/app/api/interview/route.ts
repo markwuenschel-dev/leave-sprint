@@ -15,6 +15,9 @@ import {
   buildProbePrompt,
   buildHintPrompt,
   parseProbeReply,
+  buildDebriefPrompt,
+  parseDebriefReply,
+  type DebriefLevelInput,
 } from "@/lib/interview/prompt";
 import type { ObservationContext } from "@waypoint/rubric";
 
@@ -30,7 +33,7 @@ export async function GET() {
 }
 
 interface InterviewBody {
-  action?: "question" | "slate" | "probe" | "hint" | "grade";
+  action?: "question" | "slate" | "probe" | "hint" | "grade" | "debrief";
   provider: ProviderId;
   // action: "question" | "slate"
   role?: string;
@@ -49,6 +52,8 @@ interface InterviewBody {
   answer?: string;
   probingTranscript?: string;
   knownTags?: string[];
+  // action: "debrief" — the whole graded session, one entry per level
+  session?: DebriefLevelInput[];
 }
 
 export async function POST(req: Request) {
@@ -105,6 +110,13 @@ export async function POST(req: Request) {
       if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
       const hint = (await p.complete(buildHintPrompt(body.transcript))).trim();
       return NextResponse.json({ hint });
+    }
+
+    if (action === "debrief") {
+      if (!body.session?.length) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+      const raw = await p.complete(buildDebriefPrompt(body.session));
+      // null when the model didn't return usable JSON — the client silently skips the card.
+      return NextResponse.json({ debrief: parseDebriefReply(raw) });
     }
 
     // action: "grade"
