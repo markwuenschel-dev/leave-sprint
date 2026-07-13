@@ -30,14 +30,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@waypoint/rubric", "@waypoint/qbank", "@waypoint/practice-types"],
-  // Emit a self-contained server bundle (.next/standalone) with only the traced deps, so the
-  // deploy image copies a fraction of node_modules instead of the whole tree — much less disk
-  // I/O and a far smaller image on the shared EC2 box. Needs outputFileTracingRoot (below) so
-  // the monorepo's workspace packages are traced. The infra Dockerfile must serve this bundle
-  // (`node apps/waypoint/server.js`) for the savings to land; `next start` still works too.
-  output: "standalone",
-  // monorepo: trace from the repo root so standalone captures workspace deps (and silences the
-  // wrong-lockfile root warning).
+  // monorepo: silence wrong-lockfile root warning
   outputFileTracingRoot: path.join(__dirname, "../.."),
 };
 
