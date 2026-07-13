@@ -11,17 +11,29 @@ import type { GradeInput } from "@/lib/llm";
 const DIMS = RD.universalDims.map((d) => `- ${d.id} (0–${d.max}): ${d.label}`).join("\n");
 const GATES = RD.gates.map((g) => `- ${g.gate}: ${g.req}`).join("\n");
 
-const SYSTEM_BASE = `You are an expert technical interviewer grading ONE candidate answer against a competency rubric. Emit only the observations object matching the provided JSON schema — your raw judgment. A deterministic engine computes the final grade from it, so do not compute totals yourself.
+const SYSTEM_BASE = `You are an expert technical interviewer grading exactly ONE candidate answer against a competency rubric. Output ONLY the observations object matching the provided JSON schema. NEVER compute or mention a total or final grade — a deterministic engine derives it from your observations.
 
-Universal sub-scores — score each dimension on its own scale:
+Evidence discipline (apply to every field):
+- Score ONLY what the answer explicitly states. Base each score solely on text actually present — NEVER extrapolate, and NEVER credit knowledge, correctness, or skill the candidate did not demonstrate.
+- Naming a concept without explaining it does NOT demonstrate it. Score vague, buzzword, or hand-wavy answers low and name the gap.
+- When evidence is thin or ambiguous, score DOWN and widen scoreUncertainty — never give the benefit of the doubt.
+
+Score bands — apply to every 0–100 field, and proportionally to each sub-score's own 0–max scale:
+- 85–100: complete and correct — explains the "why," handles nuance and edge cases, no errors.
+- 65–84: solid — core idea correct, minor gaps or imprecision.
+- 45–64: partial — right direction but thin, incomplete, or partly wrong.
+- 20–44: weak — mostly missing, vague, or notably incorrect.
+- 0–19: absent or wrong — off-topic, empty, or fundamentally mistaken.
+
+Universal sub-scores — score each on its own scale using the bands above:
 ${DIMS}
 
-Level scores L1/L2/L3 (each 0–100) — how strongly the answer demonstrates each difficulty level. They MUST be monotonic: L3 ≤ L2 ≤ L1 (a candidate cannot demonstrate a harder level more strongly than an easier one).
+Level scores L1/L2/L3 (each 0–100) — how strongly the answer demonstrates each difficulty level. Derive them IN ORDER: score L1 (foundational mastery) first; then L2 (deeper tradeoffs and edge cases), which MUST be ≤ L1; then L3 (senior, systems-level judgment), which MUST be ≤ L2. The result MUST be monotonic (L3 ≤ L2 ≤ L1) — a candidate cannot demonstrate a harder level more strongly than an easier one. Weak fundamentals cap every level, even when the answer shows flashes of advanced insight.
 
-Gates — give each a verdict of Pass, Partial, or Fail:
+Gates — verdict each Pass, Partial, or Fail. Award Pass ONLY on explicit evidence the requirement is met; Partial when partly met; default to Fail when the answer gives no evidence either way. Absence of evidence is NEVER a Pass.
 ${GATES}
 
-Also provide gapTypes (from the allowed enum), severity, nextActionType, brief strengths / weaknesses / surviveProbing, knowledge and weakness tags, a calibrationConfidence, and scoreUncertainty {range, reason}. Grade strictly against what the answer actually contains — do not credit unstated knowledge.`;
+Also provide gapTypes (from the allowed enum), severity, nextActionType, brief strengths / weaknesses / surviveProbing (how the answer held up under any follow-up probing), knowledge and weakness tags, a calibrationConfidence, and scoreUncertainty {range, reason}. Lower calibrationConfidence and widen scoreUncertainty for short, ambiguous, or partial answers; keep them tight only when the evidence is clear.`;
 
 export interface GradeArgs {
   question: string;
@@ -35,11 +47,13 @@ export interface GradeArgs {
 /** Assemble the system + user prompt the provider seam grades. */
 export function buildGradeInput(args: GradeArgs): GradeInput {
   const system = args.knownTags?.length
-    ? `${SYSTEM_BASE}\n\nPrefer these existing tags where they fit (put genuinely new ones in proposedNewTags): ${args.knownTags.join("; ")}.`
+    ? `${SYSTEM_BASE}\n\nPrefer these existing tags where they genuinely fit; put only truly new ones in proposedNewTags: ${args.knownTags.join("; ")}.`
     : SYSTEM_BASE;
 
-  let user = `Question:\n${args.question}\n\nCandidate answer:\n${args.answer}`;
-  if (args.probingTranscript) user += `\n\nProbing follow-ups and responses:\n${args.probingTranscript}`;
+  let user = `Question asked (context only — do NOT grade the question itself):\n${args.question}\n\nCandidate answer to grade:\n${args.answer}`;
+  if (args.probingTranscript) {
+    user += `\n\nProbing follow-ups and the candidate's responses (additional evidence — weigh alongside the answer):\n${args.probingTranscript}`;
+  }
 
   return { system, user };
 }
