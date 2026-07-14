@@ -96,12 +96,14 @@ CREATE TABLE IF NOT EXISTS wp_app_meta (
   role_filter text NOT NULL DEFAULT 'ALL',
   qbank_pos jsonb NOT NULL DEFAULT '{"track":"swe","idx":0}',
   qbank_order jsonb NOT NULL DEFAULT '{}',
+  study_guides jsonb NOT NULL DEFAULT '{}',
   solid_interview_logs jsonb NOT NULL DEFAULT '{"SWE_FS_II":[],"MLE_II":[]}',
   mock_seq integer NOT NULL DEFAULT 0,
   mock_asked jsonb NOT NULL DEFAULT '[]',
   last_updated text
 );
 ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS qbank_order jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS study_guides jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS mock_seq integer NOT NULL DEFAULT 0;
 ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS mock_asked jsonb NOT NULL DEFAULT '[]';
 `;

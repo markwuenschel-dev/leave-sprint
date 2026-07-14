@@ -99,6 +99,7 @@ export const appMeta = pgTable("wp_app_meta", {
   roleFilter: text("role_filter").notNull().default("ALL"),
   qbankPos: jsonb("qbank_pos").$type<{ track: string; idx: number }>().notNull().default({ track: "swe", idx: 0 }),
   qbankOrder: jsonb("qbank_order").$type<Record<string, string[]>>().notNull().default({}),
+  studyGuides: jsonb("study_guides").$type<Record<string, unknown>>().notNull().default({}),
   solidInterviewLogs: jsonb("solid_interview_logs")
     .$type<{ SWE_FS_II: string[]; MLE_II: string[] }>()
     .notNull()

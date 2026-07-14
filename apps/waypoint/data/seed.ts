@@ -16,4 +16,5 @@ export const SEED: WaypointState = {
   solidInterviewLogs: { SWE_FS_II: [], MLE_II: [] },
   mockSeq: 0,
   mockAsked: [],
+  studyGuides: {},
 };

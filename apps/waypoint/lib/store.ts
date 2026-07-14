@@ -21,6 +21,7 @@ import type {
   WaypointState,
 } from "./domain";
 import type { TwinImportSummary } from "./twinImport";
+import type { StudyGuide } from "./study";
 import { emptyRhythm, todayIso, weekStartIso } from "./domain";
 
 const now = () => new Date().toISOString();
@@ -40,6 +41,10 @@ export interface WaypointStore extends WaypointState {
   setQBankPos: (track: TrackKey, idx: number) => void;
   /** Replace a track's deck order (null clears back to natural data order). */
   setQBankOrder: (track: TrackKey, order: string[] | null) => void;
+  /** Cache a freshly built Study Guide for a role scope (null clears it). */
+  setStudyGuide: (role: RoleFilter, guide: StudyGuide | null) => void;
+  /** Toggle a week-plan checkbox on the cached guide for a role. */
+  toggleStudyWeekItem: (role: RoleFilter, itemId: string) => void;
   addRubricEntry: (entry: Partial<RubricEntry>) => void;
   /** Patch fields on an existing entry (gap status chips, close-on-retest, etc.). */
   patchRubricEntry: (id: string, patch: Partial<RubricEntry>) => void;
@@ -99,6 +104,7 @@ const mergeHydration = (persisted: unknown, current: WaypointStore): WaypointSto
     weeklyReviews: { ...p.weeklyReviews, ...current.weeklyReviews },
     qbankStatus: { ...p.qbankStatus, ...current.qbankStatus },
     qbankOrder: { ...p.qbankOrder, ...current.qbankOrder },
+    studyGuides: { ...p.studyGuides, ...current.studyGuides },
     rubricEntries: mergeEntries(p.rubricEntries ?? [], current.rubricEntries),
     applications: unionById(p.applications ?? [], current.applications),
     solidInterviewLogs: {
@@ -207,6 +213,32 @@ export const useWaypointStore = create<WaypointStore>()(
           if (order == null) delete next[track];
           else next[track] = order;
           return { qbankOrder: next, lastUpdated: now() };
+        }),
+
+      setStudyGuide: (role, guide) =>
+        set((s) => {
+          const next = { ...s.studyGuides };
+          if (guide == null) delete next[role];
+          else next[role] = guide;
+          return { studyGuides: next, lastUpdated: now() };
+        }),
+
+      toggleStudyWeekItem: (role, itemId) =>
+        set((s) => {
+          const guide = s.studyGuides[role];
+          if (!guide) return s;
+          return {
+            studyGuides: {
+              ...s.studyGuides,
+              [role]: {
+                ...guide,
+                week: guide.week.map((w) =>
+                  w.id === itemId ? { ...w, done: !w.done } : w,
+                ),
+              },
+            },
+            lastUpdated: now(),
+          };
         }),
 
       addRubricEntry: (entry) =>
@@ -356,6 +388,8 @@ export const useWaypointStore = create<WaypointStore>()(
           setQBankStatus: _h,
           setQBankPos: _i,
           setQBankOrder: _setQOrd,
+          setStudyGuide: _setSG,
+          toggleStudyWeekItem: _togSW,
           addRubricEntry: _j,
           patchRubricEntry: _patchR,
           importRubricEntries: _impR,
@@ -392,6 +426,7 @@ export const useWaypointStore = create<WaypointStore>()(
         qbankStatus: s.qbankStatus,
         qbankPos: s.qbankPos,
         qbankOrder: s.qbankOrder,
+        studyGuides: s.studyGuides,
         applications: s.applications,
         solidInterviewLogs: s.solidInterviewLogs,
         mockSeq: s.mockSeq,

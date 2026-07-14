@@ -1,6 +1,7 @@
 import type { Problem, FileDefenseItem, Energy } from "@waypoint/practice-types";
 import type { RubricEntry } from "@waypoint/rubric";
 import type { QBankStatus, TrackKey } from "@waypoint/qbank";
+import type { StudyGuide } from "./study";
 
 export type Phase = "B" | "A";
 /**
@@ -132,6 +133,11 @@ export interface WaypointState {
    */
   mockSeq: number;
   mockAsked: string[];
+  /**
+   * Cached Study Guides, one per role scope, each carrying its build watermark
+   * (gradeCount) so the surface can flag staleness. Rebuilt only on demand.
+   */
+  studyGuides: Partial<Record<RoleFilter, StudyGuide>>;
   lastUpdated?: string;
 }
 

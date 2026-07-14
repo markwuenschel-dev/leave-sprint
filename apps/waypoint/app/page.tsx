@@ -7,6 +7,7 @@ import {
   BookOpen,
   Shield,
   Mic2,
+  GraduationCap,
   Briefcase,
   CalendarRange,
   Sparkles,
@@ -22,6 +23,7 @@ import {
   PracticeSurface,
   DefenseSurface,
   InterviewSurface,
+  StudySurface,
   ApplicationsSurface,
   WeeklySurface,
   MockSurface,
@@ -44,6 +46,7 @@ const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "practice", label: "Practice", icon: BookOpen },
   { id: "defense", label: "Defense", icon: Shield },
   { id: "interview", label: "Interview", icon: Mic2 },
+  { id: "study", label: "Study", icon: GraduationCap },
   { id: "applications", label: "Applications", icon: Briefcase },
   { id: "weekly", label: "Weekly", icon: CalendarRange },
   { id: "mock", label: "AI Questions", icon: Sparkles },
@@ -176,6 +179,7 @@ export default function WaypointHome() {
         {tab === "interview" && (
           <InterviewSurface key={interviewTab} initialTab={interviewTab} />
         )}
+        {tab === "study" && <StudySurface />}
         {tab === "applications" && <ApplicationsSurface />}
         {tab === "weekly" && <WeeklySurface />}
         {tab === "mock" && <MockSurface />}

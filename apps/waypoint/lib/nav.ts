@@ -6,6 +6,7 @@ export type MainTabId =
   | "practice"
   | "defense"
   | "interview"
+  | "study"
   | "applications"
   | "weekly"
   | "mock"

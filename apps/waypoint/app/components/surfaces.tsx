@@ -3,6 +3,7 @@ export { ReadinessSurface } from "./surfaces/ReadinessSurface";
 export { PracticeSurface } from "./surfaces/PracticeSurface";
 export { DefenseSurface } from "./surfaces/DefenseSurface";
 export { InterviewSurface } from "./surfaces/InterviewSurface";
+export { StudySurface } from "./surfaces/StudySurface";
 export { ApplicationsSurface } from "./surfaces/ApplicationsSurface";
 export { WeeklySurface } from "./surfaces/WeeklySurface";
 export { MockSurface } from "./surfaces/MockSurface";
