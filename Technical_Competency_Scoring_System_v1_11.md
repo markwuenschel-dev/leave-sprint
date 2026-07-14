@@ -5,6 +5,8 @@ Level I / II / III • Difficulty-Calibrated • Domain- and Role-Aware
 
 Version 1.11 — Role-Weighted, Schema-Enforced, BI-Aware Longitudinal Tracking Layer
 
+Revision 2 (2026-07-14) — Waypoint import-parity patch: uniform `finalScore` required in every record including fast mode; `calibration.graderModel` provenance; walkthrough quick-log classification; gap soft-open default. See §29.
+
 Designed for prospective and retrospective evaluation of coding, debugging, technical interviews, system design, and production engineering work.
 
 # 1. Purpose and Operating Principle
@@ -35,6 +37,10 @@ Every graded answer must report all of the following fields in this order:
 
 - Qualifying demonstrated level: answer level capped by the problem level, difficulty evidence, and autonomy requirements
 
+- Final score: the uniform 0–100 supporting grade (`finalScore`), computed per §21.5 and always reported explicitly
+
+The three level scores remain controlling; the uniform final score is supporting evidence, but it is never optional. Downstream tracking (averages, pass rates, score histograms, trend charts) is computed from `finalScore`, and an importing tracker that receives a record without it will silently derive `finalScore` from whatever supporting scores are present — which evaluates to 0 when they were also omitted. A missing final score therefore corrupts every rolling statistic, not just one record.
+
 The grader must not substitute a single task-specific total, a universal total, or a binary “demonstrated / not demonstrated” table for the three numerical level scores. Task-specific category points may be shown as supporting evidence, but they do not replace the three required scores.
 
 Role and domain mapping affect where the evidence is recorded. They do not raise the answer score. Problem level caps qualifying evidence; it does not suppress the Level II or Level III developmental scores.
@@ -50,13 +56,14 @@ Level III answer score: \_\_/100 — Pass / Borderline / Fail
   
 Answer level: Level \_\_  
 Qualifying demonstrated level: Level \_\_  
+Final score (uniform): \_\_/100  
 Primary domain: \_\_  
 Primary role: \_\_  
 Assistance: \_\_  
 Caps/penalties: \_\_  
 Main reason the next level was not reached: \_\_
 
-Validation rule: if any of the three numerical answer scores is missing, the assessment must be regenerated before it is recorded in the progress tracker.
+Validation rule: if any of the three numerical answer scores or the uniform `finalScore` is missing, the assessment must be regenerated before it is recorded in the progress tracker.
 
 
 ## 1.2 Mandatory Assessment Extraction and Coverage Contract
@@ -475,7 +482,7 @@ Each assessment must be tagged on two separate axes: technical domain and role c
 | Languages                    | Java; Python; TypeScript; SQL                                                                                      |
 | Frameworks/platforms         | Spring Boot; React; AWS; Docker/CI/CD; Databases                                                                   |
 | Core engineering specialties | Algorithms/DSA; Backend/API engineering; Frontend engineering; Distributed systems; Observability/reliability      |
-| Data and AI specialties      | Data modeling; Data engineering; Statistical analysis; Machine learning; Retrieval/RAG; Evaluation/experimentation |
+| Data and AI specialties      | Data modeling; Data engineering; Data analysis; Statistical analysis; Machine learning; Retrieval/RAG; Evaluation/experimentation |
 
 ## 9.2 Domain Subcompetencies
 
@@ -1057,6 +1064,8 @@ Accepted `status` values: `open`, `in progress`, `closed`, `reopened`, `not appl
 
 Rules: do not mark a gap closed because it was explained once immediately after feedback. Close a gap only when the candidate demonstrates it on a later attempt or in a different but comparable context. Reopen a gap if it recurs after being marked closed.
 
+Soft-open default (rev 2): any record carrying one or more `gapTypes` or `knowledgeGapTags` without an explicit `gapClosureStatus` is treated by the importing tracker as `{"status": "open", "openedDate": <record date>, "retestRequired": true}`. Emit `gapClosureStatus` explicitly when a different status is intended (for example, a re-demonstration that closes the gap); otherwise the default applies automatically.
+
 
 ## 17.12 Priority and Next Action
 
@@ -1147,6 +1156,7 @@ Use `calibration` to identify who or what produced the score and how much trust 
 {
   "calibration": {
     "evaluatorType": "AI grader",
+    "graderModel": "claude-sonnet-5",
     "humanReviewed": false,
     "realInterviewSignal": false,
     "calibrationConfidence": "Medium"
@@ -1158,9 +1168,12 @@ Accepted `evaluatorType` values: `self`, `AI grader`, `peer`, `senior engineer`,
 
 Accepted `calibrationConfidence` values: `Low`, `Medium`, `High`.
 
+`graderModel` (rev 2): the exact model identifier that produced the grade (for example `claude-sonnet-5`), stamped on every record where `evaluatorType` is `AI grader`. Manually graded records omit it. The tracker's grader-provenance filter slices history, gaps, retest, and performance boards by this field to detect a lenient or drifting grader; an AI-graded record without it cannot be audited by model.
+
 Rules:
 
 - AI grading is useful for consistency but should not be treated as equivalent to human interview signal.
+- Every AI-graded record must carry both `evaluatorType: "AI grader"` and the exact `graderModel` id. Do not use marketing names or aliases; use the model id string the grading system reports.
 - Human mock interviews, senior-engineer review, and real interview feedback should receive higher calibration weight.
 - `realInterviewSignal: true` should be reserved for actual recruiter, hiring-manager, interviewer, or interview-loop feedback.
 - Low calibration confidence should reduce trend weight even when the score is high.
@@ -2425,9 +2438,9 @@ Use `loggingMode` to control how much of the diagnostic layer must be populated 
 
 ### `fast` mode
 
-Required: the three level scores, `answerLevel`, `qualifyingDemonstratedLevel`, `gates`, `weaknessTags`, `knowledgeGapTags`, `taskType`, `difficulty`, `assistanceLevel`. Everything else may be omitted.
+Required: `assessmentId`, `date`, `task`, the three level scores, **`finalScore` (the uniform 0–100 final grade — never omitted; see rule below)**, `answerLevel`, `qualifyingDemonstratedLevel`, `gates`, `weaknessTags`, `knowledgeGapTags`, `taskType`, `difficulty`, `assistanceLevel`. Everything else may be omitted.
 
-Use `fast` for high-volume routine drilling: coding-bank grinding, SQL reps, and other repeated practice where the primary need is a pass/fail signal and the specific missing concept, not a full readiness re-derivation.
+Use `fast` for high-volume routine drilling: coding-bank grinding, SQL reps, Q Bank mastered/quick-log entries, defense (project story) cold-walkthrough reps graded in-app (`taskType: "walkthrough"`, typically `evidenceClass: "classB"`), and other repeated practice where the primary need is a pass/fail signal and the specific missing concept, not a full readiness re-derivation.
 
 ### `full` mode
 
@@ -2438,7 +2451,8 @@ Use `full` for: the first occurrence of a new or previously unseen gap, any rete
 ### Rules
 
 - `loggingMode` is optional; a record without it is treated as `full` for backward compatibility with pre-v1.11 records.
-- Switching a record to `fast` never permits skipping the three-score core or the gates — those are never optional regardless of logging mode.
+- Switching a record to `fast` never permits skipping the three-score core, the uniform `finalScore`, or the gates — those are never optional regardless of logging mode. Rev 2 note: earlier printings of this section listed the fast-mode requireds without `finalScore`; graders following that list emitted records the importing tracker back-filled with a computed `finalScore` of 0 (both supporting scores defaulting to 0), silently dragging down every average. Always emit `finalScore` explicitly.
+- Leveled ladder sessions (an L1 question, then L2, then L3 stretch on the same concept) produce **one record per level**, linked with `attemptGroupId`/`attemptNumber` — the same one-record-per-attempt rule as coding (§1.2.2). Do not collapse a ladder into a single averaged record.
 - A tracker that is entirely `fast`-mode for months would lose the diagnostic richness this system exists for; treat a `full`-mode record as due at minimum once per active gap and once per calibration cycle, not only when convenient.
 - `trackerHealth` audits (§17.33) should include a `fast`/`full` distribution check so an unintentional drift toward all-`fast` logging is visible.
 - `loggingMode` supersedes the earlier undocumented `quickLog` boolean that appeared in the standard record example without a corresponding rubric section or schema type. Do not emit `quickLog` in new records; migrate `quickLog: true` to `loggingMode: "fast"` and `quickLog: false`/absent to `loggingMode: "full"` on next touch of a legacy record.
@@ -2525,6 +2539,7 @@ Rule: any future version that adds a new diagnostic object, tag, or enum value t
 >   
 > Caps:  
 > Penalties:  
+> Final score (uniform): /100  
 > Confirmed strengths:  
 > Confirmed weaknesses:  
 > Weakness tags:  
@@ -2541,7 +2556,7 @@ Rule: any future version that adds a new diagnostic object, tag, or enum value t
 > Anti-inflation checks:  
 > Next improvement target:
 
-A formal assessment record is incomplete if it omits the three level scores, task type, assistance level, assessment outcome for scored atomic attempts, source/coverage fields for migrated records, or attempt-linkage fields for retries.
+A formal assessment record is incomplete if it omits the three level scores, the uniform final score, task type, assistance level, assessment outcome for scored atomic attempts, source/coverage fields for migrated records, or attempt-linkage fields for retries.
 
 # 19. Example Domain/Role Mapping
 
@@ -2903,7 +2918,7 @@ A formal tracker export should flag entries that lack:
 | `rawScore` | Number | Computed as `universalScore × 0.60 + taskSpecificScore × 0.40`. |
 | `cap` | Number or `null` | Defaults to `null`, meaning no cap. |
 | `penalties` | Number | Defaults to `0`. |
-| `finalScore` | Number | Computed from `rawScore − penalties`, then capped when `cap` is not `null`. |
+| `finalScore` | Number `0`–`100` | **Required in every emitted record, including `loggingMode: "fast"` (rev 2).** If omitted, the importer computes `rawScore − penalties` (capped when `cap` is not `null`) — and when the supporting scores were also omitted this silently evaluates to `0`, poisoning averages, pass rates, and score histograms. Never omit. |
 | `levelScores` | Object with `L1`, `L2`, and `L3` scores | All three default to `null`. |
 | `demonstratedLevel` | Controlled string | Displays `—` in history. |
 | `confidence` | `High`, `Medium`, or `Low` | Displays `—` in history. |
@@ -3166,7 +3181,8 @@ The six universal subscores total `100`. Values must stay within the stated maxi
 6. When `cap` is a number, set `finalScore` to the lower of the post-penalty score and the cap.
 7. When `cap` is `null`, do not cap the score.
 8. Use the supplied `finalScore` when an authoritative final value has already been calculated and validated.
-9. Validate diagnostic fields when present.
+9. Grader obligation (rev 2): steps 1–8 describe how an *importer* recovers from missing fields; they are not permission to omit them. A grader must always emit `finalScore` explicitly (and the supporting `universalScore`/`taskSpecificScore` chain in `full` mode) so the importer never has to fall back to a degenerate computed value.
+10. Validate diagnostic fields when present.
 10. Do not allow `knowledgeGapTags`, `gapTypes`, `focusAreas`, `expectedElements`, or evidence volume to increase a score.
 11. Use diagnostic fields to select next practice targets, track retention, and update role-readiness coverage.
 12. Use staleness and retest data to decide whether an old passing score remains current.
@@ -3207,10 +3223,12 @@ Each formal assessment must include:
 - `levelScores.L1`
 - `levelScores.L2`
 - `levelScores.L3`
+- `finalScore`
 - `answerLevel`
 - `qualifyingDemonstratedLevel`
 - all mandatory gates
 - strengths, weaknesses, and next target
+- `calibration.graderModel` when `calibration.evaluatorType` is `AI grader`
 
 For coding assessments, also require `problemName` when known and `compileStatus` / `testStatus` when implementation evidence exists.
 
@@ -3253,6 +3271,7 @@ The correct response is not to defend the existing distribution. The correct res
 A scoring output is invalid when:
 
 - it lacks any of the three level scores
+- it lacks the uniform `finalScore` (any logging mode)
 - it collapses multiple assessable coding problems into one record without child entries
 - it overwrites retries instead of preserving linked attempts
 - it omits coverage audit data for a bulk migration
@@ -3299,6 +3318,7 @@ Once an evaluation begins, the rubric cannot be changed to alter the result. Cha
 > Logging mode (fast/full) model version: 1.0
 > Schema-doc parity rule version: 1.0
 > BIE/BIA role model version: 1.0
+> Import-parity patch revision: 2 (2026-07-14)
 
 
 # 24. Version 1.9.1 Hardening Changelog
@@ -3419,3 +3439,17 @@ Primary intent:
 - give the BI/DS case-study interview format its own honest classification instead of stretching `sysdesign` or `knowledge` to cover it;
 - make the JSON Schema actually enforce what the rubric has claimed was mandatory since v1.9.1;
 - make logging cost sustainable across the full length of a job search, not just the current leave sprint.
+
+# 29. Version 1.11 Revision 2 (2026-07-14) Waypoint Import-Parity Patch Changelog
+
+Revision 2 changes no scoring standard. It closes the gaps that let schema-valid grader output import badly into the Waypoint tracker.
+
+Fixed:
+
+- **Uniform `finalScore` is now explicitly required in every record, in every logging mode.** The §17.35 fast-mode required list had omitted it; graders following that list emitted records the importer back-filled with a computed `finalScore` of 0, corrupting averages, pass rates, and histograms. Updated: §1.1 (output contract + template + validation rule), §17.35, §21.3 omission table, §21.5 grader obligation, §22.1, §22.5 hard failure conditions, and the JSON schema (`finalScore` added to `properties` and `required`).
+- **`calibration.graderModel` added** (§17.15 + schema): AI-graded records must stamp the exact grader model id alongside `evaluatorType: "AI grader"`; the tracker's grader-provenance filter audits by it. Manual grades omit it.
+- **Gap soft-open default documented** (§17.11 + schema): `gapTypes`/`knowledgeGapTags` present without `gapClosureStatus` ⇒ importer opens the gap (`open`, `retestRequired: true`) automatically.
+- **Defense walkthrough quick-logs classified** (§17.35): in-app graded defense story reps are `taskType: "walkthrough"`, typically `evidenceClass: "classB"`, `loggingMode: "fast"`.
+- **Leveled ladder rule stated** (§17.35): L1→L2→L3 ladder sessions produce one record per level, linked by `attemptGroupId`/`attemptNumber`.
+- **`Data analysis` added to the domain taxonomy** (§9.1) to match the tracker's BI question track (taskType `knowledge`, domain `Data Analysis`, role `DS`).
+- **Schema score-chain parity**: `finalScore`, `universalScore`, `universalSubScores`, `taskSpecificScore`, `rawScore`, `cap`, `penalties`, `levelVerdicts`, `answerLevel`, `qualifyingDemonstratedLevel`, `demonstratedLevel`, `confidence`, `evidenceClass`, `primaryDomain`, `secondaryDomains`, `primaryRole`, `secondaryRoles`, `strengths`, `weaknesses`, and `nextTarget` now have typed definitions in `progress_tracker_record_schema_v1_11.json` (previously accepted only via `additionalProperties: true`, so their omission or mistyping was invisible to validation).

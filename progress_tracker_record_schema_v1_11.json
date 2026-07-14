@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "progress_tracker_record_schema_v1_11.json",
-  "title": "Technical Competency Progress Tracker Record v1.11",
+  "title": "Technical Competency Progress Tracker Record v1.11 (v1.11 rev 2, 2026-07-14)",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -14,7 +14,8 @@
     "levelScores",
     "answerLevel",
     "qualifyingDemonstratedLevel",
-    "gates"
+    "gates",
+    "finalScore"
   ],
   "properties": {
     "assessmentId": {
@@ -1047,7 +1048,7 @@
         "full",
         null
       ],
-      "description": "fast = three level scores + gates + weaknessTags/knowledgeGapTags only. full = complete diagnostic layer. Default assumed 'full' if omitted for backward compatibility with pre-v1.11 records."
+      "description": "fast = assessmentId/date/task, three level scores, finalScore (uniform 0-100, never omitted), answerLevel, qualifyingDemonstratedLevel, gates, weaknessTags/knowledgeGapTags, taskType, difficulty, assistanceLevel. full = complete diagnostic layer. Default assumed 'full' if omitted for backward compatibility with pre-v1.11 records. Supersedes the deprecated quickLog boolean (quickLog:true maps to 'fast')."
     },
     "expectedElements": {
       "type": "array",
@@ -1511,7 +1512,8 @@
             "null"
           ]
         }
-      }
+      },
+      "description": "Gap lifecycle. Soft-open default (rev 2): if gapTypes or knowledgeGapTags are present and this object is omitted, the importing tracker opens the gap automatically ({status:'open', openedDate:<record date>, retestRequired:true}). Emit explicitly when a different status is intended."
     },
     "priority": {
       "type": "object",
@@ -1724,6 +1726,13 @@
             "High",
             null
           ]
+        },
+        "graderModel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Exact model id that produced an AI grade (e.g. 'claude-sonnet-5'). Required when evaluatorType is 'AI grader'; omit/null for manual grades. The tracker's grader-provenance filter audits by this field."
         }
       }
     },
@@ -1732,6 +1741,270 @@
       "items": {
         "type": "string"
       }
+    },
+    "finalScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Uniform final grade 0-100 (rev 2: REQUIRED in every record, including loggingMode 'fast'). Importers that receive a record without it compute rawScore - penalties (capped), which silently evaluates to 0 when the supporting scores were also omitted and poisons averages, pass rates, and histograms. Always emit explicitly."
+    },
+    "universalScore": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Universal competency total (sum of the six universalSubScores). Required in full mode."
+    },
+    "universalSubScores": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "correctness": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 25
+        },
+        "reasoning": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20
+        },
+        "judgment": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15
+        },
+        "validation": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15
+        },
+        "communication": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15
+        },
+        "completeness": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "taskSpecificScore": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Task-specific rubric total. Required in full mode."
+    },
+    "rawScore": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "universalScore x 0.60 + taskSpecificScore x 0.40."
+    },
+    "cap": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Score cap per section 13; null = no cap."
+    },
+    "penalties": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Total penalty points deducted; default 0."
+    },
+    "levelVerdicts": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "L1": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Pass",
+            "Borderline",
+            "Fail",
+            null
+          ]
+        },
+        "L2": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Pass",
+            "Borderline",
+            "Fail",
+            null
+          ]
+        },
+        "L3": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Pass",
+            "Borderline",
+            "Fail",
+            null
+          ]
+        }
+      }
+    },
+    "answerLevel": {
+      "type": "string",
+      "description": "Highest level whose score passes its standard. Use 'L1'/'L2'/'L3' (or 'Below Level I'). The tracker's role-level matrix counts only 'L1'/'L2'/'L3'."
+    },
+    "qualifyingDemonstratedLevel": {
+      "type": "string",
+      "description": "Answer level capped by problem level, difficulty evidence, and autonomy. Use 'L1'/'L2'/'L3' (or 'Below Level I')."
+    },
+    "demonstratedLevel": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "Below Level I",
+        "Emerging Level I",
+        "Level I",
+        "Strong Level I",
+        "Level II",
+        "Strong Level II",
+        "Level III",
+        "Strong Level III",
+        null
+      ]
+    },
+    "confidence": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "High",
+        "Medium",
+        "Low",
+        null
+      ]
+    },
+    "evidenceClass": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "prospective",
+        "classA",
+        "classB",
+        "classC",
+        null
+      ],
+      "description": "Evidence class ids per section 10: prospective controlled, Class A strong retrospective, Class B partial retrospective, Class C anecdotal."
+    },
+    "primaryDomain": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Primary technical domain (section 9.1), e.g. 'Java', 'Data Analysis'."
+    },
+    "secondaryDomains": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "primaryRole": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "SWE",
+        "MLE",
+        "DS",
+        "DE",
+        "BIE",
+        "BIA",
+        null
+      ],
+      "description": "Primary role competency axis. The tracker's role-level matrix and role filters key on this."
+    },
+    "secondaryRoles": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string",
+        "enum": [
+          "SWE",
+          "MLE",
+          "DS",
+          "DE",
+          "BIE",
+          "BIA"
+        ]
+      }
+    },
+    "strengths": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "weaknesses": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nextTarget": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "allOf": [
@@ -1823,6 +2096,35 @@
         "required": [
           "conceptDiscovery"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "calibration": {
+            "type": "object",
+            "properties": {
+              "evaluatorType": {
+                "const": "AI grader"
+              }
+            },
+            "required": [
+              "evaluatorType"
+            ]
+          }
+        },
+        "required": [
+          "calibration"
+        ]
+      },
+      "then": {
+        "properties": {
+          "calibration": {
+            "required": [
+              "graderModel"
+            ]
+          }
+        }
       }
     }
   ]
