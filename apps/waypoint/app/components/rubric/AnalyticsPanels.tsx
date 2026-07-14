@@ -1,108 +1,17 @@
 "use client";
 
 /**
- * Non-line analytics for the Readiness + Performance surfaces (inline SVG / CSS,
+ * Non-line analytics for the Performance surface (inline SVG / CSS,
  * no charting dep):
- *  - ReadinessKPIs  : summary stat tiles (numbers Performance's trends don't show)
  *  - SkillAreaBars  : ranked avg-final per task type (where you stand now)
  *  - GateBars       : pass/partial/fail per mandatory gate (status colors)
  *  - DomainRadar    : avg score across technical domains
  *  - ScoreHistogram : distribution of final scores, colored by pass band
  */
 
-import type { ReactNode } from "react";
-import type { PerfSummary, SkillAreaStat, DomainStat, HistBin } from "@/lib/gaps";
-import { card } from "../surfaces/shared";
+import type { SkillAreaStat, DomainStat, HistBin } from "@/lib/gaps";
 
 const STATUS = { pass: "var(--green)", partial: "var(--yellow)", fail: "#ef4444" } as const;
-
-/* ── Readiness KPI tiles ─────────────────────────────────────────────────── */
-function Tile({ label, value, sub, accent }: { label: string; value: ReactNode; sub?: string; accent?: string }) {
-  return (
-    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">{label}</div>
-      <div className="mt-1 font-mono text-3xl font-bold" style={{ color: accent ?? "var(--text)" }}>{value}</div>
-      {sub ? <div className="mt-0.5 text-[11px] text-[var(--text-dim)]">{sub}</div> : null}
-    </div>
-  );
-}
-
-export function ReadinessKPIs({ s }: { s: PerfSummary }) {
-  if (!s.graded) {
-    return (
-      <div className={card}>
-        <p className="text-sm text-[var(--text-dim)]">
-          No graded assessments yet — import JSON or log a grade to populate readiness numbers.
-        </p>
-      </div>
-    );
-  }
-  const covered = s.coverage.filter((c) => c.count > 0).length;
-  return (
-    <div>
-      <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
-        Evidence at a glance
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <Tile label="Graded" value={s.graded} sub="assessments" accent="var(--cyan)" />
-        <Tile
-          label="Avg final"
-          value={s.avgFinal ?? "—"}
-          sub="/ 100"
-          accent={s.avgFinal != null && s.avgFinal >= 70 ? "var(--green)" : "var(--yellow)"}
-        />
-        <Tile label="Qualifying rate" value={`${s.qualifyingRate}%`} sub="earned a level" />
-        <Tile
-          label="Pass rate"
-          value={`${s.passRate}%`}
-          sub="scored ≥ 70"
-          accent={s.passRate >= 50 ? "var(--green)" : "var(--yellow)"}
-        />
-        <Tile
-          label="Best levels"
-          value={
-            <span className="inline-flex items-baseline gap-1.5 text-2xl">
-              <span style={{ color: "var(--cyan)" }}>{s.bestLevel.L1}</span>
-              <span className="text-base text-[var(--text-dim)]">·</span>
-              <span style={{ color: "var(--orange)" }}>{s.bestLevel.L2}</span>
-              <span className="text-base text-[var(--text-dim)]">·</span>
-              <span style={{ color: "var(--magenta)" }}>{s.bestLevel.L3}</span>
-            </span>
-          }
-          sub="L1 · L2 · L3 hits"
-        />
-        <Tile
-          label="Proof strength"
-          value={s.avgProof != null ? `${Math.round(s.avgProof * 100)}%` : "—"}
-          sub="avg confidence"
-        />
-        <Tile label="Coverage" value={`${covered}/${s.coverage.length}`} sub="task types w/ evidence" />
-        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-dim)]">Task types</div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {s.coverage.map((c) => (
-              <span
-                key={c.taskType}
-                title={`${c.label}: ${c.count}`}
-                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px]"
-                style={{
-                  background: c.count ? `color-mix(in srgb, ${c.color} 16%, transparent)` : "var(--surface-2)",
-                  color: c.count ? c.color : "var(--text-dim)",
-                }}
-              >
-                <span
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: c.count ? c.color : "var(--text-dim)" }}
-                />
-                {c.count}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ── Ranked bars: avg final by skill area ────────────────────────────────── */
 export function SkillAreaBars({ data }: { data: SkillAreaStat[] }) {

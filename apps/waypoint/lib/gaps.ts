@@ -15,9 +15,9 @@ import {
 } from "@waypoint/rubric";
 import type { RoleFilter } from "./domain";
 
-export type MatrixRole = "SWE" | "MLE" | "DS" | "DE";
+export type MatrixRole = "SWE" | "MLE" | "DS" | "DE" | "BIE" | "BIA";
 
-export const MATRIX_ROLES: MatrixRole[] = ["SWE", "MLE", "DS", "DE"];
+export const MATRIX_ROLES: MatrixRole[] = ["SWE", "MLE", "DS", "DE", "BIE", "BIA"];
 export const MATRIX_LEVELS: LevelId[] = ["L1", "L2", "L3"];
 
 const OPEN_STATUSES = new Set(["open", "in progress", "reopened"]);
@@ -25,11 +25,30 @@ const OPEN_STATUSES = new Set(["open", "in progress", "reopened"]);
 /** Map a graded entry to matrix role, or null if unscoped / escape. */
 export function entryMatrixRole(e: RubricEntry): MatrixRole | null {
   const pr = e.primaryRole;
-  if (pr === "SWE" || pr === "MLE" || pr === "DS" || pr === "DE") return pr;
+  if (
+    pr === "SWE" ||
+    pr === "MLE" ||
+    pr === "DS" ||
+    pr === "DE" ||
+    pr === "BIE" ||
+    pr === "BIA"
+  ) {
+    return pr;
+  }
 
   const blob = `${e.domain || ""} ${e.primaryDomain || ""} ${e.primaryRole || ""}`.toUpperCase();
   if (/\bSWE\b|FULL.?STACK|BACKEND|FRONTEND|REACT/.test(blob)) return "SWE";
   if (/\bMLE\b|MACHINE.?LEARN|ML\b/.test(blob)) return "MLE";
+  // BI before DS/DE: "semantic layer" and "dashboard" work is BI, but the DS and
+  // DE patterns below are broad enough to swallow it if they run first.
+  if (/\bBIA\b|BI.?ANALYST|BUSINESS.?INTELLIGENCE.?ANALYST|BUSINESS.?ANALYST/.test(blob)) return "BIA";
+  if (
+    /\bBIE\b|BI.?ENGINEER|BUSINESS.?INTELLIGENCE.?ENGINEER|SEMANTIC.?LAYER|DASHBOARD|TABLEAU|POWER.?BI|QUICKSIGHT|LOOKER/.test(
+      blob,
+    )
+  ) {
+    return "BIE";
+  }
   if (/\bDS\b|DATA.?SCIEN|STATIST/.test(blob)) return "DS";
   if (/\bDE\b|DATA.?ENG|ETL|PIPELINE/.test(blob)) return "DE";
   return null;
@@ -308,9 +327,27 @@ export function qualifyingRateTrend(
 const isQual = (q: RubricEntry["qualifyingDemonstratedLevel"]) => q === "L1" || q === "L2" || q === "L3";
 const avg = (ns: number[]) => (ns.length ? Math.round(ns.reduce((a, b) => a + b, 0) / ns.length) : null);
 
+/**
+ * Avg of the trailing `w` graded finals minus the `w` before them — "am I getting
+ * better?" in one number. Null until there's a full prior window to compare to,
+ * so an early streak can't masquerade as improvement.
+ */
+function trendDelta(es: RubricEntry[], w = 5): number | null {
+  const finals = es
+    .filter((e) => !!e.date && typeof e.finalScore === "number")
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .map((e) => e.finalScore as number);
+  if (finals.length < 2 * w) return null;
+  const recent = avg(finals.slice(-w));
+  const prior = avg(finals.slice(-2 * w, -w));
+  return recent != null && prior != null ? recent - prior : null;
+}
+
 export interface PerfSummary {
   graded: number;
   avgFinal: number | null;
+  /** Trailing-5 avg minus the 5 before it; null until 10 dated grades exist. */
+  trend: number | null;
   qualifyingRate: number; // %
   passRate: number; // % scoring >= 70
   bestLevel: { L1: number; L2: number; L3: number; none: number };
@@ -334,6 +371,7 @@ export function performanceSummary(entries: RubricEntry[], roleFilter: RoleFilte
   return {
     graded,
     avgFinal: avg(finals),
+    trend: trendDelta(es),
     qualifyingRate: graded ? Math.round((qual / graded) * 100) : 0,
     passRate: graded ? Math.round((pass / graded) * 100) : 0,
     bestLevel,

@@ -1,168 +1,163 @@
 "use client";
 
 /**
- * Readiness — the glance surface (redesign 2026-07-14). One card per primary
- * role: concentric floor rings (practice / interviews / stories), a GREEN/OPEN
- * verdict, and a single computed "Closes it" action line with deep links.
- * Role × Level analytics live on Interview → Performance, not here.
+ * Readiness — the glance surface. One card per role, and the card is a scoreboard:
+ * average final score for that role, big, with the numbers behind it.
+ * "How well am I answering questions?" — nothing else.
+ *
+ * The evidence floor (practice / mocks / stories coverage) deliberately does NOT
+ * appear on these cards. It answers a different question — did you do the reps —
+ * and mixing it in is what made this surface unreadable. It survives only as the
+ * header pill; the coverage detail lives on Interview → Performance.
  */
 
 import { useMemo } from "react";
 import { useWaypointStore } from "@/lib/store";
-import { computeReadiness, type RoleFloor } from "@/lib/readiness";
-import { openHighGapCount, performanceSummary } from "@/lib/gaps";
-import { requestNav, type InterviewTabId, type MainTabId } from "@/lib/nav";
-import type { PrimaryRole } from "@/lib/domain";
-import { FloorRings } from "../ui/FloorRings";
-import { ReadinessKPIs } from "../rubric/AnalyticsPanels";
+import { computeReadiness } from "@/lib/readiness";
+import {
+  openHighGapCount,
+  performanceSummary,
+  type MatrixRole,
+  type PerfSummary,
+} from "@/lib/gaps";
+import { requestNav } from "@/lib/nav";
+import { ScoreDonut, scoreColor } from "../ui/ScoreDonut";
 
-const RING_COLORS = {
-  practice: "var(--cyan)",
-  interview: "var(--violet)",
-  defense: "var(--magenta)",
-} as const;
+const ROLE_LABELS: Record<MatrixRole, string> = {
+  SWE: "SWE Full Stack II",
+  MLE: "MLE II",
+  DS: "DS",
+  DE: "DE",
+  BIE: "BIE",
+  BIA: "BIA",
+};
 
-interface NextStep {
-  text: string;
-  tab: MainTabId;
-  interviewTab?: InterviewTabId;
-}
+const ROLES: MatrixRole[] = ["SWE", "MLE", "DS", "DE", "BIE", "BIA"];
 
-/** 0..1 progress toward each dimension's floor (practice floor is the 80% bar). */
-function floorRatios(r: RoleFloor): { practice: number; interview: number; defense: number } {
-  const cap = (n: number) => Math.max(0, Math.min(1, n));
+function trendText(trend: number | null): { text: string; color: string } | null {
+  if (trend == null || trend === 0) return null;
+  const up = trend > 0;
   return {
-    practice: r.practice.met ? 1 : cap((r.practice.ratio ?? 0) / 0.8),
-    interview: r.interview.need ? cap((r.interview.count ?? 0) / r.interview.need) : 0,
-    defense: r.defense.need ? cap((r.defense.count ?? 0) / r.defense.need) : 0,
+    text: `${up ? "▲" : "▼"} ${Math.abs(trend)} vs last 5`,
+    color: up ? "var(--green)" : "var(--text-dim)",
   };
 }
 
-function nextSteps(r: RoleFloor): NextStep[] {
-  const out: NextStep[] = [];
-  if (!r.practice.met) {
-    const n = Math.max(1, (r.practice.need ?? 0) - (r.practice.count ?? 0));
-    out.push({ text: `${n} more solid core problem${n === 1 ? "" : "s"}`, tab: "practice" });
-  }
-  if (!r.interview.met) {
-    const n = Math.max(1, (r.interview.need ?? 0) - (r.interview.count ?? 0));
-    out.push({
-      text: `${n} more solid mock${n === 1 ? "" : "s"}`,
-      tab: "interview",
-      interviewTab: "grade",
-    });
-  }
-  if (!r.defense.met) {
-    const n = Math.max(1, (r.defense.need ?? 0) - (r.defense.count ?? 0));
-    out.push({ text: `${n} more stor${n === 1 ? "y" : "ies"} cold`, tab: "defense" });
-  }
-  return out;
+function Stat({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  accent?: string;
+}) {
+  return (
+    <div>
+      <div className="mb-0.5 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-dim)]">
+        {label}
+      </div>
+      <div className="font-mono text-[19px] font-bold leading-tight" style={{ color: accent ?? "var(--text)" }}>
+        {value}
+      </div>
+      {sub ? <div className="mt-px text-[10px] text-[var(--text-dim)]">{sub}</div> : null}
+    </div>
+  );
 }
 
-function RoleCard({
-  floor,
-  onLogSolid,
-}: {
-  floor: RoleFloor;
-  onLogSolid: () => void;
-}) {
-  const ratios = floorRatios(floor);
-  const pct = Math.round(((ratios.practice + ratios.interview + ratios.defense) / 3) * 100);
-  const steps = nextSteps(floor);
-
-  const dims: { key: keyof typeof RING_COLORS; name: string; d: RoleFloor["practice"] }[] = [
-    { key: "practice", name: "Practice", d: floor.practice },
-    { key: "interview", name: "Interviews", d: floor.interview },
-    { key: "defense", name: "Stories cold", d: floor.defense },
-  ];
+function RoleCard({ role, summary }: { role: MatrixRole; summary: PerfSummary }) {
+  const label = ROLE_LABELS[role];
+  const t = trendText(summary.trend);
 
   return (
-    <div className="rounded-3xl border border-[var(--hairline)] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="mb-4 flex items-baseline justify-between gap-2">
-        <h3 className="font-semibold">
-          {floor.role === "SWE_FS_II" ? "SWE Full Stack II" : "MLE II"}
-        </h3>
-        <span
-          className="text-[11px] font-bold tracking-[0.08em]"
-          style={{ color: floor.green ? "var(--green)" : "var(--yellow)" }}
-        >
-          {floor.green ? "GREEN" : "OPEN"}
+    <div className="flex flex-col gap-[18px] rounded-3xl border border-[var(--hairline)] bg-[var(--surface)] p-5 sm:p-[22px]">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="font-semibold">{label}</h3>
+        <span className="text-[10px] uppercase tracking-[0.06em] text-[var(--text-dim)]">
+          {summary.graded ? `${summary.graded} graded` : "no data"}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-5">
-        <FloorRings
-          label={`${floor.role} floor progress`}
-          rings={[
-            { value: ratios.practice, color: RING_COLORS.practice },
-            { value: ratios.interview, color: RING_COLORS.interview },
-            { value: ratios.defense, color: RING_COLORS.defense },
-          ]}
-          center={
-            <div className="text-center leading-tight">
-              <div
-                className="font-mono text-xl font-bold"
-                style={{ color: floor.green ? "var(--green)" : "var(--text)" }}
-              >
-                {floor.green ? "GO" : `${pct}%`}
+      {summary.graded ? (
+        <div className="flex flex-wrap items-center gap-5">
+          <ScoreDonut
+            score={summary.avgFinal}
+            label={`${label} average final score: ${summary.avgFinal} of 100`}
+            center={
+              <div className="text-center leading-tight">
+                <div className="font-mono text-[34px] font-bold" style={{ color: scoreColor(summary.avgFinal) }}>
+                  {summary.avgFinal ?? "—"}
+                </div>
+                <div className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-dim)]">
+                  avg final
+                </div>
+                {t ? (
+                  <div className="font-mono text-[10px] font-semibold" style={{ color: t.color }}>
+                    {t.text}
+                  </div>
+                ) : null}
               </div>
-              <div className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-dim)]">
-                of floor
-              </div>
-            </div>
-          }
-        />
-        <div className="min-w-[150px] flex-1 space-y-2">
-          {dims.map(({ key, name, d }) => (
-            <div key={key} className="flex items-baseline gap-2 text-sm">
-              <span
-                className="h-2 w-2 shrink-0 translate-y-px rounded-full"
-                style={{ background: RING_COLORS[key] }}
-                aria-hidden
-              />
-              <span className="text-[var(--text-mid)]">{name}</span>
-              <span
-                className={`ml-auto font-mono text-xs ${
-                  d.met ? "text-[var(--green)]" : "text-[var(--text)]"
-                }`}
-                title={d.detail}
-              >
-                {d.count ?? 0}/{d.need ?? 0}
-                {d.met ? " ✓" : ""}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-4 border-t border-[var(--hairline)] pt-3.5 text-sm">
-        {floor.green ? (
-          <span className="text-[var(--green)]">Floor met — keep it warm.</span>
-        ) : (
-          <span className="text-[var(--text-mid)]">
-            <span className="font-semibold text-[var(--cyan)]">Closes it:</span>{" "}
-            {steps.map((s, i) => (
-              <span key={s.text}>
-                {i > 0 ? " + " : ""}
-                <button
-                  type="button"
-                  onClick={() => requestNav(s.tab, s.interviewTab)}
-                  className="underline decoration-[var(--hairline-strong)] underline-offset-2 hover:text-[var(--cyan)] hover:decoration-[var(--cyan)]"
+            }
+          />
+          <div className="grid min-w-[168px] flex-1 grid-cols-2 gap-x-3.5 gap-y-3">
+            <Stat
+              label="Pass rate"
+              value={`${summary.passRate}%`}
+              sub="scored ≥ 70"
+              accent={summary.passRate >= 50 ? "var(--green)" : "var(--yellow)"}
+            />
+            <Stat label="Qualifying" value={`${summary.qualifyingRate}%`} sub="earned a level" />
+            <Stat
+              label="Best levels"
+              value={
+                <span
+                  className="inline-flex items-baseline gap-1.5"
+                  title={`${summary.bestLevel.L1} × L1 · ${summary.bestLevel.L2} × L2 · ${summary.bestLevel.L3} × L3`}
                 >
-                  {s.text}
-                </button>
-              </span>
-            ))}
-          </span>
-        )}
-        <button
-          type="button"
-          className="mt-2 block text-xs text-[var(--text-dim)] hover:text-[var(--cyan)]"
-          onClick={onLogSolid}
-        >
-          + Log solid interview/mock for this role
-        </button>
-      </div>
+                  <span style={{ color: "var(--cyan)" }}>{summary.bestLevel.L1}</span>
+                  <span className="text-[11px] text-[var(--text-dim)]">·</span>
+                  <span style={{ color: "var(--orange)" }}>{summary.bestLevel.L2}</span>
+                  <span className="text-[11px] text-[var(--text-dim)]">·</span>
+                  <span style={{ color: "var(--magenta)" }}>{summary.bestLevel.L3}</span>
+                </span>
+              }
+              sub="L1 · L2 · L3"
+            />
+            <Stat
+              label="Proof strength"
+              value={summary.avgProof != null ? `${Math.round(summary.avgProof * 100)}%` : "—"}
+              sub="avg confidence"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-5">
+          <ScoreDonut
+            score={null}
+            label={`${label} — nothing graded yet`}
+            center={
+              <div className="text-center leading-tight">
+                <div className="font-mono text-[34px] font-bold text-[var(--text-dim)]">—</div>
+                <div className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-dim)]">
+                  avg final
+                </div>
+              </div>
+            }
+          />
+          <div className="min-w-[168px] flex-1 space-y-2">
+            <p className="text-xs text-[var(--text-dim)]">Nothing graded as {label} yet.</p>
+            <button
+              type="button"
+              onClick={() => requestNav("interview", "grade")}
+              className="text-xs text-[var(--cyan)] underline underline-offset-2"
+            >
+              Grade a {label} assessment
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -170,16 +165,20 @@ function RoleCard({
 export function ReadinessSurface() {
   const state = useWaypointStore();
   const snap = useMemo(() => computeReadiness(state), [state]);
-  const logSolid = useWaypointStore((s) => s.logSolidInterview);
   const roleFilter = state.roleFilter;
+
   const highGaps = useMemo(
     () => openHighGapCount(state.rubricEntries, roleFilter),
     [state.rubricEntries, roleFilter],
   );
-  const summary = useMemo(
-    () => performanceSummary(state.rubricEntries, roleFilter),
-    [state.rubricEntries, roleFilter],
-  );
+  // One summary per role, independent of the header filter — every card always
+  // shows, and always counts only its own role.
+  const summaries = useMemo(() => {
+    const out = {} as Record<MatrixRole, PerfSummary>;
+    for (const r of ROLES) out[r] = performanceSummary(state.rubricEntries, r);
+    return out;
+  }, [state.rubricEntries]);
+
   const greenCount = snap.roles.filter((r) => r.green).length;
 
   return (
@@ -192,9 +191,9 @@ export function ReadinessSurface() {
             borderColor: snap.evidenceGreen ? "var(--green)" : "var(--yellow)",
             color: snap.evidenceGreen ? "var(--green)" : "var(--yellow)",
           }}
-          title="Hybrid gate: checkable floor for both primaries + your go/no-go. Today checkboxes do not auto-green this board."
+          title="Hybrid gate: checkable coverage floor for both primaries + your go/no-go. Detail lives on Interview → Performance."
         >
-          Evidence: {greenCount}/2 roles green
+          Evidence: {greenCount}/2 primaries green
         </span>
         {highGaps > 0 ? (
           <span
@@ -207,16 +206,10 @@ export function ReadinessSurface() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {snap.roles.map((r) => (
-          <RoleCard
-            key={r.role}
-            floor={r}
-            onLogSolid={() => logSolid(r.role as PrimaryRole)}
-          />
+        {ROLES.map((r) => (
+          <RoleCard key={r} role={r} summary={summaries[r]} />
         ))}
       </div>
-
-      <ReadinessKPIs s={summary} />
     </div>
   );
 }

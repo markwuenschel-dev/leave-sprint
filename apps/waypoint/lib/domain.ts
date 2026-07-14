@@ -6,11 +6,16 @@ import type { StudyGuide } from "./study";
 export type Phase = "B" | "A";
 /**
  * Role scope for the analytics boards (matrix, gaps, retest, performance).
- * Mirrors the roles the role×level matrix tracks (SWE/MLE primary + DS/DE
+ * Mirrors the roles the role×level matrix tracks (SWE/MLE primary + DS/DE/BIE/BIA
  * escape) plus "ALL". This is a display filter only — it never feeds the
  * evidence-green floor, which is fixed to the two primary roles.
+ *
+ * These ids match `RD.roles` in @waypoint/rubric, which is what carries each
+ * role's scoring weights — BIE and BIA are weighted very differently (BIE leans
+ * dashboard modeling + ETL, BIA leans business context + stakeholder comms), so
+ * they stay distinct rather than collapsing into DS.
  */
-export type RoleFilter = "ALL" | "SWE" | "MLE" | "DS" | "DE";
+export type RoleFilter = "ALL" | "SWE" | "MLE" | "DS" | "DE" | "BIE" | "BIA";
 export type PrimaryRole = "SWE_FS_II" | "MLE_II";
 
 /** Single source of truth for the header role-scope control. */
@@ -20,6 +25,8 @@ export const ROLE_FILTER_OPTIONS: { value: RoleFilter; label: string }[] = [
   { value: "MLE", label: "MLE only" },
   { value: "DS", label: "DS only" },
   { value: "DE", label: "DE only" },
+  { value: "BIE", label: "BIE only" },
+  { value: "BIA", label: "BIA only" },
 ];
 
 const ROLE_FILTER_VALUES: ReadonlySet<string> = new Set(
