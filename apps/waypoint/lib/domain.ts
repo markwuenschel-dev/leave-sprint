@@ -114,6 +114,13 @@ export interface WaypointState {
   rubricEntries: RubricEntry[];
   qbankStatus: Record<string, QBankStatus>;
   qbankPos: { track: TrackKey; idx: number };
+  /**
+   * Per-track custom deck order (question ids). Absent track → natural data
+   * order. Set by Shuffle; "mark mastered" moves that id to the end without
+   * reshuffling the rest. Ids no longer in the bank are dropped on resolve;
+   * new bank questions append in natural order.
+   */
+  qbankOrder: Partial<Record<TrackKey, string[]>>;
   applications: Application[];
   /** Manually marked solid mocks/scored sessions per primary (count can also derive from rubric). */
   solidInterviewLogs: Record<PrimaryRole, string[]>; // ISO dates or entry ids

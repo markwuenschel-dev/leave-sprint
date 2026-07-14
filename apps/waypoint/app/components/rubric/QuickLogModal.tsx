@@ -1,26 +1,44 @@
 "use client";
 
 /**
- * Quick-log modal — Q-Bank "mastered" → rubric bridge.
- * Collects score + assistance and writes via store (normaliseEntry path).
+ * Quick-log modal — the fast grade bridge into the rubric. Q Bank passes a
+ * `track` (mapped via QB_TRACK_MAP); other surfaces (Defense) pass an explicit
+ * `classification`. Collects score + assistance and writes via store
+ * (normaliseEntry path).
  */
 
 import { useState } from "react";
 import { QB_TRACK_MAP, type TrackKey } from "@waypoint/qbank";
-import { RD, scoreBand } from "@waypoint/rubric";
+import { RD, scoreBand, type Role, type TaskType } from "@waypoint/rubric";
 import { useWaypointStore } from "@/lib/store";
 import { X } from "lucide-react";
 
+export interface QuickLogClassification {
+  taskType: TaskType;
+  domain: string;
+  role: Role;
+}
+
 interface QuickLogModalProps {
   task: string;
-  track: TrackKey;
+  /** Q Bank path — resolved through QB_TRACK_MAP. */
+  track?: TrackKey;
+  /** Direct classification — takes precedence over `track`. */
+  classification?: QuickLogClassification;
   onClose: () => void;
   onLogged?: () => void;
 }
 
-export function QuickLogModal({ task, track, onClose, onLogged }: QuickLogModalProps) {
+export function QuickLogModal({
+  task,
+  track,
+  classification,
+  onClose,
+  onLogged,
+}: QuickLogModalProps) {
   const addEntry = useWaypointStore((s) => s.addRubricEntry);
-  const map = QB_TRACK_MAP[track];
+  const map: QuickLogClassification =
+    classification ?? QB_TRACK_MAP[track ?? "swe"];
   const [score, setScore] = useState(80);
   const [assist, setAssist] = useState(0);
   const band = scoreBand(score);

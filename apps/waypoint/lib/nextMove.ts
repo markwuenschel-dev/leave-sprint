@@ -25,7 +25,6 @@ export function pickNextMove(input: {
   solidInterviewLogs: WaypointState["solidInterviewLogs"];
   roleFilter: RoleFilter;
   rhythmDone: { practice: boolean; defense: boolean; interview: boolean; admin: boolean };
-  phase: "B" | "A";
 }): NextMove {
   const snap = computeReadiness({
     problems: input.problems,
@@ -138,13 +137,10 @@ export function pickNextMove(input: {
   }
   if (!input.rhythmDone.admin) {
     return {
-      title: input.phase === "A" ? "Admin · pipeline touch" : "Admin · plan / log",
-      why:
-        input.phase === "A"
-          ? "One application row update or outreach note."
-          : "Light admin — journal, wishlist, or readiness glance.",
-      cta: input.phase === "A" ? "Open Applications" : "Open Readiness",
-      tab: input.phase === "A" ? "applications" : "readiness",
+      title: "Admin · plan / pipeline touch",
+      why: "Light admin — journal, an application row update, or a readiness glance.",
+      cta: "Open Applications",
+      tab: "applications",
     };
   }
 

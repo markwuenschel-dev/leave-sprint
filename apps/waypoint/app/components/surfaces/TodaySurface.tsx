@@ -10,7 +10,6 @@ import { ProgressRing } from "../ui/ProgressRing";
 import { card } from "./shared";
 
 export function TodaySurface() {
-  const phase = useWaypointStore((s) => s.phase);
   const toggle = useWaypointStore((s) => s.toggleRhythm);
   const setNote = useWaypointStore((s) => s.setRhythmNote);
   const day = useWaypointStore((s) => s.rhythmDays[todayIso()] || null);
@@ -53,7 +52,7 @@ export function TodaySurface() {
     {
       key: "admin",
       label: "Admin light",
-      hint: phase === "A" ? "Apps touch + plan" : "Plan, log, gate glance",
+      hint: "Plan, log, apps touch",
     },
   ];
 
@@ -69,9 +68,8 @@ export function TodaySurface() {
         solidInterviewLogs,
         roleFilter,
         rhythmDone: slots,
-        phase,
       }),
-    [problems, fileDefense, rubricEntries, solidInterviewLogs, roleFilter, slots, phase],
+    [problems, fileDefense, rubricEntries, solidInterviewLogs, roleFilter, slots],
   );
 
   return (
@@ -86,7 +84,7 @@ export function TodaySurface() {
             color: readiness.evidenceGreen ? "var(--green)" : "var(--text-mid)",
           }}
         >
-          Evidence: {readiness.evidenceGreen ? "green" : "building"} · Phase {phase}
+          Evidence: {readiness.evidenceGreen ? "green" : "building"}
         </span>
       </div>
 

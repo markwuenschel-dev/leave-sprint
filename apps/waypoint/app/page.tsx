@@ -53,7 +53,6 @@ const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
 export default function WaypointHome() {
   const [tab, setTab] = useState<TabId>("today");
   const [interviewTab, setInterviewTab] = useState<InterviewTabId>("qbank");
-  const phase = useWaypointStore((s) => s.phase);
   const roleFilter = useWaypointStore((s) => s.roleFilter);
   const setRoleFilter = useWaypointStore((s) => s.setRoleFilter);
   // Never call computeReadiness inside a zustand selector — new object every
@@ -95,22 +94,6 @@ export default function WaypointHome() {
     return () => window.removeEventListener(WP_NAV_EVENT, onNav);
   }, []);
 
-  // Phase A: optional reorder — Applications higher on mobile strip
-  const ordered =
-    phase === "A"
-      ? [
-          TABS[0],
-          TABS[5],
-          TABS[1],
-          TABS[2],
-          TABS[3],
-          TABS[4],
-          TABS[6],
-          TABS[7],
-          TABS[8],
-        ]
-      : TABS;
-
   return (
     <div className="min-h-screen pb-8">
       <header
@@ -127,7 +110,7 @@ export default function WaypointHome() {
           <div className="min-w-0">
             <div className="text-xl font-semibold tracking-tight">Waypoint</div>
             <div className="truncate text-[10px]" style={{ color: "var(--text-dim)" }}>
-              Phase {phase} · Evidence {evidenceGreen ? "green" : "open"} · EC2-ready
+              Evidence {evidenceGreen ? "green" : "open"} · EC2-ready
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -163,7 +146,7 @@ export default function WaypointHome() {
           aria-label="Main"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {ordered.map(({ id, label, icon: Icon }) => {
+          {TABS.map(({ id, label, icon: Icon }) => {
             const active = tab === id;
             return (
               <button

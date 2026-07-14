@@ -38,6 +38,8 @@ export interface WaypointStore extends WaypointState {
   setDefenseNotes: (id: string, notes: string) => void;
   setQBankStatus: (questionId: string, status: QBankStatus | null) => void;
   setQBankPos: (track: TrackKey, idx: number) => void;
+  /** Replace a track's deck order (null clears back to natural data order). */
+  setQBankOrder: (track: TrackKey, order: string[] | null) => void;
   addRubricEntry: (entry: Partial<RubricEntry>) => void;
   /** Patch fields on an existing entry (gap status chips, close-on-retest, etc.). */
   patchRubricEntry: (id: string, patch: Partial<RubricEntry>) => void;
@@ -96,6 +98,7 @@ const mergeHydration = (persisted: unknown, current: WaypointStore): WaypointSto
     rhythmDays: { ...p.rhythmDays, ...current.rhythmDays },
     weeklyReviews: { ...p.weeklyReviews, ...current.weeklyReviews },
     qbankStatus: { ...p.qbankStatus, ...current.qbankStatus },
+    qbankOrder: { ...p.qbankOrder, ...current.qbankOrder },
     rubricEntries: mergeEntries(p.rubricEntries ?? [], current.rubricEntries),
     applications: unionById(p.applications ?? [], current.applications),
     solidInterviewLogs: {
@@ -197,6 +200,14 @@ export const useWaypointStore = create<WaypointStore>()(
         }),
 
       setQBankPos: (track, idx) => set({ qbankPos: { track, idx }, lastUpdated: now() }),
+
+      setQBankOrder: (track, order) =>
+        set((s) => {
+          const next = { ...s.qbankOrder };
+          if (order == null) delete next[track];
+          else next[track] = order;
+          return { qbankOrder: next, lastUpdated: now() };
+        }),
 
       addRubricEntry: (entry) =>
         set((s) => {
@@ -344,6 +355,7 @@ export const useWaypointStore = create<WaypointStore>()(
           setDefenseNotes: _g,
           setQBankStatus: _h,
           setQBankPos: _i,
+          setQBankOrder: _setQOrd,
           addRubricEntry: _j,
           patchRubricEntry: _patchR,
           importRubricEntries: _impR,
@@ -379,6 +391,7 @@ export const useWaypointStore = create<WaypointStore>()(
         rubricEntries: s.rubricEntries,
         qbankStatus: s.qbankStatus,
         qbankPos: s.qbankPos,
+        qbankOrder: s.qbankOrder,
         applications: s.applications,
         solidInterviewLogs: s.solidInterviewLogs,
         mockSeq: s.mockSeq,

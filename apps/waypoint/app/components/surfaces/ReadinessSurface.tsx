@@ -47,9 +47,7 @@ function DimBar({
 export function ReadinessSurface() {
   const state = useWaypointStore();
   const snap = useMemo(() => computeReadiness(state), [state]);
-  const setPhase = useWaypointStore((s) => s.setPhase);
   const logSolid = useWaypointStore((s) => s.logSolidInterview);
-  const phase = state.phase;
   const roleFilter = state.roleFilter;
   const highGaps = useMemo(
     () => openHighGapCount(state.rubricEntries, roleFilter),
@@ -64,16 +62,6 @@ export function ReadinessSurface() {
     [state.rubricEntries, roleFilter],
   );
 
-  function enterA() {
-    if (!snap.evidenceGreen) {
-      const ok = window.confirm(
-        "Evidence is not green yet. Personal go/no-go: enter Phase A anyway?",
-      );
-      if (!ok) return;
-    }
-    setPhase("A");
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -84,27 +72,10 @@ export function ReadinessSurface() {
             size={48}
             color={snap.evidenceGreen ? "var(--green)" : "var(--cyan)"}
           >
-            <span className="text-[10px] font-bold">{snap.evidenceGreen ? "GO" : "B"}</span>
+            <span className="text-[10px] font-bold">
+              {snap.evidenceGreen ? "GO" : `${snap.roles.filter((r) => r.green).length}/2`}
+            </span>
           </ProgressRing>
-        </div>
-        <div className="flex gap-2">
-          {phase === "B" ? (
-            <button
-              type="button"
-              onClick={enterA}
-              className="rounded-xl border border-[var(--cyan)]/40 bg-[var(--cyan)]/15 px-4 py-2 text-sm font-medium text-[var(--cyan)]"
-            >
-              Enter Phase A
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPhase("B")}
-              className="rounded-xl border border-[var(--hairline)] px-4 py-2 text-sm"
-            >
-              Return to Phase B
-            </button>
-          )}
         </div>
       </div>
       <p className="text-sm text-[var(--text-mid)]">
@@ -170,7 +141,7 @@ export function ReadinessSurface() {
         both primaries must clear practice, interview, and defense.
       </p>
 
-      {/* Soft signal only — does not block green / Phase A */}
+      {/* Soft signal only — does not block evidence green */}
       <p className="text-sm text-[var(--text-mid)]">
         Open High/Critical gaps:{" "}
         <strong style={{ color: highGaps > 0 ? "var(--orange)" : "var(--text-dim)" }}>

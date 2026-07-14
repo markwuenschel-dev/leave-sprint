@@ -59,7 +59,7 @@ export function ApplicationsSurface() {
         <div>
           <h2 className="text-2xl font-semibold">Applications</h2>
           <p className="mt-1 text-sm text-[var(--text-dim)]">
-            {apps.length} total · role+company pipeline · wishlist OK in Phase B
+            {apps.length} total · role+company pipeline · wishlist welcome anytime
           </p>
         </div>
         <button
@@ -100,7 +100,7 @@ export function ApplicationsSurface() {
 
       {list.length === 0 && !draft ? (
         <div className={`${card} text-sm text-[var(--text-dim)]`}>
-          No applications yet. Wishlist roles while in Phase B is fine.
+          No applications yet. Wishlisting roles before evidence is green is fine.
         </div>
       ) : null}
 

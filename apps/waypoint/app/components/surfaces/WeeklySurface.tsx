@@ -4,21 +4,17 @@ import { useWaypointStore, weekStartIso } from "@/lib/store";
 import { card } from "./shared";
 
 export function WeeklySurface() {
-  const phase = useWaypointStore((s) => s.phase);
   const week = weekStartIso();
   const review = useWaypointStore((s) => s.weeklyReviews[week]);
   const setWeekly = useWaypointStore((s) => s.setWeeklyField);
   const apps = useWaypointStore((s) => s.applications);
 
-  const pipeline =
-    phase === "A"
-      ? {
-          active: apps.filter((a) =>
-            ["wishlist", "applied", "interviewing"].includes(a.status),
-          ).length,
-          interviewing: apps.filter((a) => a.status === "interviewing").length,
-        }
-      : null;
+  const pipeline = {
+    active: apps.filter((a) =>
+      ["wishlist", "applied", "interviewing"].includes(a.status),
+    ).length,
+    interviewing: apps.filter((a) => a.status === "interviewing").length,
+  };
 
   return (
     <div className="space-y-4">
@@ -26,23 +22,19 @@ export function WeeklySurface() {
         <h2 className="text-2xl font-semibold">Weekly</h2>
         <p className="mt-1 text-sm text-[var(--text-dim)]">Week of {week}</p>
       </div>
-      {phase === "A" && pipeline ? (
-        <div className={`${card} text-sm text-[var(--text-mid)]`}>
-          Pipeline glance: <strong>{pipeline.active}</strong> open ·{" "}
-          <strong>{pipeline.interviewing}</strong> interviewing
-        </div>
-      ) : null}
-      {phase === "A" ? (
-        <div className={card}>
-          <label className="text-xs text-[var(--text-dim)]">Pipeline + interviews</label>
-          <textarea
-            className="mt-2 min-h-[80px] w-full rounded-xl border border-[var(--hairline)] bg-transparent p-3 text-sm"
-            value={review?.pipelineNotes || ""}
-            onChange={(e) => setWeekly(week, { pipelineNotes: e.target.value })}
-            placeholder="Who moved? What interviews are next?"
-          />
-        </div>
-      ) : null}
+      <div className={`${card} text-sm text-[var(--text-mid)]`}>
+        Pipeline glance: <strong>{pipeline.active}</strong> open ·{" "}
+        <strong>{pipeline.interviewing}</strong> interviewing
+      </div>
+      <div className={card}>
+        <label className="text-xs text-[var(--text-dim)]">Pipeline + interviews</label>
+        <textarea
+          className="mt-2 min-h-[80px] w-full rounded-xl border border-[var(--hairline)] bg-transparent p-3 text-sm"
+          value={review?.pipelineNotes || ""}
+          onChange={(e) => setWeekly(week, { pipelineNotes: e.target.value })}
+          placeholder="Who moved? What interviews are next?"
+        />
+      </div>
       <div className={card}>
         <label className="text-xs text-[var(--text-dim)]">What moved readiness?</label>
         <textarea

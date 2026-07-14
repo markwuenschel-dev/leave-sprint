@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ListOrdered, Shuffle } from "lucide-react";
 import { QBANK, type QBankQuestion, type TrackKey } from "@waypoint/qbank";
 import { useWaypointStore } from "@/lib/store";
+import { moveIdToEnd, resolveDeck, shuffledDeckIds } from "@/lib/qbankDeck";
 import {
   INTERVIEW_TAB_KEY,
   WP_NAV_EVENT,
@@ -18,6 +20,7 @@ import { GradeForm } from "../rubric/GradeForm";
 import { RubricHistory } from "../rubric/History";
 import { QuickLogModal } from "../rubric/QuickLogModal";
 import { GapsBoard } from "../rubric/GapsBoard";
+import { QBankReviewPanel } from "../rubric/QBankReviewPanel";
 import { RetestQueue } from "../rubric/RetestQueue";
 import { PerformancePanel } from "../rubric/PerformancePanel";
 import { SurfaceHero, card } from "./shared";
@@ -68,6 +71,8 @@ export function InterviewSurface({
   const setPos = useWaypointStore((s) => s.setQBankPos);
   const status = useWaypointStore((s) => s.qbankStatus);
   const setStatus = useWaypointStore((s) => s.setQBankStatus);
+  const order = useWaypointStore((s) => s.qbankOrder);
+  const setOrder = useWaypointStore((s) => s.setQBankOrder);
   const entries = useWaypointStore((s) => s.rubricEntries);
   const roleFilter = useWaypointStore((s) => s.roleFilter);
   const graderModels = useMemo(() => graderModelsIn(entries), [entries]);
@@ -78,8 +83,14 @@ export function InterviewSurface({
   );
   const trackKey = (TRACK_ORDER.includes(pos.track) ? pos.track : "swe") as TrackKey;
   const track = QBANK[trackKey];
-  const idx = Math.min(pos.idx, Math.max(0, track.questions.length - 1));
-  const q = track.questions[idx];
+  const trackOrder = order[trackKey];
+  const deck = useMemo(
+    () => resolveDeck(track.questions, trackOrder),
+    [track.questions, trackOrder],
+  );
+  const idx = Math.min(pos.idx, Math.max(0, deck.length - 1));
+  const q = deck[idx];
+  const isShuffled = !!trackOrder?.length;
   const [revealed, setRevealed] = useState<boolean[]>([]);
   const [logPrompt, setLogPrompt] = useState<string | null>(null);
 
@@ -138,7 +149,20 @@ export function InterviewSurface({
   function markMastered() {
     if (!q) return;
     setStatus(q.id, "mastered");
+    // Send the mastered card to the back of the deck without reshuffling the
+    // rest — the next question slides into the current position.
+    setOrder(trackKey, moveIdToEnd(deck.map((d) => d.id), q.id));
     setLogPrompt(q.q);
+  }
+
+  function shuffleDeck() {
+    setOrder(trackKey, shuffledDeckIds(track.questions, status));
+    setPos(trackKey, 0);
+  }
+
+  function resetDeckOrder() {
+    setOrder(trackKey, null);
+    setPos(trackKey, 0);
   }
 
   return (
@@ -233,7 +257,17 @@ export function InterviewSurface({
       ) : null}
 
       {tab === "history" ? <RubricHistory entries={filtered} /> : null}
-      {tab === "gaps" ? <GapsBoard entries={filtered} roleFilter={roleFilter} /> : null}
+      {tab === "gaps" ? (
+        <>
+          <QBankReviewPanel
+            onOpen={(t, deckIdx) => {
+              setPos(t, deckIdx);
+              setTab("qbank");
+            }}
+          />
+          <GapsBoard entries={filtered} roleFilter={roleFilter} />
+        </>
+      ) : null}
       {tab === "retest" ? <RetestQueue entries={filtered} roleFilter={roleFilter} /> : null}
       {tab === "performance" ? (
         <PerformancePanel entries={filtered} roleFilter={roleFilter} />
@@ -279,6 +313,34 @@ export function InterviewSurface({
             })}
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={shuffleDeck}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--violet)]/40 bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--violet)] transition hover:bg-[var(--tint-violet,var(--fill-subtle))]"
+              title="Randomize this track's question order (mastered cards go to the back)"
+            >
+              <Shuffle size={13} aria-hidden />
+              Shuffle
+            </button>
+            {isShuffled ? (
+              <button
+                type="button"
+                onClick={resetDeckOrder}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-xs text-[var(--text-dim)] transition hover:text-[var(--text-mid)]"
+                title="Back to the original question order"
+              >
+                <ListOrdered size={13} aria-hidden />
+                In order
+              </button>
+            ) : null}
+            <span className="text-[11px] text-[var(--text-dim)]">
+              {isShuffled
+                ? "Custom order — “Mark mastered” sends a card to the back without reshuffling."
+                : "Original order — Shuffle to randomize this track."}
+            </span>
+          </div>
+
           {q ? (
             <Flashcard
               meta={
@@ -286,12 +348,26 @@ export function InterviewSurface({
                   <span className="text-[var(--cyan)]">{track.label}</span>
                   <span>·</span>
                   <span>
-                    {idx + 1}/{track.questions.length}
+                    {idx + 1}/{deck.length}
                   </span>
+                  {isShuffled ? (
+                    <>
+                      <span>·</span>
+                      <span className="text-[var(--violet)]">shuffled</span>
+                    </>
+                  ) : null}
                   {status[q.id] ? (
                     <>
                       <span>·</span>
-                      <span className="text-[var(--green)]">{status[q.id]}</span>
+                      <span
+                        className={
+                          status[q.id] === "mastered"
+                            ? "text-[var(--green)]"
+                            : "text-[var(--yellow)]"
+                        }
+                      >
+                        {status[q.id] === "review" ? "retrain" : status[q.id]}
+                      </span>
                     </>
                   ) : null}
                 </>
@@ -318,7 +394,7 @@ export function InterviewSurface({
                   </button>
                   <button
                     type="button"
-                    disabled={idx >= track.questions.length - 1}
+                    disabled={idx >= deck.length - 1}
                     onClick={() => setPos(trackKey, idx + 1)}
                     className="inline-flex items-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm disabled:opacity-40"
                   >
@@ -350,8 +426,9 @@ export function InterviewSurface({
                         ? "border-[var(--yellow)] bg-[var(--tint-yellow)] text-[var(--yellow)]"
                         : "border-[var(--border)] bg-[var(--surface-2)]"
                     }`}
+                    title="Flag for retraining — shows up under Gaps"
                   >
-                    Review
+                    Retrain
                   </button>
                   {status[q.id] && status[q.id] !== "mastered" ? (
                     <button

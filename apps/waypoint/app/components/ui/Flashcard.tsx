@@ -72,9 +72,17 @@ export function Flashcard({
                     toneStyles[layer.tone ?? "default"],
                   )}
                 >
-                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">
-                    {layer.label}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onToggle(i)}
+                    className="group mb-2 flex w-full items-center justify-between gap-3 text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)] hover:text-[var(--text-mid)]"
+                    title={`Hide ${layer.label}`}
+                  >
+                    <span>{layer.label}</span>
+                    <span className="font-mono normal-case tracking-normal opacity-0 transition group-hover:opacity-100">
+                      hide ×
+                    </span>
+                  </button>
                   <div className="text-[var(--text)]/90">{layer.content}</div>
                 </div>
               ) : (

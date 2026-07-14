@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Clock, ClipboardCheck } from "lucide-react";
 import { useWaypointStore } from "@/lib/store";
 import { ProgressRing } from "../ui/ProgressRing";
+import { QuickLogModal, type QuickLogClassification } from "../rubric/QuickLogModal";
 import { SurfaceHero, card } from "./shared";
 
 /** Slugs that read wrong in title case → uppercase (matches ingest humanizer). */
@@ -13,6 +14,18 @@ function projectLabel(key: string): string {
     .split("-")
     .map((w) => (ACR.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
     .join(" ");
+}
+
+/** Rubric classification for grading a defense rep as a project walkthrough. */
+function defenseClassification(f: {
+  project?: string;
+  roleTrack?: string;
+}): QuickLogClassification {
+  return {
+    taskType: "walkthrough",
+    domain: f.project ? projectLabel(f.project) : "Project story",
+    role: f.roleTrack === "MLE" ? "MLE" : "SWE",
+  };
 }
 
 /**
@@ -29,6 +42,10 @@ export function DefenseSurface() {
   const [idx, setIdx] = useState(0);
   const [showHints, setShowHints] = useState(false);
   const [projectFilter, setProjectFilter] = useState<string>("ALL");
+  const [gradeTarget, setGradeTarget] = useState<{
+    task: string;
+    classification: QuickLogClassification;
+  } | null>(null);
 
   const projects = useMemo(
     () => Array.from(new Set(items.map((i) => i.project).filter(Boolean) as string[])).sort(),
@@ -231,6 +248,20 @@ export function DefenseSurface() {
                 <Check size={15} className="shrink-0" strokeWidth={2.5} aria-hidden />
                 Practiced → next
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setGradeTarget({
+                    task: `Defense: ${current.title}`,
+                    classification: defenseClassification(current),
+                  })
+                }
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--magenta)]/50 px-3 py-2 text-sm text-[var(--magenta)] hover:bg-[var(--tint-magenta)]"
+                title="Score this cold walkthrough into the rubric (shows in History / Gaps / Performance)"
+              >
+                <ClipboardCheck size={15} className="shrink-0" aria-hidden />
+                Grade…
+              </button>
               {(current.practicedDates?.length ?? 0) > 0 ? (
                 <button
                   type="button"
@@ -292,19 +323,42 @@ export function DefenseSurface() {
                       {last ? `${n}× · last ${last}` : "Not practiced"}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => mark(f.id)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cyan)] bg-[var(--cyan)] px-3 py-1.5 text-xs font-semibold text-[var(--bg)]"
-                  >
-                    <Check size={14} className="shrink-0" aria-hidden />
-                    Practiced
-                  </button>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setGradeTarget({
+                          task: `Defense: ${f.title}`,
+                          classification: defenseClassification(f),
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--magenta)]/50 px-3 py-1.5 text-xs text-[var(--magenta)] hover:bg-[var(--tint-magenta)]"
+                    >
+                      <ClipboardCheck size={14} className="shrink-0" aria-hidden />
+                      Grade
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => mark(f.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cyan)] bg-[var(--cyan)] px-3 py-1.5 text-xs font-semibold text-[var(--bg)]"
+                    >
+                      <Check size={14} className="shrink-0" aria-hidden />
+                      Practiced
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
+      ) : null}
+
+      {gradeTarget ? (
+        <QuickLogModal
+          task={gradeTarget.task}
+          classification={gradeTarget.classification}
+          onClose={() => setGradeTarget(null)}
+        />
       ) : null}
     </div>
   );
