@@ -2,7 +2,7 @@
 
 import type { TaskType, Role } from '@waypoint/rubric';
 
-export type TrackKey = 'swe' | 'mle' | 'ds' | 'de' | 'react' | 'sql' | 'sdlc' | 'diag';
+export type TrackKey = 'swe' | 'mle' | 'ds' | 'de' | 'react' | 'sql' | 'sdlc' | 'diag' | 'bi';
 export type QBankStatus = 'mastered' | 'review';
 
 /** One Level-I question with its Level II/III stretch follow-ons. */

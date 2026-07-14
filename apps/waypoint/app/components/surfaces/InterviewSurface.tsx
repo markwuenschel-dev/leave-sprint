@@ -23,7 +23,7 @@ import { PerformancePanel } from "../rubric/PerformancePanel";
 import { SurfaceHero, card } from "./shared";
 import { filterByGrader, graderModelsIn } from "@/lib/graderFilter";
 
-const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
+const TRACK_ORDER: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag", "bi"];
 
 const INTERVIEW_TABS: { id: InterviewTabId; label: string; short?: string }[] = [
   { id: "qbank", label: "Q Bank" },

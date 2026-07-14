@@ -11,4 +11,5 @@ export const QB_TRACK_MAP: Record<TrackKey, TrackMapEntry> = {
   sql: { taskType: 'knowledge', domain: 'SQL', role: 'DE' },
   sdlc: { taskType: 'knowledge', domain: 'Docker/CI/CD', role: 'SWE' },
   diag: { taskType: 'coding', domain: 'Backend/API Engineering', role: 'SWE' },
+  bi: { taskType: 'knowledge', domain: 'Data Analysis', role: 'DS' },
 };

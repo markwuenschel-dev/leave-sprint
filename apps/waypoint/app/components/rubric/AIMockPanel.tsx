@@ -29,7 +29,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-const TRACKS: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag"];
+const TRACKS: TrackKey[] = ["swe", "mle", "ds", "de", "react", "sql", "sdlc", "diag", "bi"];
 const MAX_ADAPTIVE = 2; // adaptive follow-ups per level, at the model's discretion
 const LEVEL_PASS = 70; // finalScore needed to escalate to the next level
 const box = "rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)]";
