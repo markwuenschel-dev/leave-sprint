@@ -10,7 +10,7 @@
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:3000 — apps/waypoint
+pnpm dev          # http://localhost:3210 — apps/waypoint (prod still serves on 3000)
 pnpm build
 pnpm start        # migrate PGlite + next start (local)
 ```

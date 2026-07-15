@@ -9,10 +9,16 @@
 import { NextResponse } from "next/server";
 import { availableProviders, getProvider, type ProviderId } from "@/lib/llm";
 import {
+  STUDY_SYSTEM,
+  studyUserPrompt,
+  validMissConcepts,
   validRepIds,
+  type ProblemSource,
+  type StudyConcept,
   type StudyDigest,
   type StudyGuideLearnItem,
   type StudyGuideWeekItem,
+  type StudyProblem,
   type StudyRep,
 } from "@/lib/study";
 
@@ -26,26 +32,6 @@ export async function GET() {
   );
 }
 
-const SYSTEM = `You are a study coach building a short, per-role study guide for a software/data career switcher, from a deterministic digest of their graded interview practice history. Be specific and evidence-bound: every claim must trace to the digest, every rep must cite an id from it. No filler, no generic advice.
-
-Reply with ONLY a JSON object, no markdown fences:
-{
-  "learn": [
-    {
-      "title": "concept to learn, phrased as the underlying model to acquire",
-      "why": "2-3 sentences: the evidence (which misses/trends), and why learning this collapses several misses at once",
-      "reps": [{ "kind": "qbank" | "defense" | "retest", "id": "<id from digest>", "label": "short human label" }]
-    }
-  ],
-  "week": [{ "id": "w1", "text": "one concrete checkable action mixing study + reps" }]
-}
-
-Rules:
-- 2 to 4 learn items, ordered by leverage (most recurring misses collapsed first).
-- 1 to 4 reps per learn item. kind "qbank" ids come from qbankCandidates or retrainCards; "retest" ids from dueRetests; "defense" ids from defenseStories. Never invent an id.
-- 4 to 6 week items, small enough to finish in a week alongside a job search; reference the learn items and reps by name.
-- If the digest has almost no signal (few misses), say so in the single learn item's "why" and build the week from retrain cards, due retests, and unpracticed defense stories instead.`;
-
 interface StudyBody {
   provider: ProviderId;
   digest: StudyDigest;
@@ -55,6 +41,14 @@ interface RawGuide {
   learn?: Partial<StudyGuideLearnItem>[];
   week?: Partial<StudyGuideWeekItem>[];
 }
+
+const PROBLEM_SOURCES = new Set<ProblemSource>([
+  "leetcode",
+  "neetcode",
+  "hackerrank",
+  "stratascratch",
+  "other",
+]);
 
 function parseGuide(text: string, digest: StudyDigest): { learn: StudyGuideLearnItem[]; week: StudyGuideWeekItem[] } | null {
   const start = text.indexOf("{");
@@ -67,12 +61,27 @@ function parseGuide(text: string, digest: StudyDigest): { learn: StudyGuideLearn
     return null;
   }
   const allowed = validRepIds(digest);
+  const concepts = validMissConcepts(digest);
   const learn: StudyGuideLearnItem[] = (raw.learn ?? [])
     .filter((l) => typeof l?.title === "string" && typeof l?.why === "string")
     .slice(0, 4)
     .map((l) => ({
       title: l.title!.slice(0, 140),
       why: l.why!.slice(0, 500),
+      // Same contract as rep ids: a claim we can't tie back to the digest is dropped.
+      collapses: ((l.collapses ?? []) as string[])
+        .filter((c) => typeof c === "string" && concepts.has(c))
+        .slice(0, 8),
+      concepts: ((l.concepts ?? []) as StudyConcept[])
+        .filter((c) => typeof c?.name === "string" && typeof c?.claim === "string")
+        .slice(0, 4)
+        .map((c) => ({
+          name: c.name.slice(0, 100),
+          claim: c.claim.slice(0, 240),
+          ...(typeof c.lookup === "string" && c.lookup.trim()
+            ? { lookup: c.lookup.slice(0, 160) }
+            : {}),
+        })),
       reps: ((l.reps ?? []) as StudyRep[])
         .filter(
           (r) =>
@@ -82,6 +91,22 @@ function parseGuide(text: string, digest: StudyDigest): { learn: StudyGuideLearn
         )
         .slice(0, 4)
         .map((r) => ({ kind: r.kind, id: r.id, label: String(r.label ?? r.id).slice(0, 80) })),
+      problems: ((l.problems ?? []) as StudyProblem[])
+        .filter((p) => typeof p?.name === "string" && PROBLEM_SOURCES.has(p?.source))
+        .slice(0, 4)
+        .map((p) => ({
+          source: p.source,
+          name: p.name.slice(0, 100),
+          ...(typeof p.slug === "string" && p.slug.trim()
+            ? { slug: p.slug.trim().slice(0, 80) }
+            : {}),
+          ...(p.difficulty === "easy" || p.difficulty === "medium" || p.difficulty === "hard"
+            ? { difficulty: p.difficulty }
+            : {}),
+          ...(typeof p.targets === "string" && p.targets.trim()
+            ? { targets: p.targets.slice(0, 120) }
+            : {}),
+        })),
     }));
   const week: StudyGuideWeekItem[] = (raw.week ?? [])
     .filter((w) => typeof w?.text === "string")
@@ -108,8 +133,8 @@ export async function POST(req: Request) {
   try {
     const p = getProvider(body.provider);
     const raw = await p.complete({
-      system: SYSTEM,
-      user: `DIGEST (role scope: ${body.digest.role}):\n${JSON.stringify(body.digest)}`,
+      system: STUDY_SYSTEM,
+      user: studyUserPrompt(body.digest),
     });
     const guide = parseGuide(raw, body.digest);
     if (!guide) return NextResponse.json({ error: "unparseable_guide" }, { status: 502 });

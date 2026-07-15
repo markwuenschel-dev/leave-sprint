@@ -23,7 +23,8 @@ export function anthropicProvider(opts: { apiKey: string; model?: string }): Int
     async complete(input: GradeInput) {
       const res = await client.messages.create({
         model,
-        max_tokens: 1024,
+        // A full study guide (4 learn items × concepts + problems) runs ~5k tokens.
+        max_tokens: 8192,
         system: input.system,
         messages: [{ role: "user", content: userContent(input) }],
       });

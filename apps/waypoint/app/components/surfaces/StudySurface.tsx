@@ -12,11 +12,14 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { BookOpenCheck, RefreshCw } from "lucide-react";
+import { BookOpenCheck, Check, Copy, RefreshCw } from "lucide-react";
 import { QBANK, type TrackKey } from "@waypoint/qbank";
 import { useWaypointStore } from "@/lib/store";
 import {
   buildStudyDigest,
+  problemUrl,
+  STUDY_SYSTEM,
+  studyUserPrompt,
   type StudyGuideLearnItem,
   type StudyGuideWeekItem,
   type StudyRep,
@@ -25,6 +28,20 @@ import { resolveDeck } from "@/lib/qbankDeck";
 import { requestNav } from "@/lib/nav";
 import { ROLE_FILTER_OPTIONS, type RoleFilter } from "@/lib/domain";
 import { SurfaceHero, card } from "./shared";
+
+const DIFFICULTY_CLS = {
+  easy: "text-[var(--green)]",
+  medium: "text-[var(--yellow)]",
+  hard: "text-[var(--orange)]",
+} as const;
+
+const SOURCE_LABEL: Record<string, string> = {
+  leetcode: "LeetCode",
+  neetcode: "NeetCode",
+  hackerrank: "HackerRank",
+  stratascratch: "StrataScratch",
+  other: "Practice",
+};
 
 const TREND_LABEL = {
   worsening: { text: "▲ worsening", cls: "text-[var(--orange)]" },
@@ -56,6 +73,7 @@ export function StudySurface() {
   const [providers, setProviders] = useState<string[] | null>(null);
   const [provider, setProvider] = useState<string>("");
   const [building, setBuilding] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,6 +93,26 @@ export function StudySurface() {
   const guide = guides[role];
   const newGrades = guide ? Math.max(0, digest.gradeCount - guide.gradeCount) : 0;
   const noProviders = providers !== null && providers.length === 0;
+
+  /** Leverage = total graded misses the item's collapsed concepts account for. */
+  const missCount = useMemo(
+    () => new Map(digest.misses.map((m) => [m.concept, m.misses])),
+    [digest.misses],
+  );
+  const leverageOf = (l: StudyGuideLearnItem) =>
+    (l.collapses ?? []).reduce((sum, c) => sum + (missCount.get(c) ?? 0), 0);
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(
+        `${STUDY_SYSTEM}\n\n---\n\n${studyUserPrompt(digest)}`,
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setError("Couldn't reach the clipboard — copy the prompt from lib/study.ts instead.");
+    }
+  }
 
   function openRep(rep: StudyRep) {
     if (rep.kind === "qbank") {
@@ -184,6 +222,20 @@ export function StudySurface() {
               stale · {newGrades} new grade{newGrades === 1 ? "" : "s"}
             </span>
           ) : null}
+          <button
+            type="button"
+            onClick={copyPrompt}
+            disabled={digest.gradeCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--hairline)] px-2.5 py-1.5 text-xs text-[var(--text-mid)] transition hover:text-[var(--text)] disabled:opacity-40"
+            title="Copy the exact prompt + digest to run this guide in another LLM"
+          >
+            {copied ? (
+              <Check size={13} className="text-[var(--green)]" aria-hidden />
+            ) : (
+              <Copy size={13} aria-hidden />
+            )}
+            {copied ? "Copied" : "Copy prompt"}
+          </button>
           {providers?.length ? (
             <>
               {providers.length > 1 ? (
@@ -293,12 +345,92 @@ export function StudySurface() {
                     key={l.title}
                     className="rounded-xl border border-[var(--hairline)] bg-[var(--bg-elev)] p-3.5"
                   >
-                    <div className="text-sm font-semibold text-[var(--text)]">{l.title}</div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <div className="text-sm font-semibold text-[var(--text)]">{l.title}</div>
+                      {leverageOf(l) > 0 ? (
+                        <span className="shrink-0 rounded-md bg-[var(--tint-yellow)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--yellow)]">
+                          collapses {leverageOf(l)} misses
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="mt-1 text-xs leading-relaxed text-[var(--text-mid)]">
                       {l.why}
                     </p>
+                    {l.collapses?.length ? (
+                      <div className="mt-1.5 text-[11px] text-[var(--text-dim)]">
+                        collapses: {l.collapses.join(" · ")}
+                      </div>
+                    ) : null}
+
+                    {l.concepts?.length ? (
+                      <div className="mt-3 border-t border-[var(--hairline)] pt-2.5">
+                        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-dim)]">
+                          Look these up
+                        </div>
+                        <div className="space-y-2">
+                          {l.concepts.map((c) => (
+                            <div key={c.name}>
+                              <div className="text-xs font-medium text-[var(--text)]">
+                                {c.name}
+                              </div>
+                              <div className="text-[11px] leading-relaxed text-[var(--text-mid)]">
+                                {c.claim}
+                              </div>
+                              {c.lookup ? (
+                                <div className="mt-0.5 font-mono text-[10px] text-[var(--text-dim)]">
+                                  ↳ {c.lookup}
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {l.problems?.length ? (
+                      <div className="mt-3 border-t border-[var(--hairline)] pt-2.5">
+                        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                          <div className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-dim)]">
+                            Grind these
+                          </div>
+                          <div className="font-mono text-[10px] text-[var(--text-dim)]">
+                            model recall · verify the link
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {l.problems.map((p) => (
+                            <div key={`${p.source}:${p.name}`}>
+                              <a
+                                href={problemUrl(p)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-baseline gap-1.5 text-xs text-[var(--cyan)] hover:underline"
+                              >
+                                <span className="font-mono text-[10px] text-[var(--text-dim)]">
+                                  {SOURCE_LABEL[p.source] ?? p.source}
+                                </span>
+                                {p.name}
+                                {p.difficulty ? (
+                                  <span
+                                    className={`font-mono text-[10px] ${DIFFICULTY_CLS[p.difficulty]}`}
+                                  >
+                                    {p.difficulty}
+                                  </span>
+                                ) : null}
+                              </a>
+                              {p.targets ? (
+                                <div className="text-[10px] text-[var(--text-dim)]">
+                                  {p.targets}
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
                     {l.reps.length ? (
-                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      <div className="mt-3 flex flex-wrap gap-1.5 border-t border-[var(--hairline)] pt-2.5">
                         {l.reps.map((r) => (
                           <button
                             key={`${r.kind}:${r.id}`}
