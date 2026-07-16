@@ -2,8 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ListOrdered, Shuffle } from "lucide-react";
-import { QBANK, type QBankQuestion, type TrackKey } from "@waypoint/qbank";
+import {
+  QBANK,
+  questionToMarkdown,
+  trackToMarkdown,
+  questionsToJson,
+  type QBankQuestion,
+  type TrackKey,
+} from "@waypoint/qbank";
 import { useWaypointStore } from "@/lib/store";
+import { downloadFile } from "@/lib/download";
 import { moveIdToEnd, resolveDeck, shuffledDeckIds } from "@/lib/qbankDeck";
 import {
   INTERVIEW_TAB_KEY,
@@ -339,6 +347,31 @@ export function InterviewSurface({
                 ? "Custom order — “Mark mastered” sends a card to the back without reshuffling."
                 : "Original order — Shuffle to randomize this track."}
             </span>
+            <span className="ml-auto flex items-center gap-1.5">
+              <span className="text-[11px] text-[var(--text-dim)]">Download {track.short}:</span>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadFile(`qbank-${trackKey}.md`, trackToMarkdown(track), "text/markdown")
+                }
+                className="rounded-lg border border-[var(--hairline)] px-2 py-1 text-[11px] text-[var(--text-dim)] hover:text-[var(--text-mid)]"
+              >
+                MD
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadFile(
+                    `qbank-${trackKey}.json`,
+                    questionsToJson(track.questions),
+                    "application/json",
+                  )
+                }
+                className="rounded-lg border border-[var(--hairline)] px-2 py-1 text-[11px] text-[var(--text-dim)] hover:text-[var(--text-mid)]"
+              >
+                JSON
+              </button>
+            </span>
           </div>
 
           {q ? (
@@ -441,7 +474,25 @@ export function InterviewSurface({
                   ) : null}
                   <button
                     type="button"
-                    className="ml-auto inline-flex items-center rounded-lg border border-[var(--cyan)]/40 px-3 py-2 text-sm text-[var(--cyan)]"
+                    className="ml-auto inline-flex items-center rounded-lg border border-[var(--hairline)] px-2.5 py-2 text-xs text-[var(--text-dim)] hover:text-[var(--text-mid)]"
+                    onClick={() => downloadFile(`${q.id}.md`, questionToMarkdown(q), "text/markdown")}
+                    title="Download this question's full stack (answer, follow-up, L2, L3) as Markdown"
+                  >
+                    ↓ MD
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-lg border border-[var(--hairline)] px-2.5 py-2 text-xs text-[var(--text-dim)] hover:text-[var(--text-mid)]"
+                    onClick={() =>
+                      downloadFile(`${q.id}.json`, questionsToJson([q]), "application/json")
+                    }
+                    title="Download this question's full stack (answer, follow-up, L2, L3) as JSON"
+                  >
+                    ↓ JSON
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-lg border border-[var(--cyan)]/40 px-3 py-2 text-sm text-[var(--cyan)]"
                     onClick={() => setLogPrompt(q.q)}
                   >
                     Quick log…

@@ -16,3 +16,11 @@ export const QB_TRACK_MAP: Record<TrackKey, TrackMapEntry> = {
   // yet, so nothing routes there until the track grows.
   bi: { taskType: 'knowledge', domain: 'Data Analysis', role: 'BIE' },
 };
+
+/** Reverse lookup: a RubricEntry's primaryDomain (e.g. "SQL") -> the qbank track that covers it, if any. */
+export function domainToTrack(domain: string): TrackKey | null {
+  const hit = (Object.entries(QB_TRACK_MAP) as [TrackKey, TrackMapEntry][]).find(
+    ([, v]) => v.domain === domain,
+  );
+  return hit ? hit[0] : null;
+}

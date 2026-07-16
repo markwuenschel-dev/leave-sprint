@@ -99,6 +99,7 @@ const SEV_RANK: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low:
 export interface RetestItem {
   id: string;
   task: string;
+  primaryDomain: string;
   bucket: 'due-now' | 'due-soon' | 'blocked';
   retestDate: string | null;
   stalenessRisk: string | null;
@@ -132,6 +133,7 @@ export function retestSchedule(entries: RubricEntry[], today = new Date()): Rete
     items.push({
       id: e.id,
       task: e.task,
+      primaryDomain: e.primaryDomain || e.domain || '',
       bucket,
       retestDate,
       stalenessRisk: staleRisk,

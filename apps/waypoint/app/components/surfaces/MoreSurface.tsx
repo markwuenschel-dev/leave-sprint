@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { parseImportFiles, type RubricEntry } from "@waypoint/rubric";
+import { QBANK, bankToMarkdown, questionsToJson, type QBankQuestion, type QBankTrack } from "@waypoint/qbank";
 import { useWaypointStore, todayIso } from "@/lib/store";
 import { mergeCatalogLists } from "@/data/catalog";
 import { formatTwinSummary } from "@/lib/twinImport";
+import { downloadFile } from "@/lib/download";
 import type { WaypointState } from "@/lib/domain";
 import { card } from "./shared";
 
@@ -46,6 +48,15 @@ export function MoreSurface() {
     a.href = URL.createObjectURL(blob);
     a.download = `waypoint-backup-${todayIso()}.json`;
     a.click();
+  }
+
+  function doExportQBankMd() {
+    downloadFile(`qbank-full-${todayIso()}.md`, bankToMarkdown(QBANK), "text/markdown");
+  }
+
+  function doExportQBankJson() {
+    const all = (Object.values(QBANK) as QBankTrack[]).flatMap((t) => t.questions) as QBankQuestion[];
+    downloadFile(`qbank-full-${todayIso()}.json`, questionsToJson(all), "application/json");
   }
 
   function mergeAppBackup(d: Record<string, unknown>) {
@@ -182,6 +193,22 @@ export function MoreSurface() {
             title="Add any missing catalog rows without wiping status"
           >
             Refresh catalog
+          </button>
+          <button
+            type="button"
+            onClick={doExportQBankMd}
+            className="rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm"
+            title="Download the full Q Bank (all tracks, all questions — answer, follow-up, L2, L3) as Markdown"
+          >
+            Q Bank MD
+          </button>
+          <button
+            type="button"
+            onClick={doExportQBankJson}
+            className="rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm"
+            title="Download the full Q Bank (all tracks, all questions — answer, follow-up, L2, L3) as JSON"
+          >
+            Q Bank JSON
           </button>
           <button
             type="button"

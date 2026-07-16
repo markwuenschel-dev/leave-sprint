@@ -6,6 +6,7 @@ import {
   parseImportFiles,
   scoreBand,
   taskLabel,
+  RD,
   type LevelId,
   type RubricEntry,
 } from "@waypoint/rubric";
@@ -158,6 +159,12 @@ export function RubricHistory({ entries: entriesProp }: { entries?: RubricEntry[
                     {e.taskType ? ` · ${taskLabel(e.taskType)}` : ""}
                     {e.primaryRole ? ` · ${e.primaryRole}` : ""}
                     {e.loggingMode ? ` · ${e.loggingMode}` : e.quickLog ? " · fast" : ""}
+                    {" · "}
+                    <span
+                      title={`Difficulty: ${RD.difficulty.find((d) => d.d === e.difficulty)?.label ?? "—"} · Assistance: ${RD.assistance.find((a) => a.lvl === e.assistanceLevel)?.desc ?? "—"}`}
+                    >
+                      D{e.difficulty} · A{e.assistanceLevel}
+                    </span>
                   </div>
                   <div className="mt-3">
                     <LevelScorePills

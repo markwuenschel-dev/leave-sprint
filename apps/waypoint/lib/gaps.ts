@@ -301,6 +301,20 @@ export function trendsByTaskType(
     .filter((t) => t.count > 0);
 }
 
+/** Score history for a single domain (e.g. a repractice queue item's topic), rolling-averaged. */
+export function domainScoreHistory(
+  entries: RubricEntry[],
+  domain: string,
+  roleFilter: RoleFilter = "ALL",
+  w = 5,
+): { labels: string[]; final: (number | null)[]; count: number } {
+  const es = filterEntriesByRole(entries, roleFilter)
+    .filter((e) => e.primaryDomain === domain && !!e.date)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const final = es.map((e) => (typeof e.finalScore === "number" ? e.finalScore : null));
+  return { labels: es.map((e) => e.date), final: rollingAverage(final, w), count: es.length };
+}
+
 /* ── Rolling qualifying rate (share of trailing window that earned L1/L2/L3) ── */
 export interface RateTrend {
   labels: string[];

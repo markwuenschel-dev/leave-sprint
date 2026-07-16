@@ -255,7 +255,7 @@ Reply with ONLY a JSON object, no markdown fences:
 }
 
 Rules:
-- 2 to 4 learn items, ordered by leverage: the item collapsing the most recurring misses comes first.
+- 2 to 5 learn items, ordered by leverage: the item collapsing the most recurring misses comes first.
 - "collapses" must quote concept strings from digest.misses verbatim; anything else is dropped, which costs the item its leverage badge.
 - 2 to 4 concepts per learn item. Name the actual mechanism ("window frame clauses: ROWS vs RANGE"), never a topic label ("SQL"). "lookup" must be something to type into a search bar or a named doc/chapter — never "read the docs".
 - 1 to 4 reps per learn item. "qbank" ids come from qbankCandidates or retrainCards; "retest" ids from dueRetests; "defense" ids from defenseStories. Never invent an id.
