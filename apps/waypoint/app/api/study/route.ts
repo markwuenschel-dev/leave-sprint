@@ -64,7 +64,7 @@ function parseGuide(text: string, digest: StudyDigest): { learn: StudyGuideLearn
   const concepts = validMissConcepts(digest);
   const learn: StudyGuideLearnItem[] = (raw.learn ?? [])
     .filter((l) => typeof l?.title === "string" && typeof l?.why === "string")
-    .slice(0, 4)
+    .slice(0, 5)
     .map((l) => ({
       title: l.title!.slice(0, 140),
       why: l.why!.slice(0, 500),

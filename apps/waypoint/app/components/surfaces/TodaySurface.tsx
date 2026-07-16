@@ -3,10 +3,12 @@
 import { useMemo } from "react";
 import { useWaypointStore, todayIso } from "@/lib/store";
 import { computeReadiness } from "@/lib/readiness";
-import { activeRetestQueue } from "@/lib/gaps";
+import { activeRetestQueue, domainScoreHistory } from "@/lib/gaps";
 import { pickNextMove } from "@/lib/nextMove";
 import { requestNav } from "@/lib/nav";
+import { domainToTrack } from "@waypoint/qbank";
 import { ProgressRing } from "../ui/ProgressRing";
+import { Sparkline } from "../ui/Sparkline";
 import { card } from "./shared";
 
 export function TodaySurface() {
@@ -18,6 +20,7 @@ export function TodaySurface() {
   const rubricEntries = useWaypointStore((s) => s.rubricEntries);
   const solidInterviewLogs = useWaypointStore((s) => s.solidInterviewLogs);
   const roleFilter = useWaypointStore((s) => s.roleFilter);
+  const setQBankPos = useWaypointStore((s) => s.setQBankPos);
 
   const readiness = useMemo(
     () =>
@@ -36,6 +39,21 @@ export function TodaySurface() {
   );
   const top = queue.slice(0, 5);
   const more = Math.max(0, queue.length - top.length);
+
+  const entryById = useMemo(
+    () => new Map(rubricEntries.map((e) => [e.id, e])),
+    [rubricEntries],
+  );
+
+  const historyByDomain = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof domainScoreHistory>>();
+    for (const i of top) {
+      if (i.primaryDomain && !m.has(i.primaryDomain)) {
+        m.set(i.primaryDomain, domainScoreHistory(rubricEntries, i.primaryDomain, roleFilter));
+      }
+    }
+    return m;
+  }, [top, rubricEntries, roleFilter]);
 
   const slots = day?.slots || {
     practice: false,
@@ -169,41 +187,54 @@ export function TodaySurface() {
           </p>
         ) : (
           <ul className="space-y-2">
-            {top.map((i) => (
-              <li key={i.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-start gap-2 rounded-xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-3 py-2 text-left text-sm hover:border-[var(--cyan)]/40"
-                  onClick={() => requestNav("interview", "gaps")}
-                >
-                  <span
-                    className="mt-0.5 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px]"
-                    style={{
-                      borderColor:
-                        i.bucket === "due-now"
-                          ? "var(--orange)"
-                          : i.bucket === "blocked"
-                            ? "var(--text-dim)"
-                            : "var(--yellow)",
-                      color:
-                        i.bucket === "due-now"
-                          ? "var(--orange)"
-                          : i.bucket === "blocked"
-                            ? "var(--text-dim)"
-                            : "var(--yellow)",
+            {top.map((i) => {
+              const urgencyColor =
+                i.bucket === "due-now"
+                  ? "var(--orange)"
+                  : i.bucket === "blocked"
+                    ? "var(--text-dim)"
+                    : "var(--yellow)";
+              const hist = i.primaryDomain ? historyByDomain.get(i.primaryDomain) : undefined;
+              return (
+                <li key={i.id}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--bg-elev)] py-2 pl-2.5 pr-3 text-left text-sm hover:border-[var(--cyan)]/40"
+                    style={{ borderLeft: `3px solid ${urgencyColor}` }}
+                    title={
+                      i.bucket === "due-now"
+                        ? "Due now"
+                        : i.bucket === "blocked"
+                          ? "Blocked"
+                          : "Due soon"
+                    }
+                    onClick={() => {
+                      const entry = entryById.get(i.id);
+                      const track = entry?.primaryDomain
+                        ? domainToTrack(entry.primaryDomain)
+                        : null;
+                      if (track) setQBankPos(track, 0);
+                      requestNav("interview", "qbank");
                     }}
                   >
-                    {i.bucket === "due-now" ? "now" : i.bucket === "blocked" ? "block" : "soon"}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{i.task}</span>
-                    <span className="block truncate text-xs text-[var(--text-dim)]">
-                      {i.action}
+                    <span className="w-14 shrink-0 truncate text-xs font-medium uppercase tracking-wide text-[var(--text-dim)]">
+                      {i.primaryDomain || "—"}
                     </span>
-                  </span>
-                </button>
-              </li>
-            ))}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{i.task}</span>
+                      <span className="block truncate text-xs text-[var(--text-dim)]">
+                        {i.action}
+                      </span>
+                    </span>
+                    {hist && hist.count > 0 ? (
+                      <span className="shrink-0">
+                        <Sparkline values={hist.final} width={56} height={20} />
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
         {more > 0 ? (
