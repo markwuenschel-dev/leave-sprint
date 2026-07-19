@@ -19,6 +19,23 @@ Data lives in embedded **PGlite** under `apps/waypoint/.pglite` (no cloud host r
 
 Optional: set `APP_TOKEN` for a cookie gate; unset = open.
 
+### LLM / AI Interviewer (LiteLLM gateway)
+
+Preferred: run the [litellm-langfuse-gateway](https://github.com/markwuenschel-dev/litellm-langfuse-gateway) stack locally, then in **repo-root** `.env`:
+
+```env
+LITELLM_BASE_URL=http://localhost:4000/v1
+LITELLM_VIRTUAL_KEY=sk-...   # virtual key from `llg keys create` (not the master key)
+```
+
+When `LITELLM_VIRTUAL_KEY` is set, Waypoint’s AI providers go through that gateway (aliases like `openai-general`, `anthropic-general`, …). You do **not** need raw `OPENAI_API_KEY` / etc. in leave-sprint for chat/grade.
+
+1. Start Docker + gateway (`uv run llg up` in the gateway repo).
+2. Put the two vars above in leave-sprint `.env`.
+3. `pnpm dev` → Interview → AI Mock; pick a provider.
+
+See `.env.example` and `apps/waypoint/lib/llm/registry.ts`.
+
 ### Deploy on AWS EC2 (Node)
 
 Local-first still means **your** server — EC2 is fine. Not Railway.

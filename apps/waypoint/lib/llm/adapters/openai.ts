@@ -1,13 +1,14 @@
 /**
- * OpenAI-compatible adapter — one shape for OpenAI and Grok (ADR-0002). Grok is
- * OpenAI-API-compatible, so it's the same code with a different baseURL/key/model.
- * Structured output via response_format json_schema (strict).
+ * OpenAI-compatible adapter — one shape for OpenAI, Grok, and the LiteLLM gateway.
+ * Grok and the local gateway are OpenAI-API-compatible; they differ only in
+ * baseURL / key / model id. Structured output via response_format json_schema (strict).
  */
 import OpenAI from "openai";
 import { OBSERVATIONS_JSON_SCHEMA } from "@waypoint/rubric";
 import { parseObservations, userContent, type GradeInput, type InterviewProvider, type ProviderId } from "../types";
 
-function openAICompatible(opts: {
+/** Shared OpenAI-compatible client (OpenAI, Grok, LiteLLM proxy). */
+export function openAICompatible(opts: {
   id: ProviderId;
   apiKey: string;
   model: string;
@@ -54,5 +55,31 @@ export function grokProvider(opts: { apiKey: string; model?: string }): Intervie
     apiKey: opts.apiKey,
     model: opts.model ?? "grok-4.5",
     baseURL: "https://api.x.ai/v1",
+  });
+}
+
+/** Map interview provider ids → LiteLLM stable aliases (gateway model_list). */
+export const GATEWAY_MODEL_ALIAS: Record<ProviderId, string> = {
+  openai: "openai-general",
+  grok: "grok-general",
+  anthropic: "anthropic-general",
+  gemini: "gemini-general",
+};
+
+/**
+ * Route any provider through the local LiteLLM OpenAI-compatible proxy.
+ * Requires LITELLM_VIRTUAL_KEY (sk-…) and a running gateway; optional LITELLM_BASE_URL.
+ */
+export function gatewayProvider(opts: {
+  id: ProviderId;
+  apiKey: string;
+  baseURL?: string;
+  model?: string;
+}): InterviewProvider {
+  return openAICompatible({
+    id: opts.id,
+    apiKey: opts.apiKey,
+    model: opts.model ?? GATEWAY_MODEL_ALIAS[opts.id],
+    baseURL: opts.baseURL ?? "http://localhost:4000/v1",
   });
 }
