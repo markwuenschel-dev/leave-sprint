@@ -1,6 +1,7 @@
 /** Anthropic (Claude) adapter — structured output via output_config.format. */
 import Anthropic from "@anthropic-ai/sdk";
 import { OBSERVATIONS_JSON_SCHEMA } from "@waypoint/rubric";
+import { assertNotHermeticLiveCall } from "../hermetic";
 import { parseObservations, userContent, type GradeInput, type InterviewProvider } from "../types";
 
 export function anthropicProvider(opts: { apiKey: string; model?: string }): InterviewProvider {
@@ -10,6 +11,7 @@ export function anthropicProvider(opts: { apiKey: string; model?: string }): Int
     id: "anthropic",
     model,
     async grade(input: GradeInput) {
+      assertNotHermeticLiveCall("anthropic.grade");
       const res = await client.messages.create({
         model,
         max_tokens: 4096,
@@ -21,6 +23,7 @@ export function anthropicProvider(opts: { apiKey: string; model?: string }): Int
       return parseObservations(text && "text" in text ? text.text : "");
     },
     async complete(input: GradeInput) {
+      assertNotHermeticLiveCall("anthropic.complete");
       const res = await client.messages.create({
         model,
         // A full study guide (4 learn items × concepts + problems) runs ~5k tokens.

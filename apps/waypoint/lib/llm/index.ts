@@ -11,6 +11,12 @@
 export * from "./types";
 export * from "./pipeline";
 export * from "./registry";
+export {
+  isHermeticEnv,
+  blankCostCredentials,
+  assertNotHermeticLiveCall,
+  COST_ENV_KEYS,
+} from "./hermetic";
 export { anthropicProvider } from "./adapters/anthropic";
 export {
   openaiProvider,

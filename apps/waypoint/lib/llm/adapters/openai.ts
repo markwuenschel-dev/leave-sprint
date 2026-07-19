@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
 import { OBSERVATIONS_JSON_SCHEMA } from "@waypoint/rubric";
+import { assertNotHermeticLiveCall } from "../hermetic";
 import { parseObservations, userContent, type GradeInput, type InterviewProvider, type ProviderId } from "../types";
 
 /** LiteLLM/Langfuse origin fields (omit when not on gateway and SERVICE_NAME unset). */
@@ -62,6 +63,7 @@ export function openAICompatible(opts: {
     id: opts.id,
     model: opts.model,
     async grade(input: GradeInput) {
+      assertNotHermeticLiveCall("openai-compatible.grade");
       const metadata = attachMeta("grade");
       const res = await client.chat.completions.create({
         model: opts.model,
@@ -78,6 +80,7 @@ export function openAICompatible(opts: {
       return parseObservations(res.choices[0]?.message?.content ?? "");
     },
     async complete(input: GradeInput) {
+      assertNotHermeticLiveCall("openai-compatible.complete");
       const metadata = attachMeta("complete");
       const res = await client.chat.completions.create({
         model: opts.model,

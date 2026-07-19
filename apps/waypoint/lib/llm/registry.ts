@@ -8,6 +8,7 @@ import {
   GATEWAY_MODEL_ALIAS,
 } from "./adapters/openai";
 import { geminiProvider } from "./adapters/gemini";
+import { isHermeticEnv } from "./hermetic";
 
 export const PROVIDER_ENV_KEY: Record<ProviderId, string> = {
   anthropic: "ANTHROPIC_API_KEY",
@@ -18,8 +19,13 @@ export const PROVIDER_ENV_KEY: Record<ProviderId, string> = {
 
 const ALL_PROVIDERS = Object.keys(PROVIDER_ENV_KEY) as ProviderId[];
 
-/** True when a real LiteLLM virtual key is configured (must start with sk-). */
+/**
+ * True when a real LiteLLM virtual key is configured (must start with sk-).
+ * Always false under hermetic/test (see ``hermetic.ts``) so developer .env
+ * cannot bill the gateway during automated runs.
+ */
 export function gatewayEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (isHermeticEnv(env)) return false;
   const key = (env.LITELLM_VIRTUAL_KEY ?? "").trim();
   return key.startsWith("sk-");
 }
@@ -42,6 +48,12 @@ export function availableProviders(env: NodeJS.ProcessEnv = process.env): Provid
  * in this app. Dictation (transcribe) still uses OPENAI_API_KEY separately.
  */
 export function getProvider(id: ProviderId, env: NodeJS.ProcessEnv = process.env): InterviewProvider {
+  if (isHermeticEnv(env) && (env.LLG_ALLOW_LIVE ?? "").trim() !== "1") {
+    throw new Error(
+      `getProvider("${id}"): hermetic mode refuses live providers ` +
+        "(set LLG_ALLOW_LIVE=1 only for intentional paid runs).",
+    );
+  }
   if (gatewayEnabled(env)) {
     const apiKey = (env.LITELLM_VIRTUAL_KEY ?? "").trim();
     // Optional single override for all gateway traffic (e.g. llm-general)

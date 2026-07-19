@@ -5,6 +5,7 @@
  * server-side; the browser only ever POSTs audio to /api/transcribe.
  */
 import OpenAI from "openai";
+import { assertNotHermeticLiveCall } from "./hermetic";
 import { PROVIDER_ENV_KEY } from "./registry";
 
 const TRANSCRIBE_MODEL = "gpt-4o-transcribe";
@@ -26,6 +27,7 @@ export async function transcribeAudio(
   file: File,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<{ text: string }> {
+  assertNotHermeticLiveCall("transcribeAudio", env);
   const apiKey = env[PROVIDER_ENV_KEY.openai];
   if (!apiKey) throw new OpenAIUnavailableError();
   const client = new OpenAI({ apiKey });
