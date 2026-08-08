@@ -5,10 +5,16 @@
  * /api/state (same as manual grades). Server-side so provider keys never ship
  * to the browser. NOTE: keys must be in the waypoint process env
  * (apps/waypoint/.env.local or the deploy env) — Next does not load the repo-root .env.
+ *
+ * The request body is parsed, not cast: the shape lives in lib/http/schemas.ts
+ * (`InterviewRequestBody`) so the client imports the same declaration instead of
+ * hand-mirroring it. Failures are classified — bad client input (4xx), an
+ * unusable model response (502 kind=model_response), a provider failure
+ * (502 kind=upstream), or our own fault (500 kind=internal) — see lib/http/respond.ts.
  */
 
 import { NextResponse } from "next/server";
-import { availableProviders, getProvider, gradeToEntry, type ProviderId } from "@/lib/llm";
+import { availableProviders, getProvider, gradeToEntry } from "@/lib/llm";
 import {
   buildGradeInput,
   buildQuestionPrompt,
@@ -17,9 +23,10 @@ import {
   parseProbeReply,
   buildDebriefPrompt,
   parseDebriefReply,
-  type DebriefLevelInput,
 } from "@/lib/interview/prompt";
-import type { ObservationContext } from "@waypoint/rubric";
+import { BODY_LIMITS, readJsonBody } from "@/lib/http/parse";
+import { errorResponse, failureResponse } from "@/lib/http/respond";
+import { parseInterviewBody } from "@/lib/http/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,65 +39,32 @@ export async function GET() {
   );
 }
 
-interface InterviewBody {
-  action?: "question" | "slate" | "probe" | "hint" | "grade" | "debrief";
-  provider: ProviderId;
-  // action: "question" | "slate"
-  role?: string;
-  domain?: string;
-  seed?: string;
-  avoid?: string[];
-  /** question/probe: which rung of the L1→L2→L3 ladder this turn is at. */
-  level?: 1 | 2 | 3;
-  // action: "probe"
-  transcript?: string;
-  /** probe: true when this is the candidate's last answer for the level — feedback only, no follow-up. */
-  final?: boolean;
-  // action: "grade" — classification + provenance (graderModel is added by the seam)
-  ctx?: Omit<ObservationContext, "graderModel">;
-  question?: string;
-  answer?: string;
-  probingTranscript?: string;
-  knownTags?: string[];
-  // action: "debrief" — the whole graded session, one entry per level
-  session?: DebriefLevelInput[];
-}
-
 export async function POST(req: Request) {
-  let body: InterviewBody;
-  try {
-    body = (await req.json()) as InterviewBody;
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+  const raw = await readJsonBody(req, BODY_LIMITS.interview);
+  if (!raw.ok) return failureResponse(raw.failure);
+  const parsed = parseInterviewBody(raw.value);
+  if (!parsed.ok) return failureResponse(parsed.failure);
+  const body = parsed.value;
 
-  const provider = body?.provider;
-  if (!provider) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+  const provider = body.provider;
   if (!availableProviders().includes(provider)) {
-    return NextResponse.json({ error: "provider_unavailable", provider }, { status: 400 });
+    return NextResponse.json(
+      { error: "provider_unavailable", provider, kind: "client_input" },
+      { status: 400 },
+    );
   }
 
-  const action = body.action ?? "grade";
+  const action = body.action;
   try {
     const p = getProvider(provider);
 
-    if (action === "question") {
-      if (!body.role || !body.domain) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-      const text = await p.complete(
-        buildQuestionPrompt({ role: body.role, domain: body.domain, level: body.level, seed: body.seed, avoid: body.avoid }),
-      );
-      return NextResponse.json({ question: text.trim() });
-    }
-
-    if (action === "slate") {
-      if (!body.role || !body.domain) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-      const role = body.role;
-      const domain = body.domain;
+    if (body.action === "slate") {
+      const { role, domain, seed, avoid } = body;
       const results = await Promise.allSettled(
         availableProviders().map(async (id) => ({
           provider: id,
           question: (
-            await getProvider(id).complete(buildQuestionPrompt({ role, domain, seed: body.seed, avoid: body.avoid }))
+            await getProvider(id).complete(buildQuestionPrompt({ role, domain, seed, avoid }))
           ).trim(),
         })),
       );
@@ -98,37 +72,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ candidates });
     }
 
-    if (action === "probe") {
-      if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-      const raw = await p.complete(buildProbePrompt(body.transcript, body.final, body.level));
+    if (body.action === "question") {
+      const { role, domain, seed, avoid, level } = body;
+      const text = await p.complete(buildQuestionPrompt({ role, domain, level, seed, avoid }));
+      return NextResponse.json({ question: text.trim() });
+    }
+
+    if (body.action === "probe") {
+      const reply = await p.complete(buildProbePrompt(body.transcript, body.final, body.level));
       // Verdict-only feedback + one follow-up; probe is null on a DONE sentinel.
-      const { feedback, probe } = parseProbeReply(raw);
+      const { feedback, probe } = parseProbeReply(reply);
       return NextResponse.json({ feedback, probe });
     }
 
-    if (action === "hint") {
-      if (!body.transcript) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+    if (body.action === "hint") {
       const hint = (await p.complete(buildHintPrompt(body.transcript))).trim();
       return NextResponse.json({ hint });
     }
 
-    if (action === "debrief") {
-      if (!body.session?.length) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-      const raw = await p.complete(buildDebriefPrompt(body.session));
+    if (body.action === "debrief") {
+      const reply = await p.complete(buildDebriefPrompt(body.session));
       // null when the model didn't return usable JSON — the client silently skips the card.
-      return NextResponse.json({ debrief: parseDebriefReply(raw) });
+      return NextResponse.json({ debrief: parseDebriefReply(reply) });
     }
 
-    // action: "grade"
+    // action: "grade" — the parser guarantees ctx/question/answer are present and typed.
     const { ctx, question, answer, probingTranscript, knownTags } = body;
-    if (!ctx || !question || !answer) return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-    const result = await gradeToEntry(p, buildGradeInput({ question, answer, probingTranscript, knownTags }), ctx);
+    const result = await gradeToEntry(
+      p,
+      buildGradeInput({ question, answer, probingTranscript, knownTags }),
+      ctx,
+    );
     return NextResponse.json(result);
   } catch (err) {
-    console.error("POST /api/interview failed:", err);
-    return NextResponse.json(
-      { error: `${action}_failed`, message: String((err as Error).message).slice(0, 300) },
-      { status: 502 },
-    );
+    return errorResponse("POST /api/interview", action, err);
   }
 }

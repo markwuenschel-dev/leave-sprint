@@ -10,13 +10,19 @@
  * level cleared but no longer gates progression. After the last level a one-shot
  * end-of-session debrief gives actionable feedback. Talks to /api/interview over
  * fetch only (never imports @/lib/llm, so SDKs stay server-side).
+ *
+ * The request bodies are not described here: they come from the route's own
+ * exported contract (`ParsedInterviewRequest` in lib/http/schemas.ts) via
+ * `import type`, which `verbatimModuleSyntax` erases entirely — so the seam is
+ * compiler-checked without any of that module's runtime parsing reaching the bundle.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QBANK, QB_TRACK_MAP, type TrackKey, type QBankQuestion } from "@waypoint/qbank";
 import { useWaypointStore } from "@/lib/store";
 import { todayIso } from "@/lib/domain";
-import type { RubricEntry } from "@waypoint/rubric";
+import type { IntakeResult } from "@waypoint/rubric";
+import type { ParsedInterviewRequest } from "@/lib/http/schemas";
 import {
   Loader2,
   Sparkles,
@@ -34,15 +40,21 @@ const MAX_ADAPTIVE = 2; // adaptive follow-ups per level, at the model's discret
 const LEVEL_PASS = 70; // finalScore needed to escalate to the next level
 const box = "rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)]";
 
-interface GradeResult {
-  entry: RubricEntry;
-  monotonicOk: boolean;
-  flagged: boolean;
-  droppedTags: string[];
-}
+/**
+ * What a call site hands `post()`: the route's own per-action contract minus
+ * `provider`, which `post` supplies. `ParsedInterviewRequest` rather than the wire
+ * type `InterviewRequestBody` because the wire type has to describe every action at
+ * once and so makes every field optional — the parsed union is what the route will
+ * actually accept, so a per-action field that goes missing here is a compile error
+ * instead of a runtime 400. `Omit` has to be distributed by hand: `Omit<Union, K>`
+ * collapses a union to its common keys and would throw the discrimination away.
+ */
+type WithoutProvider<T> = T extends unknown ? Omit<T, "provider"> : never;
+type InterviewPostBody = WithoutProvider<ParsedInterviewRequest>;
+
 interface LevelOutcome {
   level: 1 | 2 | 3;
-  result: GradeResult;
+  result: IntakeResult;
   passed: boolean;
   /** The graded exchange, kept so the end-of-session debrief can reference each level. */
   exchange: { question: string; answer: string; probing?: string };
@@ -89,8 +101,13 @@ function gateTone(v: string): string {
 }
 
 /** One level's grade, with the full breakdown that makes the demonstrated level explainable. */
-function LevelGradeCard({ level, result, passed }: { level: number; result: GradeResult; passed: boolean }) {
+function LevelGradeCard({ level, result, passed }: { level: number; result: IntakeResult; passed: boolean }) {
   const e = result.entry;
+  // Signal the intake removed from the model's response (observations.ts IntakeResult.droppedTags):
+  // off-vocab `gate:`/`gapType:` values, `malformedItem:` array elements, `extraProperty:` keys.
+  // Rendering it is the contract's explicit obligation on a grading UI. Defensive because the
+  // result comes off an untyped res.json() and may predate the field.
+  const dropped = (Array.isArray(result.droppedTags) ? result.droppedTags : []).map(String);
   return (
     <div className={`${box} space-y-3 p-4`}>
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
@@ -117,6 +134,27 @@ function LevelGradeCard({ level, result, passed }: { level: number; result: Grad
           ) : null}
         </div>
       </div>
+      {/* Dropped by intake — signal the model emitted that the schema rejected, so it is
+          absent from the numbers above. Silent when the response was fully compliant. */}
+      {dropped.length ? (
+        <div>
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-[#f59e0b]">
+            Dropped by intake — {dropped.length} value{dropped.length === 1 ? "" : "s"} the model emitted did not reach
+            this grade
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {dropped.map((t, i) => (
+              <span
+                key={`${i}:${t}`}
+                title={t}
+                className="max-w-full truncate rounded-lg border border-[#f59e0b]/40 px-2 py-0.5 font-mono text-[11px] text-[#f59e0b]"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {/* Level scores — the controlling scores the verdict derives from */}
       <div>
         <div className="mb-1 text-[10px] uppercase tracking-wider text-[var(--text-dim)]">Level scores</div>
@@ -317,7 +355,11 @@ export function AIMockPanel() {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [turns, levelResults]);
 
-  async function post(bodyExtra: Record<string, unknown>) {
+  // `provider` is joined on here and stays a plain string: it arrives from GET
+  // /api/interview's untyped JSON and round-trips through a <select>, whose
+  // `e.target.value` is `string`. Narrowing it to ProviderId would need a cast or a
+  // runtime membership check, so it is the one field of the body still unchecked.
+  async function post(bodyExtra: InterviewPostBody) {
     const res = await fetch("/api/interview", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -492,7 +534,7 @@ export function AIMockPanel() {
       const question = levelTurns[0]?.text ?? "";
       const answer = levelTurns[1]?.text ?? "";
       const probing = levelTurns.length > 2 ? transcript(levelTurns.slice(2)) : undefined;
-      const j: GradeResult = await post({
+      const j: IntakeResult = await post({
         action: "grade",
         ctx: {
           task: question.slice(0, 120),

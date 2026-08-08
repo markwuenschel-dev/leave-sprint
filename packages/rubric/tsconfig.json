@@ -1,0 +1,9 @@
+{
+  "//": "Typecheck-only project. The package has no build step (main/types point straight at src/index.ts), so this exists purely so `pnpm typecheck` sweeps src AND *.test.ts. Options come from tsconfig.base.json — the same settings apps/waypoint/tsconfig.json compiles these sources under today.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

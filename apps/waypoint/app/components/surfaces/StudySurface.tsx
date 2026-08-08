@@ -24,10 +24,25 @@ import {
   type StudyGuideWeekItem,
   type StudyRep,
 } from "@/lib/study";
+import type { StudyRequestBody } from "@/lib/http/schemas";
 import { resolveDeck } from "@/lib/qbankDeck";
 import { requestNav } from "@/lib/nav";
 import { ROLE_FILTER_OPTIONS, type RoleFilter } from "@/lib/domain";
 import { SurfaceHero, card } from "./shared";
+
+/**
+ * The POST /api/study contract as this component sends it. `StudyRequestBody` is the
+ * route's own exported declaration (`import type`, erased by verbatimModuleSyntax, so
+ * none of that module's runtime parsing reaches the browser bundle) — the `digest` we
+ * post is therefore checked against what the route parses, and a new required field on
+ * the route becomes a compile error here rather than a 400 at runtime.
+ *
+ * `provider` is widened back to `string`: it arrives from GET /api/study's untyped JSON
+ * and round-trips through a <select>, whose `e.target.value` is `string`. Narrowing it
+ * to ProviderId would take a cast or a runtime membership check, so it stays the one
+ * unchecked field rather than being laundered through an `as`.
+ */
+type StudyPostBody = Omit<StudyRequestBody, "provider"> & { provider: string };
 
 const DIFFICULTY_CLS = {
   easy: "text-[var(--green)]",
@@ -136,10 +151,11 @@ export function StudySurface() {
     setBuilding(true);
     setError(null);
     try {
+      const body: StudyPostBody = { provider, digest };
       const res = await fetch("/api/study", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider, digest }),
+        body: JSON.stringify(body),
       });
       const j = (await res.json()) as {
         learn?: StudyGuideLearnItem[];

@@ -1,0 +1,13 @@
+{
+  "//": "Typecheck-only project. See packages/rubric/tsconfig.json. `paths` mirrors apps/waypoint/tsconfig.json:9-11 so @waypoint/rubric resolves to its TS source rather than depending on the pnpm symlink layout.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@waypoint/rubric": ["../rubric/src/index.ts"],
+      "@waypoint/practice-types": ["../practice-types/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

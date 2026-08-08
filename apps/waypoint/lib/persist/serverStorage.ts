@@ -1,4 +1,9 @@
 import type { StateStorage } from "zustand/middleware";
+// Type-only: the /api/state body contract, owned by the route's parser. Importing
+// it (rather than hand-mirroring `{ ...slice, __authoritative }`) makes a change to
+// that contract a tsc error here instead of a runtime 400. `import type` is erased,
+// so nothing from lib/http lands in the client bundle.
+import type { StateSaveRequestBody } from "@/lib/http/schemas";
 
 const ENDPOINT = "/api/state";
 const DEBOUNCE_MS = 500;
@@ -17,8 +22,77 @@ let hydrated = false;
 
 export type SaveState = {
   status: "idle" | "saving" | "saved" | "error";
+  /** 401 — the session lapsed. Unlock and the queued save goes out. */
   auth?: boolean;
+  /** The server will never accept this payload; retrying is pointless (see below). */
+  permanent?: boolean;
+  /** `message`/`error` from the failure body (lib/http/respond.ts:31-36), if any. */
+  detail?: string;
 };
+
+/**
+ * How a non-2xx save is treated.
+ *
+ * The bug this replaces: every status except 401 fell through to the catch, which
+ * rescheduled at a 10s ceiling — so a 413 (body over BODY_LIMITS.state, see
+ * lib/http/parse.ts:59-68) or a 400 (parseStateBody rejected the slice,
+ * lib/http/schemas.ts:parseStateBody) hammered the endpoint forever, invisibly.
+ *
+ * The split:
+ *   • 401           → "auth". Pre-existing behaviour, unchanged: re-queue, surface
+ *                     it, do NOT reschedule — the retry is the user unlocking.
+ *   • 408, 425, 429 → "transient". The standard retry-after-a-wait statuses: the
+ *                     request is well-formed, the server just isn't taking it now.
+ *   • other 4xx     → "permanent". The server has judged THIS body unacceptable;
+ *                     resending the identical bytes gets the identical answer.
+ *                     Covers 400/413 (the two the route can actually emit) and
+ *                     403/404/405/422 from a gateway or a stale tab after a deploy.
+ *   • 5xx & the rest → "transient". A fault on the server side (route.ts:62 returns
+ *                     500 save_failed for a DB/migration hiccup) or an opaque
+ *                     status 0 — all plausibly self-healing, so keep backing off.
+ *
+ * A thrown fetch (offline, DNS, TLS) never reaches here: it is caught below and
+ * stays transient, exactly as before.
+ */
+export type SaveFailureClass = "auth" | "permanent" | "transient";
+
+/** 4xx that a later attempt with the SAME body can still succeed on. */
+const RETRYABLE_CLIENT_STATUSES = new Set([408, 425, 429]);
+
+export function classifySaveFailure(status: number): SaveFailureClass {
+  if (status === 401) return "auth";
+  if (RETRYABLE_CLIENT_STATUSES.has(status)) return "transient";
+  if (status >= 400 && status < 500) return "permanent";
+  return "transient";
+}
+
+/** Best-effort read of the failure body; never throws, never blocks the caller. */
+async function failureDetail(res: Response): Promise<string | undefined> {
+  try {
+    const data: unknown = await res.json();
+    if (!data || typeof data !== "object") return undefined;
+    const { message, error } = data as { message?: unknown; error?: unknown };
+    if (typeof message === "string" && message.trim()) return message.trim();
+    if (typeof error === "string" && error.trim()) return error.trim();
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Build the PUT body. `slice` is genuinely `unknown` — it is whatever
+ * `JSON.parse` yielded from zustand's serialized envelope (setItem, below) — so
+ * the spread is an assertion, not a proof. What the declared return type DOES
+ * buy: the `__authoritative` half is checked against the route's own exported
+ * contract, so renaming/retyping that flag breaks the build here.
+ */
+function saveBody(slice: unknown): StateSaveRequestBody {
+  return {
+    ...(slice as Omit<StateSaveRequestBody, "__authoritative">),
+    __authoritative: hydrated,
+  };
+}
 
 let saveState: SaveState = { status: "idle" };
 const listeners = new Set<(s: SaveState) => void>();
@@ -57,14 +131,27 @@ async function flush(): Promise<void> {
     const res = await fetch(ENDPOINT, {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...(body as object), __authoritative: hydrated }),
+      body: JSON.stringify(saveBody(body)),
     });
-    if (res.status === 401) {
-      if (pending == null) pending = body;
-      setSaveState({ status: "error", auth: true });
-      return;
+    if (!res.ok) {
+      const kind = classifySaveFailure(res.status);
+      if (kind === "auth") {
+        if (pending == null) pending = body;
+        setSaveState({ status: "error", auth: true });
+        return;
+      }
+      if (kind === "permanent") {
+        // Keep the payload rather than dropping it: dropping is silent data loss,
+        // and a 400 can become savable after the next edit fixes the slice. What we
+        // drop is the TIMER — no reschedule, so the doomed request goes out at most
+        // once per user edit instead of every 10s forever. The indicator stays in a
+        // distinct "not saved" state until a save actually succeeds.
+        if (pending == null) pending = body;
+        setSaveState({ status: "error", permanent: true, detail: await failureDetail(res) });
+        return;
+      }
+      throw new Error(`PUT ${res.status}`);
     }
-    if (!res.ok) throw new Error(`PUT ${res.status}`);
     backoff = DEBOUNCE_MS;
     setSaveState({ status: "saved" });
   } catch {
@@ -83,6 +170,15 @@ function schedule(delay = DEBOUNCE_MS): void {
   }, delay);
 }
 
+/**
+ * Unload durability. `sendBeacon` returns only "queued / not queued" — it never
+ * exposes the response, so a permanent rejection CANNOT be classified here and a
+ * 413/400 beacon is indistinguishable from a successful one. That is unchanged by
+ * the classifier above and not fixable without abandoning sendBeacon. The blast
+ * radius is bounded: a beacon fires only on hide/pagehide, so it makes at most one
+ * doomed request per unload — never a loop — and the next session re-saves from
+ * the rehydrated store. The retry-forever bug lived entirely in flush().
+ */
 function beaconFlush(): void {
   if (pending == null) return;
   const body = pending;
@@ -93,7 +189,7 @@ function beaconFlush(): void {
   try {
     const ok = navigator.sendBeacon(
       ENDPOINT,
-      new Blob([JSON.stringify({ ...(body as object), __authoritative: hydrated })], { type: "application/json" }),
+      new Blob([JSON.stringify(saveBody(body))], { type: "application/json" }),
     );
     if (ok) pending = null;
   } catch {

@@ -39,6 +39,10 @@
   ],
   "exclude": [
     "node_modules",
-    ".next"
+    ".next",
+    "apps",
+    "packages",
+    "out",
+    ".scratch"
   ]
 }

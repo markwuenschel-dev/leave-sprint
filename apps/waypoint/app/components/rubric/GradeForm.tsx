@@ -99,6 +99,10 @@ const gateColor = (v: GateVerdict) =>
       ? "border-[var(--yellow)] bg-[var(--tint-yellow)] text-[var(--yellow)]"
       : "border-[var(--orange)] bg-[var(--tint-orange)] text-[var(--orange)]";
 
+/** Blank / non-numeric level input reads as "not scored". */
+const numOrNull = (s: string): number | null =>
+  s === "" || Number.isNaN(Number(s)) ? null : Number(s);
+
 function Row({ k, v }: { k: string; v: string | number }) {
   return (
     <div className="flex justify-between">
@@ -164,13 +168,16 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
   const [flash, setFlash] = useState("");
   const [mode, setMode] = useState<LoggingMode>("fast");
 
-  const numOrNull = (s: string): number | null =>
-    s === "" || Number.isNaN(Number(s)) ? null : Number(s);
-  const levelScores: LevelScores = {
-    L1: numOrNull(ls.L1),
-    L2: numOrNull(ls.L2),
-    L3: numOrNull(ls.L3),
-  };
+  // Memoized so the reference is stable while the three inputs are unchanged —
+  // an inline literal here defeated the derivedAnswer memo below on every render.
+  const levelScores: LevelScores = useMemo(
+    () => ({
+      L1: numOrNull(ls.L1),
+      L2: numOrNull(ls.L2),
+      L3: numOrNull(ls.L3),
+    }),
+    [ls],
+  );
   const monotonicOk = validateMonotonic(levelScores);
 
   const derivedAnswer = useMemo(
@@ -270,7 +277,8 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
       domain,
       primaryDomain: domain,
       primaryRole,
-      levelScores,
+      // Copy: the memoized object is live form state, the entry must own its own.
+      levelScores: { ...levelScores },
       levelVerdicts: lv,
       gates,
       answerLevel: answerLevel || "",
