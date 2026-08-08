@@ -9,39 +9,27 @@
 import { randomUUID } from "node:crypto";
 import OpenAI from "openai";
 import { OBSERVATIONS_JSON_SCHEMA } from "@waypoint/rubric";
-import { assertNotHermeticLiveCall } from "../hermetic";
+import { assertNotHermeticLiveCall, firstEnvValue } from "../hermetic";
 import { parseObservations, userContent, type GradeInput, type InterviewProvider, type ProviderId } from "../types";
 
-/** LiteLLM/Langfuse origin fields (omit when not on gateway and SERVICE_NAME unset). */
-function callAttribution(
-  model: string,
-  feature: string,
-  opts?: { forceService?: string },
-): Record<string, string> | undefined {
-  const service = (
-    process.env.SERVICE_NAME ??
-    process.env.LLG_SERVICE ??
-    opts?.forceService ??
-    ""
-  ).trim();
-  if (!service) return undefined;
-  const environment = (
-    process.env.ENVIRONMENT ??
-    process.env.LLG_ENVIRONMENT ??
-    "development"
-  ).trim();
-  const release = (
-    process.env.GIT_SHA ??
-    process.env.RELEASE ??
-    process.env.LLG_RELEASE ??
-    "dev"
-  ).trim();
+/**
+ * LiteLLM/Langfuse origin fields for ONE call.
+ *
+ * Gateway-path only: the caller supplies `service`, and only the gateway
+ * construction path does (see `gatewayProvider`). Direct OpenAI/Grok clients
+ * never reach here, so vendor APIs never receive our internal attribution.
+ *
+ * Every env read goes through `firstEnvValue`, which treats empty and
+ * whitespace-only values as absent — a bare `ENVIRONMENT=` in .env must fall
+ * through to the next source, not short-circuit the chain (WP-C09).
+ */
+function callAttribution(model: string, feature: string, service: string): Record<string, string> {
   return {
     request_id: randomUUID(),
     service,
     feature,
-    environment: environment || "development",
-    release: release || "dev",
+    environment: firstEnvValue(["ENVIRONMENT", "LLG_ENVIRONMENT"]) ?? "development",
+    release: firstEnvValue(["GIT_SHA", "RELEASE", "LLG_RELEASE"]) ?? "dev",
     model_alias: model,
   };
 }
@@ -52,12 +40,18 @@ export function openAICompatible(opts: {
   apiKey: string;
   model: string;
   baseURL?: string;
-  /** When set (gateway path), always attach attribution metadata. */
+  /**
+   * Gateway path only. When (and only when) this is a non-empty service name,
+   * every call carries attribution metadata. Direct-vendor factories
+   * (`openaiProvider`, `grokProvider`) leave it unset, so their requests are
+   * sent without it.
+   */
   attributionService?: string;
 }): InterviewProvider {
   const client = new OpenAI({ apiKey: opts.apiKey, baseURL: opts.baseURL });
+  const service = (opts.attributionService ?? "").trim();
   const attachMeta = (feature: string) =>
-    callAttribution(opts.model, feature, { forceService: opts.attributionService });
+    service ? callAttribution(opts.model, feature, service) : undefined;
 
   return {
     id: opts.id,
@@ -132,8 +126,7 @@ export function gatewayProvider(opts: {
     apiKey: opts.apiKey,
     model: opts.model ?? GATEWAY_MODEL_ALIAS[opts.id],
     baseURL: opts.baseURL ?? "http://localhost:4000/v1",
-    attributionService:
-      (process.env.SERVICE_NAME ?? process.env.LLG_SERVICE ?? "leave-sprint").trim() ||
-      "leave-sprint",
+    // Empty/whitespace SERVICE_NAME counts as unset, so the default still applies.
+    attributionService: firstEnvValue(["SERVICE_NAME", "LLG_SERVICE"]) ?? "leave-sprint",
   });
 }

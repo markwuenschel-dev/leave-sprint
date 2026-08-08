@@ -7,7 +7,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { availableProviders, getProvider, type ProviderId } from "@/lib/llm";
+import { availableProviders, getProvider } from "@/lib/llm";
 import {
   STUDY_SYSTEM,
   studyUserPrompt,
@@ -21,6 +21,11 @@ import {
   type StudyProblem,
   type StudyRep,
 } from "@/lib/study";
+import { BODY_LIMITS, readJsonBody } from "@/lib/http/parse";
+import { errorResponse, failureResponse } from "@/lib/http/respond";
+// Clients should import the request type `StudyRequestBody` from
+// @/lib/http/schemas rather than re-declaring it at the fetch site.
+import { parseStudyBody } from "@/lib/http/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,11 +35,6 @@ export async function GET() {
     { providers: availableProviders() },
     { headers: { "cache-control": "no-store" } },
   );
-}
-
-interface StudyBody {
-  provider: ProviderId;
-  digest: StudyDigest;
 }
 
 interface RawGuide {
@@ -117,17 +117,17 @@ function parseGuide(text: string, digest: StudyDigest): { learn: StudyGuideLearn
 }
 
 export async function POST(req: Request) {
-  let body: StudyBody;
-  try {
-    body = (await req.json()) as StudyBody;
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
-  if (!body?.provider || !body?.digest) {
-    return NextResponse.json({ error: "missing_fields" }, { status: 400 });
-  }
+  const rawBody = await readJsonBody(req, BODY_LIMITS.study);
+  if (!rawBody.ok) return failureResponse(rawBody.failure);
+  const parsed = parseStudyBody(rawBody.value);
+  if (!parsed.ok) return failureResponse(parsed.failure);
+  const body = parsed.value;
+
   if (!availableProviders().includes(body.provider)) {
-    return NextResponse.json({ error: "provider_unavailable", provider: body.provider }, { status: 400 });
+    return NextResponse.json(
+      { error: "provider_unavailable", provider: body.provider, kind: "client_input" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -137,13 +137,17 @@ export async function POST(req: Request) {
       user: studyUserPrompt(body.digest),
     });
     const guide = parseGuide(raw, body.digest);
-    if (!guide) return NextResponse.json({ error: "unparseable_guide" }, { status: 502 });
+    if (!guide) {
+      // The model replied, but with nothing we can ground — a model_response
+      // failure, distinct from the provider itself failing.
+      console.error("POST /api/study failed [model_response] action=study: unparseable guide");
+      return NextResponse.json(
+        { error: "unparseable_guide", kind: "model_response" },
+        { status: 502 },
+      );
+    }
     return NextResponse.json({ ...guide, model: p.model });
   } catch (err) {
-    console.error("POST /api/study failed:", err);
-    return NextResponse.json(
-      { error: "study_failed", message: String((err as Error).message).slice(0, 300) },
-      { status: 502 },
-    );
+    return errorResponse("POST /api/study", "study", err);
   }
 }

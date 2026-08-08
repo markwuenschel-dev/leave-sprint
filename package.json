@@ -15,7 +15,13 @@
     "db:migrate:twin": "tsx lib/db/migrate.ts",
     "db:generate:twin": "drizzle-kit generate",
     "lint": "oxlint apps/waypoint packages",
-    "lint:fix": "oxlint apps/waypoint packages --fix"
+    "lint:fix": "oxlint apps/waypoint packages --fix",
+    "typecheck": "pnpm typecheck:twin && pnpm typecheck:waypoint && pnpm typecheck:packages",
+    "typecheck:twin": "tsc --noEmit -p tsconfig.json",
+    "typecheck:waypoint": "tsc --noEmit -p apps/waypoint/tsconfig.json",
+    "typecheck:packages": "tsc --noEmit -p packages/rubric/tsconfig.json && tsc --noEmit -p packages/qbank/tsconfig.json && tsc --noEmit -p packages/practice-types/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -44,6 +50,7 @@
     "postcss": "^8.5",
     "tailwind-merge": "^3.2.0",
     "tailwindcss": "^4.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

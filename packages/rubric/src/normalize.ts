@@ -85,6 +85,14 @@ export function normaliseEntry(input: Partial<RubricEntry> | RawEntry): RubricEn
   const subs = (raw.universalSubScores as RubricEntry['universalSubScores']) || null;
   const subsTotal = subs ? subTotal(subs) : null;
   const uParsed = Number(raw.universalScore);
+  // `subsTotal ?? 0` cannot express "unknown": `RubricEntry.universalScore` is a
+  // non-null `number` (types.ts:75) that `computeRaw` consumes directly, so an absent
+  // or incomplete sub-score block lands here as a literal 0. That is tolerable for the
+  // manual/import paths (a Quick Log legitimately carries no sub-scores) but was a
+  // silent false negative on the AI path, where an omitted block became a real all-zero
+  // grade. That path is now closed upstream: `checkObservations` (observations.ts)
+  // rejects an absent or partial block before `intakeObservations` ever builds an input,
+  // so any 0 reaching this line from a graded interview is a genuine 0.
   const universalScore = !Number.isNaN(uParsed) && raw.universalScore !== undefined && raw.universalScore !== null
     ? uParsed
     : subsTotal ?? 0;

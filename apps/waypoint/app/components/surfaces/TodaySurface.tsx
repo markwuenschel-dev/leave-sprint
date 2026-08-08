@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useWaypointStore, todayIso } from "@/lib/store";
+import type { RhythmSlots } from "@/lib/domain";
 import { computeReadiness } from "@/lib/readiness";
 import { activeRetestQueue, domainScoreHistory } from "@/lib/gaps";
 import { pickNextMove } from "@/lib/nextMove";
@@ -10,6 +11,18 @@ import { domainToTrack } from "@waypoint/qbank";
 import { ProgressRing } from "../ui/ProgressRing";
 import { Sparkline } from "../ui/Sparkline";
 import { card } from "./shared";
+
+/**
+ * Fallback for a day with no persisted rhythm row. Module-level so the reference
+ * is stable across renders — an inline literal here made `slots` a fresh object
+ * every render, which silently defeated the `nextMove` memo below.
+ */
+const EMPTY_SLOTS: RhythmSlots = {
+  practice: false,
+  defense: false,
+  interview: false,
+  admin: false,
+};
 
 export function TodaySurface() {
   const toggle = useWaypointStore((s) => s.toggleRhythm);
@@ -55,12 +68,7 @@ export function TodaySurface() {
     return m;
   }, [top, rubricEntries, roleFilter]);
 
-  const slots = day?.slots || {
-    practice: false,
-    defense: false,
-    interview: false,
-    admin: false,
-  };
+  const slots = day?.slots || EMPTY_SLOTS;
   const date = todayIso();
 
   const items: { key: keyof typeof slots; label: string; hint: string }[] = [

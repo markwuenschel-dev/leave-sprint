@@ -11,11 +11,20 @@
 export * from "./types";
 export * from "./pipeline";
 export * from "./registry";
+// Hermetic cost-kill seam. App code should reach it through this barrel;
+// apps/waypoint/next.config.ts is the one exception — it imports
+// ./lib/llm/hermetic directly, because tsconfig `@/…` aliases are not available
+// at Next config load time. hermetic.ts is therefore the single declaration of
+// the cost-key list and the predicate, consumed by both.
 export {
   isHermeticEnv,
   blankCostCredentials,
   assertNotHermeticLiveCall,
+  envValue,
+  firstEnvValue,
+  isCostEnvKey,
   COST_ENV_KEYS,
+  type CostEnvKey,
 } from "./hermetic";
 export { anthropicProvider } from "./adapters/anthropic";
 export {

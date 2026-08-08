@@ -7,31 +7,28 @@
  */
 import { NextResponse } from "next/server";
 import { transcribeAudio, OpenAIUnavailableError } from "@/lib/llm/transcribe";
+import { BODY_LIMITS, readAudioUpload } from "@/lib/http/parse";
+import { errorResponse, failureResponse } from "@/lib/http/respond";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  let file: File | null = null;
-  try {
-    const audio = (await req.formData()).get("audio");
-    if (audio instanceof File) file = audio;
-  } catch {
-    return NextResponse.json({ error: "invalid_form" }, { status: 400 });
-  }
-  if (!file || file.size === 0) return NextResponse.json({ error: "missing_audio" }, { status: 400 });
+  // Same ingest discipline as the JSON routes: one bounded read, one parse, a
+  // 4xx failure value — never an unbounded upload and never a cast.
+  const audio = await readAudioUpload(req, "audio", BODY_LIMITS.audio);
+  if (!audio.ok) return failureResponse(audio.failure);
 
   try {
-    const { text } = await transcribeAudio(file);
+    const { text } = await transcribeAudio(audio.value);
     return NextResponse.json({ text });
   } catch (err) {
     if (err instanceof OpenAIUnavailableError) {
-      return NextResponse.json({ error: "openai_unavailable" }, { status: 400 });
+      return NextResponse.json(
+        { error: "openai_unavailable", kind: "client_input" },
+        { status: 400 },
+      );
     }
-    console.error("POST /api/transcribe failed:", err);
-    return NextResponse.json(
-      { error: "transcribe_failed", message: String((err as Error).message).slice(0, 300) },
-      { status: 502 },
-    );
+    return errorResponse("POST /api/transcribe", "transcribe", err);
   }
 }
