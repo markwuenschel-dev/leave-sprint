@@ -12,6 +12,7 @@ import {
   parseObservationContext,
   parseStateBody,
   parseStudyBody,
+  parseUnlockBody,
 } from "./schemas";
 
 /** Unwrap without branching, so every assertion below runs unconditionally. */
@@ -241,5 +242,26 @@ describe("parseStateBody", () => {
     const res = parseStateBody({ ...slice, rubricEntries: [entry] });
     expect(res.ok).toBe(true);
     expect(valueOf(res)?.rubricEntries[0]).toBe(entry as never);
+  });
+
+  it("rejects a thin rubric row whose present scores/diagnostic are the wrong type (WP-C25)", () => {
+    expect(parseStateBody({ ...slice, rubricEntries: [{ id: "x", finalScore: "hot" }] }).ok).toBe(false);
+    expect(parseStateBody({ ...slice, rubricEntries: [{ id: "x", diagnostic: [] }] }).ok).toBe(false);
+  });
+});
+
+describe("parseUnlockBody", () => {
+  it("accepts a non-empty token string", () => {
+    const res = parseUnlockBody({ token: "s3cret" });
+    expect(res.ok).toBe(true);
+    expect(valueOf(res)).toEqual({ token: "s3cret" });
+  });
+
+  it("rejects a missing, empty, or non-string token", () => {
+    expect(parseUnlockBody({}).ok).toBe(false);
+    expect(parseUnlockBody({ token: "" }).ok).toBe(false);
+    expect(parseUnlockBody({ token: 1 }).ok).toBe(false);
+    expect(parseUnlockBody({ token: null }).ok).toBe(false);
+    expect(parseUnlockBody(null).ok).toBe(false);
   });
 });

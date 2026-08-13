@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decideGate, isApiPath, isUnlockPath, type GateInput } from "./gate";
+import { decideGate, isApiPath, isHealthPath, isUnlockPath, type GateInput } from "./gate";
 import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE, safeEqual } from "./token";
 
 const TOKEN = "s3cret-app-token";
@@ -57,6 +57,14 @@ describe("path classification", () => {
     expect(isUnlockPath("/api/unlockme")).toBe(false);
     expect(isUnlockPath("/api/unlock/all")).toBe(false);
   });
+
+  it("exempts /api/health exactly, not by prefix", () => {
+    expect(isHealthPath("/api/health")).toBe(true);
+    expect(isHealthPath("/api/health/")).toBe(true);
+    expect(isHealthPath("/api/healthcare")).toBe(false);
+    expect(isHealthPath("/api/health/foo")).toBe(false);
+    expect(isHealthPath("/api/healthz")).toBe(false);
+  });
 });
 
 describe("decideGate — gate disabled", () => {
@@ -108,6 +116,14 @@ describe("decideGate — unauthenticated", () => {
   it("keeps the /unlock page itself reachable", () => {
     expect(decideGate(anon("/unlock"))).toEqual({ kind: "exempt" });
     expect(decideGate(anon("/unlock/"))).toEqual({ kind: "exempt" });
+  });
+
+  it("keeps /api/health reachable when locked out so a public deploy probe works", () => {
+    expect(decideGate(anon("/api/health"))).toEqual({ kind: "exempt" });
+    expect(decideGate(anon("/api/health/"))).toEqual({ kind: "exempt" });
+    // Prefix/near-miss paths stay gated — startsWith would leak /api/healthcare.
+    expect(decideGate(anon("/api/healthcare"))).toEqual({ kind: "unauthorized" });
+    expect(decideGate(anon("/api/health/foo"))).toEqual({ kind: "unauthorized" });
   });
 
   it("redirects page requests to /unlock", () => {

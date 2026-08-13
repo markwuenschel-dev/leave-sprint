@@ -75,10 +75,19 @@ export function classifyError(err: unknown): { kind: FailureKind; status: 500 | 
   return { kind: "upstream", status: 502 };
 }
 
+/** Client-facing copy keyed by kind. Never derived from Error.message. */
+const SAFE_MESSAGES: Record<FailureKind, string> = {
+  client_input: "The request was rejected.",
+  model_response: "The model returned an unusable response.",
+  upstream: "The upstream provider failed.",
+  internal: "An internal error occurred.",
+};
+
 /**
  * Turn a caught error into a response, logged under its class. `error` keeps the
  * pre-existing `<action>_failed` code so existing clients keep working; `kind`
- * is the new, machine-readable distinction.
+ * is the new, machine-readable distinction. `message` is a stable kind-keyed
+ * string — the raw Error is logged, never sent.
  */
 export function errorResponse(route: string, action: string, err: unknown): NextResponse {
   const { kind, status } = classifyError(err);
@@ -87,7 +96,7 @@ export function errorResponse(route: string, action: string, err: unknown): Next
     {
       error: `${action}_failed`,
       kind,
-      message: String((err as Error)?.message ?? err).slice(0, 300),
+      message: SAFE_MESSAGES[kind],
     },
     { status },
   );

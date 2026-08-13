@@ -65,7 +65,7 @@ $code = $null
 $lastErr = ""
 foreach ($attempt in 1..12) {
   try {
-    $code = (Invoke-WebRequest -Uri "$Url/" -MaximumRedirection 5 -TimeoutSec 30 -UseBasicParsing).StatusCode
+    $code = (Invoke-WebRequest -Uri "$Url/api/health" -MaximumRedirection 5 -TimeoutSec 30 -UseBasicParsing).StatusCode
     break
   } catch {
     $lastErr = $_.Exception.Message

@@ -372,9 +372,9 @@ export type StateSaveRequestBody = WaypointState & { __authoritative?: boolean }
  * Parse a state save. Deliberately conservative — this is the sole write path
  * for the user's real grade history, so it checks exactly the structure
  * `saveState` dereferences (the collections it iterates and the fields it uses
- * as primary keys) and passes everything else through untouched. It does not
- * re-validate the interior of a rubric entry: dropping a field there would be
- * data loss, and the mappers already own that shape.
+ * as primary keys) and passes everything else through untouched. Rubric rows
+ * get a type fitness-check on present fields only (WP-C25) — unknown extras
+ * and a thin `{ id }` still pass, so we never drop history.
  */
 export function parseStateBody(raw: unknown): ParseResult<StateSaveRequestBody> {
   if (!isRecord(raw)) return invalid("body", "a JSON object");
@@ -433,5 +433,57 @@ export function parseStateBody(raw: unknown): ParseResult<StateSaveRequestBody> 
     return invalid("__authoritative", "a boolean");
   }
 
+  const rubricFitness = checkRubricEntries(raw.rubricEntries as unknown[]);
+  if (!rubricFitness.ok) return rubricFitness;
+
   return ok(raw as unknown as StateSaveRequestBody);
+}
+
+/** Score fields a persisted rubric row may carry — present ⇒ must be a finite number. */
+const RUBRIC_SCORE_FIELDS = [
+  "finalScore",
+  "rawScore",
+  "universalScore",
+  "taskSpecificScore",
+  "difficulty",
+  "assistanceLevel",
+] as const;
+
+/**
+ * Fitness-check a rubric row without requiring a full RubricEntry (WP-C25).
+ * Extra unknown fields pass through; only present typed fields are constrained.
+ */
+function checkRubricEntries(rows: unknown[]): ParseResult<true> {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!isRecord(row)) continue;
+    if (row.date !== undefined && typeof row.date !== "string") {
+      return invalid(`rubricEntries[${i}].date`, "a string");
+    }
+    for (const key of RUBRIC_SCORE_FIELDS) {
+      if (row[key] !== undefined && num(row[key]) === undefined) {
+        return invalid(`rubricEntries[${i}].${key}`, "a finite number");
+      }
+    }
+    if (row.diagnostic !== undefined && !isRecord(row.diagnostic)) {
+      return invalid(`rubricEntries[${i}].diagnostic`, "an object");
+    }
+  }
+  return ok(true);
+}
+
+// ── /api/unlock ───────────────────────────────────────────────────────────────
+
+/** POST /api/unlock. A single non-empty token string. */
+export interface UnlockRequestBody {
+  token: string;
+}
+
+export function parseUnlockBody(raw: unknown): ParseResult<UnlockRequestBody> {
+  if (!isRecord(raw)) return invalid("body", "a JSON object");
+  if (raw.token === undefined) return missing("token");
+  if (typeof raw.token !== "string" || raw.token.length === 0) {
+    return invalid("token", "a non-empty string");
+  }
+  return ok({ token: raw.token });
 }

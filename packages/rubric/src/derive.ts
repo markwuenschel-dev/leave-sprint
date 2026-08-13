@@ -37,7 +37,7 @@ function anyCriticalBelow60(subs: UniversalSubScores | null | undefined): boolea
  * AND has no critical universal competency below 60 (§14).
  */
 export function deriveAnswerLevel(levelScores: LevelScores, gates: Gates, subs?: UniversalSubScores | null): LevelId | '' {
-  if (gates.Correctness && gates.Correctness !== 'Pass') return '';
+  if (gates.Correctness !== 'Pass') return '';
   if (anyCriticalBelow60(subs)) return '';
   for (const lvl of [...LEVELS].reverse()) {
     const s = scoreOf(levelScores, lvl);
