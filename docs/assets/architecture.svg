@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" role="img" aria-label="Waypoint architecture">
+  <title>Waypoint architecture</title>
+  <style>
+    .bg { fill: #F4F5F7; }
+    .panel { fill: #fff; stroke: #E6E8EE; stroke-width: 1.5; }
+    .panel-live { fill: #EAEDFD; stroke: #2540E8; }
+    .panel-dim { fill: #F2F3F7; stroke: #E6E8EE; }
+    .ink { fill: #141821; font: 600 14px ui-sans-serif, system-ui, sans-serif; }
+    .muted { fill: #516079; font: 500 11px ui-sans-serif, system-ui, sans-serif; }
+    .tiny { fill: #8A93A3; font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .wire { fill: none; stroke: #2540E8; stroke-width: 1.6; }
+    .wire-dim { fill: none; stroke: #C3C8D4; stroke-width: 1.4; stroke-dasharray: 5 4; }
+    .chip { fill: #2540E8; }
+    .chip-t { fill: #fff; font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #12141A; }
+      .panel { fill: #1B1E27; stroke: #2A3040; }
+      .panel-live { fill: #1A2140; stroke: #7B8CFF; }
+      .panel-dim { fill: #181B22; stroke: #2A3040; }
+      .ink { fill: #F4F5F7; }
+      .muted { fill: #A8B0BE; }
+      .tiny { fill: #8A93A3; }
+      .wire { stroke: #7B8CFF; }
+      .wire-dim { stroke: #3A4154; }
+    }
+  </style>
+  <rect class="bg" width="980" height="520" rx="16"/>
+
+  <text class="tiny" x="28" y="32">BROWSER</text>
+  <rect class="panel" x="24" y="42" width="932" height="118" rx="12"/>
+  <text class="ink" x="40" y="70">Waypoint shell</text>
+  <text class="muted" x="168" y="70">Today · Readiness · Practice · Defense · Interview · Study · Applications · Weekly · AI Questions · More</text>
+  <g transform="translate(40,88)">
+    <rect class="chip" x="0" y="0" width="88" height="24" rx="6"/><text class="chip-t" x="10" y="16">Zustand</text>
+    <rect class="chip" x="96" y="0" width="120" height="24" rx="6"/><text class="chip-t" x="106" y="16">role filter</text>
+    <rect class="chip" x="224" y="0" width="150" height="24" rx="6"/><text class="chip-t" x="234" y="16">evidence pill</text>
+  </g>
+  <text class="tiny" x="40" y="142">client persist → sendBeacon / PUT /api/state</text>
+
+  <path class="wire" d="M510 160 v28"/>
+
+  <text class="tiny" x="28" y="206">NODE  ·  apps/waypoint</text>
+  <rect class="panel-live" x="24" y="216" width="600" height="168" rx="12"/>
+  <text class="ink" x="40" y="244">Next.js 16  ·  proxy gate  ·  App Router</text>
+  <text class="tiny" x="40" y="268">/api/state   /api/interview   /api/study   /api/transcribe   /api/unlock   /api/health</text>
+  <rect class="panel" x="40" y="286" width="168" height="76" rx="8"/>
+  <text class="ink" x="52" y="310">parse · schemas</text>
+  <text class="muted" x="52" y="328">byte caps</text>
+  <text class="muted" x="52" y="344">no req.json() cast</text>
+  <rect class="panel" x="220" y="286" width="184" height="76" rx="8"/>
+  <text class="ink" x="232" y="310">LLM adapters</text>
+  <text class="muted" x="232" y="328">server-side keys</text>
+  <text class="muted" x="232" y="344">hermetic in CI</text>
+  <rect class="panel" x="416" y="286" width="184" height="76" rx="8"/>
+  <text class="ink" x="428" y="310">PGlite + Drizzle</text>
+  <text class="muted" x="428" y="328">WAYPOINT_PGLITE_DIR</text>
+  <text class="muted" x="428" y="344">your disk, your file</text>
+
+  <rect class="panel" x="644" y="216" width="312" height="168" rx="12"/>
+  <text class="tiny" x="660" y="238">PACKAGES</text>
+  <text class="ink" x="660" y="264">@waypoint/rubric</text>
+  <text class="muted" x="660" y="282">observations → derive → score</text>
+  <text class="ink" x="660" y="312">@waypoint/qbank</text>
+  <text class="muted" x="660" y="330">tracks · decks · tags</text>
+  <text class="ink" x="660" y="360">@waypoint/practice-types</text>
+
+  <path class="wire" d="M324 384 v28"/>
+
+  <text class="tiny" x="28" y="430">OUTSIDE THE BROWSER</text>
+  <rect class="panel" x="24" y="440" width="456" height="60" rx="10"/>
+  <text class="ink" x="40" y="466">LiteLLM gateway  ·  Claude / GPT / Grok / Gemini</text>
+  <text class="muted" x="40" y="484">optional · one provider per session · keys never in the client</text>
+  <rect class="panel-dim" x="500" y="440" width="456" height="60" rx="10"/>
+  <text class="ink" x="516" y="466">Leave Sprint Twin  ·  frozen</text>
+  <text class="muted" x="516" y="484">app/ lib/ data/  ·  import source only  ·  not the live product</text>
+  <path class="wire-dim" d="M728 440 v-56"/>
+</svg>

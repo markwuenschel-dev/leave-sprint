@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 88" role="img" aria-label="Waypoint">
+  <title>Waypoint</title>
+  <style>
+    .ink { fill: #141821; }
+    .mark { fill: #2540E8; }
+    .sub { fill: #516079; font: 500 13px ui-sans-serif, system-ui, sans-serif; letter-spacing: .14em; }
+    .word { font: 700 44px ui-sans-serif, system-ui, sans-serif; letter-spacing: -.03em; }
+    @media (prefers-color-scheme: dark) {
+      .ink { fill: #F4F5F7; }
+      .mark { fill: #7B8CFF; }
+      .sub { fill: #A8B0BE; }
+    }
+  </style>
+  <g transform="translate(4,10)">
+    <circle class="mark" cx="28" cy="34" r="28"/>
+    <path fill="#fff" d="M28 16l12 32-12-7-12 7z"/>
+    <circle fill="#fff" cx="28" cy="28" r="4"/>
+  </g>
+  <text class="ink word" x="76" y="54">Waypoint</text>
+  <text class="sub" x="78" y="78">LOCAL-FIRST CAREER TRANSITION HUB</text>
+</svg>

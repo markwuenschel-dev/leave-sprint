@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 280" role="img" aria-label="Hybrid evidence floor">
+  <title>Hybrid evidence floor</title>
+  <style>
+    .bg { fill: #F4F5F7; }
+    .card { fill: #fff; stroke: #E6E8EE; }
+    .go { fill: #E6F3EB; stroke: #15803D; }
+    .hold { fill: #FAEFE0; stroke: #B45309; }
+    .ink { fill: #141821; font: 650 13px ui-sans-serif, system-ui, sans-serif; }
+    .muted { fill: #516079; font: 500 11px ui-sans-serif, system-ui, sans-serif; }
+    .tiny { fill: #8A93A3; font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .arrow { fill: none; stroke: #2540E8; stroke-width: 1.6; marker-end: url(#arr); }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #12141A; }
+      .card { fill: #1B1E27; stroke: #2A3040; }
+      .go { fill: #14261C; stroke: #3DDC84; }
+      .hold { fill: #2A2114; stroke: #E0A14A; }
+      .ink { fill: #F4F5F7; }
+      .muted { fill: #A8B0BE; }
+      .tiny { fill: #8A93A3; }
+      .arrow { stroke: #7B8CFF; }
+    }
+  </style>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#2540E8"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="980" height="280" rx="16"/>
+  <text class="tiny" x="28" y="28">BOTH PRIMARIES  ·  SWE FS II  +  MLE II</text>
+
+  <rect class="card" x="24" y="44" width="200" height="100" rx="12"/>
+  <text class="ink" x="40" y="72">Practice</text>
+  <text class="muted" x="40" y="94">~80% Solid</text>
+  <text class="muted" x="40" y="112">on the core list</text>
+
+  <rect class="card" x="244" y="44" width="200" height="100" rx="12"/>
+  <text class="ink" x="260" y="72">Interview</text>
+  <text class="muted" x="260" y="94">≥ 2 solid mocks</text>
+  <text class="muted" x="260" y="112">or scored sessions</text>
+
+  <rect class="card" x="464" y="44" width="200" height="100" rx="12"/>
+  <text class="ink" x="480" y="72">Defense</text>
+  <text class="muted" x="480" y="94">core stories / files</text>
+  <text class="muted" x="480" y="112">practiced cold</text>
+
+  <path class="arrow" d="M684 94 H724"/>
+
+  <rect class="go" x="732" y="44" width="224" height="100" rx="12"/>
+  <text class="ink" x="748" y="76">Evidence green</text>
+  <text class="muted" x="748" y="98">checkable floor met</text>
+  <text class="muted" x="748" y="116">does not auto-start A</text>
+
+  <rect class="hold" x="24" y="168" width="456" height="88" rx="12"/>
+  <text class="ink" x="40" y="196">Not floor criteria</text>
+  <text class="muted" x="40" y="218">applications · network · resume polish · full-bank completion</text>
+  <text class="muted" x="40" y="236">secondary / escape roles do not block</text>
+
+  <rect class="card" x="500" y="168" width="456" height="88" rx="12"/>
+  <text class="ink" x="516" y="196">Human go / no-go</text>
+  <text class="muted" x="516" y="218">Phase B stays until you decide.</text>
+  <text class="muted" x="516" y="236">Coached AI sessions stamp llmUsed and do not inflate the floor.</text>
+</svg>

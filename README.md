@@ -1,124 +1,293 @@
-# Waypoint (+ Leave Sprint Twin)
+<p align="center">
+  <img src="docs/assets/waypoint-wordmark.svg" alt="Waypoint" width="520"/>
+</p>
 
-**Waypoint** is the active product: a **local-first career transition hub** (phase B readiness → phase A applications).
+<p align="center">
+  <strong>Local-first career hub.</strong> Rebuild readiness (phase B), then land a role (phase A).<br/>
+  Your grades live in embedded PGlite on <em>your</em> machine. Not a 29-day leave countdown.
+</p>
 
-**Leave Sprint Twin** (repo root `app/`, `lib/`) is **frozen scaffolding** — not the daily driver.
+<p align="center">
+  <a href="https://github.com/markwuenschel-dev/leave-sprint/actions/workflows/ci.yml"><img src="https://github.com/markwuenschel-dev/leave-sprint/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+  <a href="https://leavesprint.44-198-76-44.nip.io/api/health"><img src="https://img.shields.io/badge/live-%2Fapi%2Fhealth-22c55e?logo=statuspage&logoColor=white" alt="live health"/></a>
+  <img src="https://img.shields.io/badge/node-22-339933?logo=nodedotjs&logoColor=white" alt="Node 22"/>
+  <img src="https://img.shields.io/badge/pnpm-11-F69220?logo=pnpm&logoColor=white" alt="pnpm 11"/>
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16"/>
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111" alt="React 19"/>
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript"/>
+  <img src="https://img.shields.io/badge/PGlite-embedded-7148FC?logo=postgresql&logoColor=white" alt="PGlite"/>
+  <img src="https://img.shields.io/badge/data-local--first-0ea5e9" alt="local-first"/>
+  <img src="https://img.shields.io/badge/tests-vitest-6E9F18?logo=vitest&logoColor=white" alt="Vitest"/>
+  <img src="https://img.shields.io/badge/lint-oxlint-1F6FEB" alt="oxlint"/>
+</p>
 
-> Always use **pnpm**.
+<p align="center">
+  <a href="#quick-start">Start</a> ·
+  <a href="#shell">Shell</a> ·
+  <a href="#evidence-floor">Evidence floor</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#ai-interviewer">AI Interviewer</a> ·
+  <a href="#deploy">Deploy</a> ·
+  <a href="#verify">Verify</a>
+</p>
 
-## Quick start (Waypoint)
+---
+
+## What this is
+
+**Waypoint** (`apps/waypoint`, `@waypoint/*`) is the live product: a personal hub for a career transition. You practice, defend files, sit interview reps, and watch a **hybrid evidence floor** for two primary roles (SWE Full Stack II and MLE II). Crossing green does **not** flip you into applications — you still decide the go / no-go.
+
+**Leave Sprint Twin** (`app/`, root `lib/`, `data/`) is frozen scaffolding. Import source only. Not the daily driver.
+
+Always **pnpm**.
+
+```mermaid
+flowchart LR
+  subgraph B["Phase B · rebuild"]
+    P[Practice]
+    D[Defense]
+    I[Interview reps]
+    A[Admin light]
+  end
+  F{{Evidence green?}}
+  H[You decide]
+  subgraph Aphase["Phase A · land a role"]
+    Apps[Applications]
+    Net[Network]
+  end
+  P --> F
+  D --> F
+  I --> F
+  A -.-> F
+  F -->|floor met| H
+  H -->|go| Aphase
+  H -->|stay| B
+```
+
+---
+
+## Quick start
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:3210 — apps/waypoint (prod still serves on 3000)
+pnpm dev          # http://localhost:3210 — apps/waypoint
 pnpm build
-pnpm start        # migrate PGlite + next start (local)
+pnpm start        # migrate PGlite, then next start
 ```
 
-Data lives in embedded **PGlite** under `apps/waypoint/.pglite` (no cloud host required).
+No required env. Empty `.env` → embedded DB, open gate, no LLM providers.
 
-Optional: set `APP_TOKEN` for a cookie gate; unset = open.
+| Want | Do |
+| --- | --- |
+| Gate the site | `APP_TOKEN=…` in repo-root `.env` · unlock at `/unlock` or `?token=` once |
+| Pin the database | `WAYPOINT_PGLITE_DIR=/absolute/path` — unset means `<cwd>/.pglite` |
+| AI mocks | LiteLLM gateway (below) or raw provider keys |
 
-### LLM / AI Interviewer (LiteLLM gateway)
+Twin (optional, frozen): `pnpm dev:twin` on port **3001**.
 
-Preferred: run the [litellm-langfuse-gateway](https://github.com/markwuenschel-dev/litellm-langfuse-gateway) stack locally, then in **repo-root** `.env`:
+---
+
+## Shell
+
+Live tabs in `apps/waypoint/app/page.tsx`:
+
+```mermaid
+flowchart TB
+  subgraph header["header"]
+    RF[Role filter · All / SWE / MLE / …]
+    EG[Evidence pill]
+  end
+  subgraph tabs["Waypoint shell"]
+    T[Today]
+    R[Readiness]
+    Pr[Practice]
+    De[Defense]
+    In[Interview]
+    St[Study]
+    Ap[Applications]
+    W[Weekly]
+    M[AI Questions]
+    Mo[More]
+  end
+  T --- R --- Pr --- De --- In
+  In --- St --- Ap --- W --- M --- Mo
+```
+
+| Tab | Job |
+| --- | --- |
+| **Today** | Rolling checklist: Practice · Defense · Interview reps · Admin light |
+| **Readiness** | Hybrid floor for both primaries + the B→A go/no-go |
+| **Practice** | Problem bank / solidity |
+| **Defense** | File and story defense |
+| **Interview** | Q-bank, grade, history, gaps, retest, performance |
+| **Study** | Deterministic study digest |
+| **Applications** | One row = one role + company |
+| **Weekly** | Weekly review |
+| **AI Questions** | AI Interviewer (examiner, not the Interview tab) |
+| **More** | Export / import JSON, twin import, about |
+
+Rhythm checkboxes are cadence. They are not the evidence floor.
+
+---
+
+## Evidence floor
+
+<p align="center">
+  <img src="docs/assets/evidence-floor.svg" alt="Hybrid evidence floor: practice, interview, defense, then a human go/no-go" width="900"/>
+</p>
+
+**Evidence green** (both primaries):
+
+1. Practice solidity ≈ 80% Solid on a core list
+2. Interview performance ≥ 2 solid mocks / scored sessions
+3. Core stories / file defense practiced cold
+
+Applications, network, resume polish, and finishing the whole bank are **not** floor criteria. Secondary and escape roles do not block.
+
+Coached AI sessions stamp `llmIndependence.llmUsed: true` and do not inflate the floor. Glossary: [`CONTEXT.md`](CONTEXT.md).
+
+---
+
+## Architecture
+
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="Browser shell, Next API, PGlite, rubric packages, optional LLM gateway, frozen twin" width="900"/>
+</p>
+
+```text
+apps/waypoint/              live Next app
+packages/rubric/            @waypoint/rubric   · observations + derive + score
+packages/qbank/             @waypoint/qbank
+packages/practice-types/    @waypoint/practice-types
+app/  lib/  data/           Leave Sprint Twin · frozen
+docs/adr/                   accepted decisions
+```
+
+```mermaid
+flowchart LR
+  UI[Zustand shell] -->|PUT /api/state| Parse[parse + caps]
+  Parse --> PG[(PGlite file)]
+  UI -->|POST /api/interview| Pipe[gradeToEntry]
+  Pipe --> Obs[assertObservations]
+  Obs --> Eng["@waypoint/rubric derive"]
+  Eng --> PG
+  Pipe -.->|server only| LLM[LiteLLM / providers]
+```
+
+Persist is file-backed PGlite. Backup the directory, or **More → Export JSON**. One node. Not a multi-instance DB.
+
+---
+
+## AI Interviewer
+
+An LLM examiner across Q-bank tracks. **Augmenting** evidence, not the source of truth. One provider per session plays ask → probe → grade. Answers are unaided by default.
+
+The model emits **observations**. The engine scores. Provenance is stamped (who asked, who graded).
+
+```mermaid
+sequenceDiagram
+  actor You
+  participant API as /api/interview
+  participant P as Provider adapter
+  participant I as Observations intake
+  participant R as Rubric engine
+
+  You->>API: answer + probe
+  API->>P: grade (server-side key)
+  P-->>I: JSON observations
+  I-->>I: schema presence check
+  I->>R: intake
+  R-->>API: RubricEntry + droppedTags
+  Note over R: missing Correctness ⇒ no derived level
+  API-->>You: grade · provenance · flags
+```
+
+ADRs: [0001 evidence](docs/adr/0001-ai-interviewer-evidence-policy.md) · [0002 providers](docs/adr/0002-ai-interviewer-provider-architecture.md) · [0003 flow](docs/adr/0003-ai-interviewer-interview-flow.md) · [0004 observations](docs/adr/0004-ai-interviewer-observations-contract.md).
+
+### LiteLLM gateway (preferred)
+
+From [litellm-langfuse-gateway](https://github.com/markwuenschel-dev/litellm-langfuse-gateway), then repo-root `.env`:
 
 ```env
 LITELLM_BASE_URL=http://localhost:4000/v1
-LITELLM_VIRTUAL_KEY=sk-...   # virtual key from `llg keys create` (not the master key)
+LITELLM_VIRTUAL_KEY=sk-...   # virtual key from `llg keys create`
 ```
 
-When `LITELLM_VIRTUAL_KEY` is set, Waypoint’s AI providers go through that gateway (aliases like `openai-general`, `anthropic-general`, …). You do **not** need raw `OPENAI_API_KEY` / etc. in leave-sprint for chat/grade.
+When the virtual key is set, providers route through the gateway. You do not need raw `OPENAI_API_KEY` / etc. in this repo for chat/grade. Dictation still wants `OPENAI_API_KEY` (Whisper).
 
-1. Start Docker + gateway (`uv run llg up` in the gateway repo).
-2. Put the two vars above in leave-sprint `.env`.
-3. `pnpm dev` → Interview → AI Mock; pick a provider.
+CI sets `LLG_HERMETIC=1`. Tests never bill.
 
 See `.env.example` and `apps/waypoint/lib/llm/registry.ts`.
 
-### Deploy on AWS EC2 (Node)
+---
 
-Local-first still means **your** server — EC2 is fine. Not Railway.
+## Deploy
 
-1. Instance: Amazon Linux 2023 or Ubuntu, security group **inbound 80/443** (and 22 for SSH). App can listen on **3000** behind nginx.
-2. Install **Node 22+**, **pnpm**, git. Clone repo.
-3. On the box:
+Local-first still means **your** server. Production on this repo is a Compose service `leave-sprint` on a single EC2 box, PGlite volume, Caddy in front.
+
+```mermaid
+flowchart LR
+  Dev[laptop] -->|scripts/deploy.sh · deploy.ps1| Box[EC2 /opt/stack]
+  Box --> Git[leave-sprint @ SHA]
+  Box --> Img[Dockerfile.leave-sprint]
+  Img --> Ctr[compose service leave-sprint]
+  Ctr --> Vol[(PGlite volume)]
+  Caddy[Caddy :443] --> Ctr
+  Probe[GET /api/health] --> Ctr
+```
+
+```bash
+./scripts/deploy.sh              # latest main
+./scripts/deploy.sh <sha>        # pin / roll back
+# PowerShell: .\scripts\deploy.ps1
+```
+
+Scripts SSH to the box, sync the clone, `docker compose up -d --build leave-sprint`, then retry `GET /api/health` through migrate+start warmup.
+
+Bare Node + systemd is documented as an alternate single-box recipe (not what the scripts run):
 
 ```bash
 pnpm install
 pnpm --filter waypoint build
-# durable PGlite dir (persist across restarts — use a real path on the instance disk)
 export WAYPOINT_PGLITE_DIR=/var/lib/waypoint/pglite
-export APP_TOKEN='strong-secret'   # optional but recommended on a public IP
+export APP_TOKEN='strong-secret'
 mkdir -p "$WAYPOINT_PGLITE_DIR"
-pnpm --filter waypoint start       # binds 0.0.0.0; PORT defaults 3000
+pnpm --filter waypoint start     # 0.0.0.0 · PORT 3000
 ```
 
-4. Put **nginx** (or Caddy) in front: proxy `http://127.0.0.1:3000`, TLS via ACM/Let’s Encrypt.
-5. **systemd** unit example (user `ubuntu`, adjust paths):
+Put nginx/Caddy in front. Multi-instance needs a different DB story.
 
-```ini
-[Unit]
-Description=Waypoint
-After=network.target
+---
 
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/leave-sprint
-Environment=NODE_ENV=production
-Environment=WAYPOINT_PGLITE_DIR=/var/lib/waypoint/pglite
-Environment=APP_TOKEN=change-me
-Environment=PORT=3000
-ExecStart=/usr/bin/pnpm --filter waypoint start
-Restart=on-failure
+## Verify
 
-[Install]
-WantedBy=multi-user.target
-```
+Same sequence CI runs (`.github/workflows/ci.yml`):
 
-6. Open the app: `https://your-host/?token=APP_TOKEN` once if gated.
+| Gate | Command |
+| --- | --- |
+| Lint | `pnpm lint` |
+| Typecheck | `pnpm typecheck` |
+| Tests | `pnpm test` |
+| Waypoint | `pnpm --filter waypoint build` |
+| Twin | `pnpm build:twin` |
 
-**Note:** PGlite is single-node file DB — fine for one EC2. Back up `/var/lib/waypoint/pglite` (or use **More → Export JSON**). Multi-instance load balancing needs a different DB story later.
+Hermetic: `LLG_HERMETIC=1` in CI. No live LLM on the verify job.
 
-### Monorepo layout
+---
 
-```
-apps/waypoint/           # Waypoint Next app
-packages/rubric/         # @waypoint/rubric
-packages/qbank/          # @waypoint/qbank
-packages/practice-types/ # @waypoint/practice-types
-app/, lib/, data/        # Leave Sprint Twin (frozen)
-```
+## Twin
 
-### Twin (optional)
+Frozen predecessor (29-day leave dashboard). Disjoint import graph from Waypoint. Still typechecked and built in CI so it cannot silently rot as an import source.
 
 ```bash
-pnpm dev:twin     # port 3001
+pnpm dev:twin      # :3001
 pnpm build:twin
 ```
 
-## Waypoint surfaces
+Optional one-shot import on **More**: practice progress + rubric history only.
 
-| Nav | Purpose |
-|-----|---------|
-| **Today** | Daily checklist: Practice · Defense · Interview reps · Admin light |
-| **Readiness** | Hybrid evidence floor (both primaries) + phase B→A go/no-go |
-| **Practice** | Problem bank / solidity |
-| **Defense** | File & story defense |
-| **Interview** | Q bank + quick rubric log |
-| **Applications** | Role+company pipeline |
-| **Weekly** | Weekly review |
-| **More** | Export/import JSON, about |
-
-Role filter (All / SWE / MLE) is in the header.
-
-## Stack
-
-- Next.js 16 App Router, React 19, TypeScript, Tailwind 4
-- Zustand + `/api/state` → PGlite (Drizzle)
-- Shared packages for rubric engine + qbank content
+---
 
 ## Decisions
 
-Product decisions live under `.scratch/career-transition-hub/` (wayfinder map + decision pack). Domain glossary: `CONTEXT.md`.
+Product notes: `.scratch/career-transition-hub/`. Domain words: [`CONTEXT.md`](CONTEXT.md). Scoring spec: `Technical_Competency_Scoring_System_v1_11.md`.
