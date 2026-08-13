@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { AUTH_COOKIE, authCookieOptions, safeEqual } from "@/lib/auth/token";
+import { BODY_LIMITS, readJsonBody } from "@/lib/http/parse";
+import { failureResponse } from "@/lib/http/respond";
+import { parseUnlockBody } from "@/lib/http/schemas";
 
 /**
  * Sets the access cookie when the submitted token matches APP_TOKEN.
@@ -14,14 +17,11 @@ import { AUTH_COOKIE, authCookieOptions, safeEqual } from "@/lib/auth/token";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  let submitted = "";
-  try {
-    const body: unknown = await req.json();
-    const t = (body as { token?: unknown } | null)?.token;
-    submitted = typeof t === "string" ? t : "";
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+  const raw = await readJsonBody(req, BODY_LIMITS.unlock);
+  if (!raw.ok) return failureResponse(raw.failure);
+  const parsed = parseUnlockBody(raw.value);
+  if (!parsed.ok) return failureResponse(parsed.failure);
+  const submitted = parsed.value.token;
 
   const expected = process.env.APP_TOKEN;
   if (expected && safeEqual(submitted, expected)) {

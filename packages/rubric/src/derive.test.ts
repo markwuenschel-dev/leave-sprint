@@ -36,8 +36,8 @@ describe('deriveAnswerLevel', () => {
     expect(deriveAnswerLevel(scores(95, 95, 95), { Correctness: 'Partial' })).toBe('');
   });
 
-  it('does not block when the Correctness gate was never recorded', () => {
-    expect(deriveAnswerLevel(scores(85, 60, 40), {})).toBe('L1');
+  it('blocks when the Correctness gate was never recorded', () => {
+    expect(deriveAnswerLevel(scores(85, 60, 40), {})).toBe('');
   });
 
   it('is blocked when any universal dimension sits below 60% of its own max', () => {

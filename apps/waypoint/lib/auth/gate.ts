@@ -13,7 +13,7 @@ export type GateDecision =
   | { kind: "open" }
   /** Cookie matches the expected token. */
   | { kind: "allow" }
-  /** Path is part of the unlock flow itself and is never gated. */
+  /** Unlock flow or public health probe — never gated. */
   | { kind: "exempt" }
   /** `?token=` matched: caller should set the cookie and redirect to the cleaned URL. */
   | { kind: "grant" }
@@ -39,8 +39,8 @@ function isExactPath(pathname: string, p: string): boolean {
 
 /**
  * Every Next route handler in this app lives under app/api (verified: the only
- * route.ts files are app/api/{interview,state,study,transcribe}/route.ts plus
- * app/api/unlock/route.ts added here), so `/api` is the complete API surface.
+ * route.ts files are app/api/{interview,state,study,transcribe,unlock,health}/route.ts),
+ * so `/api` is the complete API surface.
  */
 export function isApiPath(pathname: string): boolean {
   return pathname === "/api" || pathname.startsWith("/api/");
@@ -54,6 +54,14 @@ export function isApiPath(pathname: string): boolean {
  */
 export function isUnlockPath(pathname: string): boolean {
   return isExactPath(pathname, "/unlock") || isExactPath(pathname, "/api/unlock");
+}
+
+/**
+ * Public deploy probe. Exact-match only: `/api/healthcare` and `/api/health/foo`
+ * stay gated. Do not use startsWith — that would exempt `/api/healthz-attack`.
+ */
+export function isHealthPath(pathname: string): boolean {
+  return isExactPath(pathname, "/api/health");
 }
 
 export function decideGate(input: GateInput): GateDecision {
@@ -70,7 +78,7 @@ export function decideGate(input: GateInput): GateDecision {
   // Checked before the exemptions so `/unlock?token=…` still mints the cookie.
   if (queryToken && safeEqual(queryToken, token)) return { kind: "grant" };
 
-  if (isUnlockPath(pathname)) return { kind: "exempt" };
+  if (isUnlockPath(pathname) || isHealthPath(pathname)) return { kind: "exempt" };
 
   if (isApiPath(pathname)) return { kind: "unauthorized" };
 

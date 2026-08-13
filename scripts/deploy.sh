@@ -50,6 +50,21 @@ fi
 printf '%s\n' "$REMOTE" | ssh -i "$KEY" "$BOX" "tr -d '\r' | bash -s"
 
 # Prove the public URL serves the new build — logs alone don't show what Caddy is fronting.
-code=$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 "$URL/") ||
-  { echo "deployed, but the health check against $URL failed" >&2; exit 1; }
+# The freshly recreated container runs `db:migrate && next start` on boot, so Caddy returns 502
+# for a few seconds until the upstream is ready — retry through that warmup window before
+# declaring the deploy unhealthy.
+code=""
+attempt=1
+while [ "$attempt" -le 12 ]; do
+  if code=$(curl -fsSL -o /dev/null -w '%{http_code}' --max-time 30 "$URL/api/health"); then
+    break
+  fi
+  code=""
+  sleep 5
+  attempt=$((attempt + 1))
+done
+if [ -z "$code" ]; then
+  echo "deployed, but the health check against $URL failed" >&2
+  exit 1
+fi
 echo "$URL -> HTTP $code"

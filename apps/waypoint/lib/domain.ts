@@ -167,8 +167,17 @@ export const APP_STATUSES: AppStatus[] = [
   "withdrawn",
 ];
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Local calendar `YYYY-MM-DD` — never `Date#toISOString()` (UTC). */
+function localYmd(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 export function todayIso(d = new Date()): string {
-  return d.toISOString().slice(0, 10);
+  return localYmd(d);
 }
 
 /** Monday of the week containing `d` (local). */
@@ -178,7 +187,7 @@ export function weekStartIso(d = new Date()): string {
   const day = x.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   x.setDate(x.getDate() + diff);
-  return x.toISOString().slice(0, 10);
+  return localYmd(x);
 }
 
 export function emptyRhythm(date: string): RhythmDay {

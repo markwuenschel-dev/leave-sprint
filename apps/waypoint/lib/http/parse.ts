@@ -65,6 +65,8 @@ export const BODY_LIMITS = {
   study: 2 * 1024 * 1024,
   /** /api/transcribe — one recorded answer (OpenAI's own upload cap is 25MB). */
   audio: 25 * 1024 * 1024,
+  /** /api/unlock — a single short token string. */
+  unlock: 4 * 1024,
 } as const;
 
 const TOO_LARGE = (maxBytes: number) =>

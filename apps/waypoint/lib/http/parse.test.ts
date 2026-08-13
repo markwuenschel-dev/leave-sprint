@@ -109,6 +109,11 @@ describe("BODY_LIMITS", () => {
     expect(Number.isFinite(BODY_LIMITS.state)).toBe(true);
     expect(BODY_LIMITS.interview).toBeLessThan(BODY_LIMITS.state);
   });
+
+  it("caps unlock at a token-sized bound (WP-C21)", () => {
+    expect(BODY_LIMITS.unlock).toBe(4 * 1024);
+    expect(BODY_LIMITS.unlock).toBeLessThan(BODY_LIMITS.interview);
+  });
 });
 
 describe("primitives", () => {

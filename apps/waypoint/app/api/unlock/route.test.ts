@@ -67,7 +67,8 @@ describe("POST /api/unlock", () => {
   it("rejects a missing / non-string token field", async () => {
     for (const body of ["{}", JSON.stringify({ token: null }), JSON.stringify({ token: 1 }), "null"]) {
       const res = await POST(post(body));
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(400);
+      await expect(res.clone().json()).resolves.toMatchObject({ kind: "client_input" });
       expect(setCookie(res)).toBe("");
     }
   });
@@ -75,12 +76,19 @@ describe("POST /api/unlock", () => {
   it("returns 400 on unparseable JSON", async () => {
     const res = await POST(post("not json"));
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "invalid_json" });
+    await expect(res.json()).resolves.toMatchObject({ error: "invalid_json" });
   });
 
-  it("fails CLOSED when APP_TOKEN is unset — an empty token never unlocks", async () => {
+  it("rejects an oversized body with 413 (WP-C21)", async () => {
+    const res = await POST(post(JSON.stringify({ token: "x".repeat(8 * 1024) })));
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toMatchObject({ error: "payload_too_large" });
+    expect(setCookie(res)).toBe("");
+  });
+
+  it("fails CLOSED when APP_TOKEN is unset — a well-formed token never unlocks", async () => {
     delete process.env.APP_TOKEN;
-    for (const body of [JSON.stringify({ token: "" }), JSON.stringify({ token: "anything" }), "{}"]) {
+    for (const body of [JSON.stringify({ token: "anything" }), JSON.stringify({ token: TOKEN })]) {
       const res = await POST(post(body));
       expect(res.status).toBe(401);
       // Identical error to a wrong token: the response is not an oracle for
