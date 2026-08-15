@@ -46,4 +46,4 @@ A pipeline row is one **role + company** pursuit, with `targetRole` and a short 
 
 ## Waypoint shell
 
-Primary nav: Today, Readiness, Practice, Defense, Interview, Applications, Weekly, More. Hybrid gate lives on Readiness. Monorepo: `apps/waypoint`, `@waypoint/rubric`, `@waypoint/qbank`, `@waypoint/practice-types`.
+Primary nav: Today, Readiness, Practice, Defense, Interview, Study, Applications, Weekly, AI Questions (mock), More. Hybrid gate lives on Readiness. Monorepo: `apps/waypoint`, `@waypoint/rubric`, `@waypoint/qbank`, `@waypoint/practice-types`.
