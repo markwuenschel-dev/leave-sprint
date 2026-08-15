@@ -77,11 +77,19 @@ describe("readJsonBody", () => {
   });
 });
 
+function audioReq(form: FormData, headers: Record<string, string> = {}): Request {
+  return new Request("http://localhost/api/transcribe", {
+    method: "POST",
+    headers,
+    body: form,
+  });
+}
+
 describe("readAudioUpload", () => {
   it("accepts a non-empty file field", async () => {
     const form = new FormData();
     form.set("audio", new File([new Uint8Array([1, 2, 3])], "answer.webm", { type: "audio/webm" }));
-    const req = new Request("http://localhost/api/transcribe", { method: "POST", body: form });
+    const req = audioReq(form, { "content-length": "128" });
     const res = await readAudioUpload(req, "audio", BODY_LIMITS.audio);
     expect(res.ok).toBe(true);
   });
@@ -89,16 +97,36 @@ describe("readAudioUpload", () => {
   it("rejects an oversized upload with 413", async () => {
     const form = new FormData();
     form.set("audio", new File([new Uint8Array(2048)], "answer.webm"));
-    const req = new Request("http://localhost/api/transcribe", { method: "POST", body: form });
+    // Declared length is under the cap so the File.size check is what trips 413.
+    const req = audioReq(form, { "content-length": "256" });
     const res = await readAudioUpload(req, "audio", 512);
     expect(failureOf(res)).toMatchObject({ status: 413 });
   });
 
   it("keeps the pre-existing missing_audio code for an absent field", async () => {
     const form = new FormData();
-    const req = new Request("http://localhost/api/transcribe", { method: "POST", body: form });
+    const req = audioReq(form, { "content-length": "16" });
     const res = await readAudioUpload(req, "audio", BODY_LIMITS.audio);
     expect(failureOf(res)).toMatchObject({ error: "missing_audio" });
+  });
+
+  it("refuses a request without Content-Length before reading the body", async () => {
+    const form = new FormData();
+    form.set("audio", new File([new Uint8Array([1, 2, 3])], "answer.webm"));
+    const req = audioReq(form);
+    expect(req.headers.get("content-length")).toBeNull();
+    const res = await readAudioUpload(req, "audio", BODY_LIMITS.audio);
+    expect(res.ok).toBe(false);
+    expect(failureOf(res)).toMatchObject({ status: 400 });
+  });
+
+  it("refuses a non-numeric Content-Length before reading the body", async () => {
+    const form = new FormData();
+    form.set("audio", new File([new Uint8Array([1, 2, 3])], "answer.webm"));
+    const req = audioReq(form, { "content-length": "nope" });
+    const res = await readAudioUpload(req, "audio", BODY_LIMITS.audio);
+    expect(res.ok).toBe(false);
+    expect(failureOf(res)).toMatchObject({ status: 400 });
   });
 });
 
