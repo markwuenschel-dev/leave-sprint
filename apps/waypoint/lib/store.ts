@@ -101,9 +101,7 @@ const _snapshotKeysExact: [MissingSnapshotKey, ExtraSnapshotKey] extends [never,
 void _snapshotKeysExact;
 
 function pickSnapshot(s: Pick<WaypointState, SnapshotKey>): WaypointState {
-  const out: Partial<WaypointState> = {};
-  for (const k of SNAPSHOT_KEYS) out[k] = s[k];
-  return out as WaypointState;
+  return Object.fromEntries(SNAPSHOT_KEYS.map((k) => [k, s[k]])) as WaypointState;
 }
 
 const unionById = <T extends { id: string }>(server: T[], local: T[]): T[] => {
