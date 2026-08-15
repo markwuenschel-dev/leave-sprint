@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { KGTAG_CLUSTERS } from "@waypoint/rubric";
 import { availableProviders, getProvider, gradeToEntry } from "@/lib/llm";
 import {
   buildGradeInput,
@@ -100,7 +101,12 @@ export async function POST(req: Request) {
     const { ctx, question, answer, probingTranscript, knownTags } = body;
     const result = await gradeToEntry(
       p,
-      buildGradeInput({ question, answer, probingTranscript, knownTags }),
+      buildGradeInput({
+        question,
+        answer,
+        probingTranscript,
+        knownTags: knownTags?.length ? knownTags : Object.values(KGTAG_CLUSTERS).flat(),
+      }),
       ctx,
     );
     return NextResponse.json(result);

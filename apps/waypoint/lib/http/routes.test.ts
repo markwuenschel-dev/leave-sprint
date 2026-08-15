@@ -10,6 +10,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { KGTAG_CLUSTERS } from "@waypoint/rubric";
 
 const saveState = vi.fn<(slice: unknown, authoritative?: boolean) => Promise<{ lastUpdated: string }>>(
   async () => ({ lastUpdated: "2026-08-08T00:00:00.000Z" }),
@@ -137,6 +138,36 @@ describe("POST /api/interview", () => {
     expect(gradeToEntry).toHaveBeenCalledTimes(1);
     // The context handed to the seam is the parsed one.
     expect(gradeToEntry.mock.calls[0][2]).toMatchObject({ primaryRole: "SWE", questionSource: "qbank" });
+  });
+
+  it("injects flattened KGTAG_CLUSTERS into the grade prompt when knownTags is omitted", async () => {
+    gradeToEntry.mockResolvedValueOnce({ entry: { id: "e1" }, monotonicOk: true, flagged: false, droppedTags: [] });
+    const res = await interviewPOST(
+      interviewReq({ provider: "anthropic", action: "grade", ctx: CTX, question: "q", answer: "a" }),
+    );
+    expect(res.status).toBe(200);
+    const input = gradeToEntry.mock.calls[0][1] as { system: string };
+    const clusterMember = Object.values(KGTAG_CLUSTERS).flat()[0];
+    expect(clusterMember).toBeTruthy();
+    expect(input.system).toContain(clusterMember);
+  });
+
+  it("lets client-supplied non-empty knownTags win over KGTAG_CLUSTERS", async () => {
+    gradeToEntry.mockResolvedValueOnce({ entry: { id: "e1" }, monotonicOk: true, flagged: false, droppedTags: [] });
+    const res = await interviewPOST(
+      interviewReq({
+        provider: "anthropic",
+        action: "grade",
+        ctx: CTX,
+        question: "q",
+        answer: "a",
+        knownTags: ["client-only-unique-tag-xyz"],
+      }),
+    );
+    expect(res.status).toBe(200);
+    const input = gradeToEntry.mock.calls[0][1] as { system: string };
+    expect(input.system).toContain("client-only-unique-tag-xyz");
+    expect(input.system).not.toContain(Object.values(KGTAG_CLUSTERS).flat()[0]);
   });
 
   it("400s a junk ctx and never calls the grader (was: any object was accepted)", async () => {
