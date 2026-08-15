@@ -436,7 +436,33 @@ export function parseStateBody(raw: unknown): ParseResult<StateSaveRequestBody> 
   const rubricFitness = checkRubricEntries(raw.rubricEntries as unknown[]);
   if (!rubricFitness.ok) return rubricFitness;
 
+  // Catalog `{ id }` rows: empty-string fill for NOT NULL columns. Rubric date is defaulted in the mapper.
+  defaultMissingStrings(raw.problems as unknown[], PROBLEM_REQUIRED_STRINGS);
+  defaultMissingStrings(raw.fileDefense as unknown[], DEFENSE_REQUIRED_STRINGS);
+  defaultMissingStrings(raw.applications as unknown[], APPLICATION_REQUIRED_STRINGS);
+
   return ok(raw as unknown as StateSaveRequestBody);
+}
+
+const PROBLEM_REQUIRED_STRINGS = ["title", "tier", "pattern", "status"] as const;
+const DEFENSE_REQUIRED_STRINGS = ["title", "why", "terminology", "interviewLine"] as const;
+const APPLICATION_REQUIRED_STRINGS = [
+  "company",
+  "roleTitle",
+  "targetRole",
+  "status",
+  "statusChangedAt",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+function defaultMissingStrings(rows: unknown[], keys: readonly string[]): void {
+  for (const row of rows) {
+    if (!isRecord(row)) continue;
+    for (const key of keys) {
+      if (row[key] == null) row[key] = "";
+    }
+  }
 }
 
 /** Score fields a persisted rubric row may carry — present ⇒ must be a finite number. */
