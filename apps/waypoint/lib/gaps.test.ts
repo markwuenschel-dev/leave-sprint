@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 // package TS sources with no build step (packages/rubric has no dist).
 import { RD, clusterForTag, type RubricEntry } from "@waypoint/rubric";
 
+import { weekStartIso } from "./domain";
 import {
   MATRIX_ROLES,
   buildGapBoard,
@@ -199,6 +200,14 @@ describe("weeklyAssessmentBuckets / cumulativeQualifying", () => {
     const member = Date.parse("2026-01-07T00:00:00Z");
     expect(start).toBeLessThanOrEqual(member);
     expect(member - start).toBeLessThanOrEqual(7 * DAY_MS);
+  });
+
+  it("groups a Sunday with the same local Monday as weekStartIso", () => {
+    // 2026-08-09 is a Sunday. UTC toISOString().slice(0, 10) can land on
+    // Saturday in TZ east of UTC; domain weekStartIso is local Monday.
+    const buckets = weeklyAssessmentBuckets([entry({ date: "2026-08-09" })]);
+    expect(buckets).toHaveLength(1);
+    expect(buckets[0].weekStart).toBe(weekStartIso(new Date("2026-08-09T00:00:00")));
   });
 
   it("skips entries with no date", () => {
