@@ -75,7 +75,7 @@ pnpm build
 pnpm start        # migrate PGlite, then next start
 ```
 
-No required env. Empty `.env` → embedded DB, open gate, no LLM providers.
+No required env for local dev. Empty `.env` → embedded DB, open gate, no LLM providers. A production build (`NODE_ENV=production`) needs `APP_TOKEN` set — an unset token no longer opens the app there (INT-002).
 
 | Want | Do |
 | --- | --- |

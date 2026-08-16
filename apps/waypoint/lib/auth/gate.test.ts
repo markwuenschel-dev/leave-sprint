@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import { decideGate, isApiPath, isHealthPath, isUnlockPath, type GateInput } from "./gate";
@@ -5,9 +8,16 @@ import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE, safeEqual } from "./token";
 
 const TOKEN = "s3cret-app-token";
 
-/** Locked-out visitor: gate on, no cookie, no ?token=. */
+/** Locked-out visitor: gate on, no cookie, no ?token=, not a production build. */
 function anon(pathname: string, over: Partial<GateInput> = {}): GateInput {
-  return { pathname, token: TOKEN, cookie: undefined, queryToken: null, ...over };
+  return {
+    pathname,
+    token: TOKEN,
+    cookie: undefined,
+    queryToken: null,
+    isProduction: false,
+    ...over,
+  };
 }
 
 describe("safeEqual", () => {
@@ -67,17 +77,106 @@ describe("path classification", () => {
   });
 });
 
+// INT-002: decideGate must take isProduction as caller-supplied input, never
+// read process.env itself -- proxy.ts is the one place that's allowed to
+// compute it from NODE_ENV, so the decision stays a pure, unit-testable
+// function. A regression test rather than a rule stated only in a comment.
+describe("gate.ts stays free of process.env (INT-002 purity)", () => {
+  it("reads no environment variables directly", () => {
+    const src = readFileSync(fileURLToPath(new URL("./gate.ts", import.meta.url)), "utf8");
+    // Strip comments first -- the doc comments *talk about* process.env
+    // (explaining what the caller computes), which isn't the same as this
+    // file reading it.
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    expect(code).not.toMatch(/process\.env/);
+  });
+});
+
 describe("decideGate — gate disabled", () => {
   it("is fully open when APP_TOKEN is unset (documented dev behaviour, deliberately preserved)", () => {
     for (const p of ["/", "/api/state", "/api/unlock", "/unlock", "/rubric"]) {
-      expect(decideGate({ pathname: p, token: undefined, cookie: undefined, queryToken: null }))
-        .toEqual({ kind: "open" });
+      expect(
+        decideGate({
+          pathname: p,
+          token: undefined,
+          cookie: undefined,
+          queryToken: null,
+          isProduction: false,
+        }),
+      ).toEqual({ kind: "open" });
     }
   });
 
   it("treats an empty-string APP_TOKEN as unset rather than as a valid secret", () => {
-    expect(decideGate({ pathname: "/api/state", token: "", cookie: "", queryToken: null }))
-      .toEqual({ kind: "open" });
+    expect(
+      decideGate({
+        pathname: "/api/state",
+        token: "",
+        cookie: "",
+        queryToken: null,
+        isProduction: false,
+      }),
+    ).toEqual({ kind: "open" });
+  });
+});
+
+// INT-002: an unset APP_TOKEN must not open a production build. Unlike the
+// non-production case above, this is the exact posture a public deploy is in
+// if the token env var is ever missing/forgotten — see gate.ts's `isProduction`
+// branch.
+describe("decideGate — production, gate disabled (INT-002 fail-closed)", () => {
+  it("does NOT open the app when APP_TOKEN is unset in production", () => {
+    expect(decideGate(anon("/", { token: undefined, isProduction: true })))
+      .not.toEqual({ kind: "open" });
+    expect(decideGate(anon("/api/state", { token: undefined, isProduction: true })))
+      .not.toEqual({ kind: "open" });
+  });
+
+  it("still exempts /api/health so a public deploy probe keeps working", () => {
+    expect(decideGate(anon("/api/health", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "exempt" });
+    expect(decideGate(anon("/api/health/", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "exempt" });
+    // Near-miss stays gated, same rule as the token-set case.
+    expect(decideGate(anon("/api/healthcare", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "unauthorized" });
+  });
+
+  it("still exempts /unlock and /api/unlock — reachable, but cannot actually unlock (the route 401s: no expected token to match)", () => {
+    expect(decideGate(anon("/unlock", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "exempt" });
+    expect(decideGate(anon("/api/unlock", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "exempt" });
+  });
+
+  it("401s API calls instead of opening them", () => {
+    expect(decideGate(anon("/api/state", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "unauthorized" });
+    expect(decideGate(anon("/api/interview", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "unauthorized" });
+  });
+
+  it("redirects page requests to /unlock instead of opening them", () => {
+    expect(decideGate(anon("/", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "challenge" });
+    expect(decideGate(anon("/rubric", { token: undefined, isProduction: true })))
+      .toEqual({ kind: "challenge" });
+  });
+
+  it("cannot be forged: a cookie or ?token= cannot grant access when there is no expected token to match", () => {
+    expect(
+      decideGate(anon("/api/state", { token: undefined, isProduction: true, cookie: "anything" })),
+    ).toEqual({ kind: "unauthorized" });
+    expect(
+      decideGate(
+        anon("/", { token: undefined, isProduction: true, queryToken: "anything" }),
+      ),
+    ).toEqual({ kind: "challenge" });
+  });
+
+  it("treats an empty-string APP_TOKEN the same as unset in production", () => {
+    expect(decideGate(anon("/api/state", { token: "", isProduction: true })))
+      .toEqual({ kind: "unauthorized" });
   });
 });
 
