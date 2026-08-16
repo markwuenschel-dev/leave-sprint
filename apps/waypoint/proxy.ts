@@ -5,7 +5,8 @@ import { decideGate } from "@/lib/auth/gate";
 import { AUTH_COOKIE, authCookieOptions } from "@/lib/auth/token";
 
 /**
- * Optional local token gate. Unset APP_TOKEN → open.
+ * Token gate. Unset APP_TOKEN → open in dev/test; in production it fails
+ * closed instead (INT-002) — see the `isProduction` branch in `decideGate`.
  *
  * All routing rules live in the pure `decideGate` (lib/auth/gate.ts) so they are
  * unit-testable; this file only turns a decision into a NextResponse.
@@ -19,6 +20,7 @@ export function proxy(req: NextRequest) {
     token,
     cookie: req.cookies.get(AUTH_COOKIE)?.value,
     queryToken: url.searchParams.get("token"),
+    isProduction: process.env.NODE_ENV === "production",
   });
 
   switch (decision.kind) {
