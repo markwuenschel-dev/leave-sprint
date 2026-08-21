@@ -6,7 +6,7 @@
  * reachable" — can be unit-tested without booting a server.
  */
 
-import { safeEqual } from "./token";
+import { safeEqual, verifySession } from "./token";
 
 export type GateDecision =
   /** APP_TOKEN unset → the gate is disabled entirely (see FAIL-OPEN note below). */
@@ -39,6 +39,14 @@ export interface GateInput {
    * silently open a production build the way it opens local dev/test).
    */
   isProduction: boolean;
+  /**
+   * Math.floor(Date.now() / 1000), computed by the caller so this function
+   * stays a pure decision (INT-003: verifySession needs a clock reading; a
+   * hidden Date.now() inside decideGate would reintroduce the same
+   * impurity INT-002 removed for isProduction, just via the clock instead
+   * of the env).
+   */
+  nowUnixSeconds: number;
 }
 
 /** Exactly one path segment deep: `/p` or `/p/`, never `/pfoo`. */
@@ -74,7 +82,7 @@ export function isHealthPath(pathname: string): boolean {
 }
 
 export function decideGate(input: GateInput): GateDecision {
-  const { pathname, token, cookie, queryToken, isProduction } = input;
+  const { pathname, token, cookie, queryToken, isProduction, nowUnixSeconds } = input;
 
   if (!token) {
     // FAIL-OPEN, preserved deliberately for local dev/test only: with no
@@ -88,7 +96,7 @@ export function decideGate(input: GateInput): GateDecision {
     // grant access either.
     if (!isProduction) return { kind: "open" };
   } else {
-    if (cookie && safeEqual(cookie, token)) return { kind: "allow" };
+    if (cookie && verifySession(cookie, token, nowUnixSeconds)) return { kind: "allow" };
 
     // Checked before the exemptions so `/unlock?token=…` still mints the cookie.
     if (queryToken && safeEqual(queryToken, token)) return { kind: "grant" };

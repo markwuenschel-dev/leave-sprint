@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AUTH_COOKIE, authCookieOptions, safeEqual } from "@/lib/auth/token";
+import { AUTH_COOKIE, authCookieOptions, createSession, safeEqual } from "@/lib/auth/token";
 import { BODY_LIMITS, readJsonBody } from "@/lib/http/parse";
 import { failureResponse } from "@/lib/http/respond";
 import { parseUnlockBody } from "@/lib/http/schemas";
@@ -26,7 +26,10 @@ export async function POST(req: Request) {
   const expected = process.env.APP_TOKEN;
   if (expected && safeEqual(submitted, expected)) {
     const res = NextResponse.json({ ok: true });
-    res.cookies.set(AUTH_COOKIE, expected, authCookieOptions());
+    // Mints a signed session (INT-003) instead of writing the raw APP_TOKEN
+    // into the cookie — see lib/auth/token.ts.
+    const nowUnixSeconds = Math.floor(Date.now() / 1000);
+    res.cookies.set(AUTH_COOKIE, createSession(expected, nowUnixSeconds), authCookieOptions());
     return res;
   }
 
