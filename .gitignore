@@ -55,3 +55,4 @@ data/assessments/
 
 # Independent-verification evidence (must stay outside any verified diff)
 .verification/
+reports/

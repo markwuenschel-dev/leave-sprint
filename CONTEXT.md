@@ -10,7 +10,7 @@ Data and app sovereignty — your assessment data lives in embedded PGlite on yo
 
 ## Leave Sprint Twin
 
-Archived predecessor dashboard for a fixed 29-day leave sprint. Not a living product; reference/import source only.
+Archived predecessor dashboard for a fixed 29-day leave sprint. Not a living product. Retired from the repository (INT-001, 2026-08-21) — its own rubric/qbank had drifted from `@waypoint/*` and it had no live import dependency from Waypoint. History is recoverable from git; the one-shot import feature (practice progress + rubric history) survives as `apps/waypoint/lib/twinImport.ts`, independent of the twin's own code.
 
 ## Phase B / Phase A
 
