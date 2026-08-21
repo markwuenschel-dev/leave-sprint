@@ -83,8 +83,6 @@ No required env for local dev. Empty `.env` → embedded DB, open gate, no LLM p
 | Pin the database | `WAYPOINT_PGLITE_DIR=/absolute/path` — unset means `<cwd>/.pglite` |
 | AI mocks | LiteLLM gateway (below) or raw provider keys |
 
-Twin (optional, frozen): `pnpm dev:twin` on port **3001**.
-
 ---
 
 ## Shell
@@ -151,15 +149,15 @@ Coached AI sessions stamp `llmIndependence.llmUsed: true` and do not inflate the
 ## Architecture
 
 <p align="center">
-  <img src="docs/assets/architecture.svg" alt="Browser shell, Next API, PGlite, rubric packages, optional LLM gateway, frozen twin" width="900"/>
+  <img src="docs/assets/architecture.svg" alt="Browser shell, Next API, PGlite, rubric packages, optional LLM gateway" width="900"/>
 </p>
+<!-- diagram still shows the retired twin as of INT-001; regenerate when convenient -->
 
 ```text
 apps/waypoint/              live Next app
 packages/rubric/            @waypoint/rubric   · observations + derive + score
 packages/qbank/             @waypoint/qbank
 packages/practice-types/    @waypoint/practice-types
-app/  lib/  data/           Leave Sprint Twin · frozen
 docs/adr/                   accepted decisions
 ```
 
@@ -269,7 +267,6 @@ Same sequence CI runs (`.github/workflows/ci.yml`):
 | Typecheck | `pnpm typecheck` |
 | Tests | `pnpm test` |
 | Waypoint | `pnpm --filter waypoint build` |
-| Twin | `pnpm build:twin` |
 
 Hermetic: `LLG_HERMETIC=1` in CI. No live LLM on the verify job.
 
@@ -277,14 +274,9 @@ Hermetic: `LLG_HERMETIC=1` in CI. No live LLM on the verify job.
 
 ## Twin
 
-Frozen predecessor (29-day leave dashboard). Disjoint import graph from Waypoint. Still typechecked and built in CI so it cannot silently rot as an import source.
+The frozen "Leave Sprint Twin" predecessor (29-day leave dashboard) was retired from this repo (INT-001) — it had zero live import dependency from Waypoint and its own rubric/qbank copies had already drifted from `@waypoint/rubric`/`@waypoint/qbank`. Its history is fully recoverable from git (`git show <pre-removal-commit>:data/app-state.json`, etc.) if ever needed.
 
-```bash
-pnpm dev:twin      # :3001
-pnpm build:twin
-```
-
-Optional one-shot import on **More**: practice progress + rubric history only.
+The one-shot import feature itself is unaffected: **More → twin import** still works, backed by `apps/waypoint/lib/twinImport.ts`, which was always independent of the twin's own application code — it parses an exported JSON payload (practice progress + rubric history only), not a live twin instance.
 
 ---
 
