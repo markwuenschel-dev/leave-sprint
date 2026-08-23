@@ -143,14 +143,24 @@ export async function readJsonBody(req: Request, maxBytes: number): Promise<Pars
   }
 }
 
-/** Read a multipart upload field as a File, under a byte cap. */
+/**
+ * Read a multipart upload field as a File, under a byte cap.
+ * A numeric Content-Length is required so formData() never buffers an unbounded body.
+ */
 export async function readAudioUpload(
   req: Request,
   field: string,
   maxBytes: number,
 ): Promise<ParseResult<File>> {
-  const declared = Number(req.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maxBytes) return TOO_LARGE(maxBytes);
+  const raw = req.headers.get("content-length");
+  const declared = Number(raw);
+  if (raw == null || !Number.isFinite(declared)) {
+    return fail(
+      "invalid_content_length",
+      "A numeric Content-Length header is required before the upload is read.",
+    );
+  }
+  if (declared > maxBytes) return TOO_LARGE(maxBytes);
   let form: FormData;
   try {
     form = await req.formData();

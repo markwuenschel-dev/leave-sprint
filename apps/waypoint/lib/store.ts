@@ -72,6 +72,42 @@ export interface WaypointStore extends WaypointState {
 
 const seed = (): WaypointState => JSON.parse(JSON.stringify(SEED)) as WaypointState;
 
+/** Persist + exportState data keys — listed once, kept exact to WaypointState. */
+export const SNAPSHOT_KEYS = [
+  "phase",
+  "roleFilter",
+  "rhythmDays",
+  "weeklyReviews",
+  "problems",
+  "fileDefense",
+  "rubricEntries",
+  "qbankStatus",
+  "qbankPos",
+  "qbankOrder",
+  "studyGuides",
+  "applications",
+  "solidInterviewLogs",
+  "mockSeq",
+  "mockAsked",
+  "lastUpdated",
+] as const satisfies readonly (keyof WaypointState)[];
+
+type SnapshotKey = (typeof SNAPSHOT_KEYS)[number];
+type MissingSnapshotKey = Exclude<keyof WaypointState, SnapshotKey>;
+type ExtraSnapshotKey = Exclude<SnapshotKey, keyof WaypointState>;
+const _snapshotKeysExact: [MissingSnapshotKey, ExtraSnapshotKey] extends [never, never]
+  ? true
+  : never = true;
+void _snapshotKeysExact;
+
+function pickSnapshot(s: Pick<WaypointState, SnapshotKey>): WaypointState {
+  const out = {} as WaypointState;
+  for (const k of SNAPSHOT_KEYS) {
+    Object.assign(out, { [k]: s[k] });
+  }
+  return out;
+}
+
 const unionById = <T extends { id: string }>(server: T[], local: T[]): T[] => {
   const byId = new Map(server.map((x) => [x.id, x]));
   for (const x of local) byId.set(x.id, x); // local (live edit) wins on conflict
@@ -373,41 +409,7 @@ export const useWaypointStore = create<WaypointStore>()(
         );
         set({ ...slice, problems, fileDefense, lastUpdated: now() });
       },
-      exportState: () => {
-        const s = get();
-        const {
-          _rehydrated: _,
-          setPhase: _a,
-          setRoleFilter: _b,
-          toggleRhythm: _c,
-          setRhythmNote: _d,
-          setProblemStatus: _e,
-          markDefensePracticed: _f,
-          unmarkDefensePracticed: _unmarkDef,
-          setDefenseNotes: _g,
-          setQBankStatus: _h,
-          setQBankPos: _i,
-          setQBankOrder: _setQOrd,
-          setStudyGuide: _setSG,
-          toggleStudyWeekItem: _togSW,
-          addRubricEntry: _j,
-          patchRubricEntry: _patchR,
-          importRubricEntries: _impR,
-          deleteRubricEntry: _delR,
-          upsertApplication: _k,
-          deleteApplication: _l,
-          setWeeklyField: _m,
-          logSolidInterview: _n,
-          noteMockQuestion: _noteMock,
-          advanceMockSession: _advMock,
-          mergeCatalog: _q,
-          importTwin: _twin,
-          importState: _o,
-          exportState: _p,
-          ...rest
-        } = s;
-        return rest as WaypointState;
-      },
+      exportState: () => pickSnapshot(get()),
     }),
     {
       name: "waypoint-v1",
@@ -415,24 +417,7 @@ export const useWaypointStore = create<WaypointStore>()(
       version: 1,
       storage: createJSONStorage(() => serverStorage),
       merge: (persisted, current) => mergeHydration(persisted, current as WaypointStore),
-      partialize: (s) => ({
-        phase: s.phase,
-        roleFilter: s.roleFilter,
-        rhythmDays: s.rhythmDays,
-        weeklyReviews: s.weeklyReviews,
-        problems: s.problems,
-        fileDefense: s.fileDefense,
-        rubricEntries: s.rubricEntries,
-        qbankStatus: s.qbankStatus,
-        qbankPos: s.qbankPos,
-        qbankOrder: s.qbankOrder,
-        studyGuides: s.studyGuides,
-        applications: s.applications,
-        solidInterviewLogs: s.solidInterviewLogs,
-        mockSeq: s.mockSeq,
-        mockAsked: s.mockAsked,
-        lastUpdated: s.lastUpdated,
-      }),
+      partialize: (s) => pickSnapshot(s),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state._rehydrated = true;

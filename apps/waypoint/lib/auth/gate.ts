@@ -6,7 +6,7 @@
  * reachable" — can be unit-tested without booting a server.
  */
 
-import { safeEqual } from "./token";
+import { safeEqual, verifySession } from "./token";
 
 export type GateDecision =
   /** APP_TOKEN unset → the gate is disabled entirely (see FAIL-OPEN note below). */
@@ -24,12 +24,29 @@ export type GateDecision =
 
 export interface GateInput {
   pathname: string;
-  /** process.env.APP_TOKEN — undefined/empty means the gate is off. */
+  /**
+   * process.env.APP_TOKEN. Undefined/empty means no secret is configured —
+   * see `isProduction` below for what that does to the gate.
+   */
   token: string | undefined;
   /** Current value of the auth cookie, if any. */
   cookie: string | undefined;
   /** `?token=` from the request URL, if any. */
   queryToken: string | null;
+  /**
+   * process.env.NODE_ENV === "production", computed by the caller so this
+   * function stays a pure decision (see INT-002: an unset APP_TOKEN must not
+   * silently open a production build the way it opens local dev/test).
+   */
+  isProduction: boolean;
+  /**
+   * Math.floor(Date.now() / 1000), computed by the caller so this function
+   * stays a pure decision (INT-003: verifySession needs a clock reading; a
+   * hidden Date.now() inside decideGate would reintroduce the same
+   * impurity INT-002 removed for isProduction, just via the clock instead
+   * of the env).
+   */
+  nowUnixSeconds: number;
 }
 
 /** Exactly one path segment deep: `/p` or `/p/`, never `/pfoo`. */
@@ -65,18 +82,25 @@ export function isHealthPath(pathname: string): boolean {
 }
 
 export function decideGate(input: GateInput): GateDecision {
-  const { pathname, token, cookie, queryToken } = input;
+  const { pathname, token, cookie, queryToken, isProduction, nowUnixSeconds } = input;
 
-  // FAIL-OPEN, preserved deliberately: with no APP_TOKEN the whole app is open.
-  // This is the documented local-dev behaviour (.env.example: "When UNSET, the
-  // app is open"). Changing it would lock the user out of a deployment whose
-  // env var is missing, so it is reported, not changed.
-  if (!token) return { kind: "open" };
+  if (!token) {
+    // FAIL-OPEN, preserved deliberately for local dev/test only: with no
+    // APP_TOKEN the whole app is open. This is the documented local-dev
+    // behaviour (.env.example: "empty .env ... open access gate").
+    //
+    // INT-002: that default must not extend to a production build. An unset
+    // token in production falls through to the same exempt/unauthorized/
+    // challenge logic below as "a token is configured but nothing matched" —
+    // there is no secret to compare against, so cookie/query-token cannot
+    // grant access either.
+    if (!isProduction) return { kind: "open" };
+  } else {
+    if (cookie && verifySession(cookie, token, nowUnixSeconds)) return { kind: "allow" };
 
-  if (cookie && safeEqual(cookie, token)) return { kind: "allow" };
-
-  // Checked before the exemptions so `/unlock?token=…` still mints the cookie.
-  if (queryToken && safeEqual(queryToken, token)) return { kind: "grant" };
+    // Checked before the exemptions so `/unlock?token=…` still mints the cookie.
+    if (queryToken && safeEqual(queryToken, token)) return { kind: "grant" };
+  }
 
   if (isUnlockPath(pathname) || isHealthPath(pathname)) return { kind: "exempt" };
 

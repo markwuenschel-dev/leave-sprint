@@ -1,5 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import { normaliseEntry, type RubricEntry } from "@waypoint/rubric";
+import { todayIso } from "../domain";
 import { rubricEntries } from "./schema";
 
 type RubricRow = InferSelectModel<typeof rubricEntries>;
@@ -33,7 +34,7 @@ export function rubricEntryToRow(e: RubricEntry): RubricRow {
   return {
     id: e.assessmentId || e.id,
     rubricVersion: e.rubricVersion ?? null,
-    date: e.date,
+    date: e.date || todayIso(),
     task: e.task ?? null,
     taskType: e.taskType || null,
     domain: e.domain ?? null,

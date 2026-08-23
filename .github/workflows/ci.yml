@@ -46,6 +46,3 @@ jobs:
 
       - name: Build Waypoint
         run: pnpm --filter waypoint build
-
-      - name: Build frozen twin
-        run: pnpm build:twin

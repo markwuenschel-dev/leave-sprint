@@ -19,7 +19,7 @@
 - **Config / dependencies:**
 
 ## 📌 Placement & scope
-- **Target:** ☐ `apps/waypoint` (live) ☐ root twin (frozen) ☐ `packages/*` ☐ tooling / CI
+- **Target:** ☐ `apps/waypoint` (live) ☐ `packages/*` ☐ tooling / CI
 - **Breaking changes / migration needed:**
 - **Deliberately out of scope:**
 - **Debt or gotchas introduced:**
@@ -36,18 +36,17 @@ Every command below exists in this repo — `pnpm run` to list them, or see
 | Typecheck | `pnpm typecheck` | ☐ pass |
 | Tests | `pnpm test` | ☐ pass |
 | Waypoint build | `pnpm --filter waypoint build` | ☐ pass |
-| Twin build | `pnpm build:twin` | ☐ pass |
 
 <!--
   Narrower reruns while iterating:
-    pnpm typecheck:waypoint   pnpm typecheck:twin
+    pnpm typecheck:waypoint
     pnpm test:watch           pnpm lint:fix
 -->
 
 ### Beyond the automated gates
 - [ ] **New or updated tests** cover the behaviour this PR changes
       <!-- tests live in packages/*/src/*.test.ts and apps/waypoint/**/*.test.ts -->
-- [ ] **Manual check** in a running app (`pnpm dev`, or `pnpm dev:twin` for the twin) — steps:
+- [ ] **Manual check** in a running app (`pnpm dev`) — steps:
 - [ ] **Edge cases / failure modes** exercised (empty DB, 401 / token gate, import of a malformed backup)
 - [ ] **No secrets or absolute local paths** in the diff; no live LLM or gateway call added to a test path
 - [ ] N/A — explain:
@@ -61,7 +60,7 @@ Every command below exists in this repo — `pnpm run` to list them, or see
 <!-- Screenshots, GIFs, before/after. Required for any UI or surface change. -->
 
 ## ⚠️ Ops & post-merge
-- **Migrations / PGlite:** <!-- `pnpm --filter waypoint db:generate` then `pnpm db:migrate`; twin: `pnpm db:generate:twin` / `pnpm db:migrate:twin` -->
+- **Migrations / PGlite:** <!-- `pnpm --filter waypoint db:generate` then `pnpm db:migrate` -->
 - **Env / setup steps:** <!-- APP_TOKEN, WAYPOINT_PGLITE_DIR, ports, systemd, proxy -->
 - **Rollback:**
 

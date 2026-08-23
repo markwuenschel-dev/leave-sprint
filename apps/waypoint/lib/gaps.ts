@@ -13,7 +13,7 @@ import {
   type RubricEntry,
   type LevelId,
 } from "@waypoint/rubric";
-import type { RoleFilter } from "./domain";
+import { weekStartIso, type RoleFilter } from "./domain";
 
 export type MatrixRole = "SWE" | "MLE" | "DS" | "DE" | "BIE" | "BIA";
 
@@ -194,9 +194,7 @@ export interface WeekBucket {
 function weekStartOf(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   if (Number.isNaN(d.getTime())) return dateStr;
-  const dow = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - dow);
-  return d.toISOString().slice(0, 10);
+  return weekStartIso(d);
 }
 
 export function weeklyAssessmentBuckets(

@@ -6,6 +6,9 @@
  */
 
 import { describe, expect, it } from "vitest";
+import type { RubricEntry } from "@waypoint/rubric";
+import { rubricEntryToRow } from "../db/mappers";
+import { todayIso } from "../domain";
 import type { ParseResult } from "./parse";
 import {
   parseInterviewBody,
@@ -247,6 +250,45 @@ describe("parseStateBody", () => {
   it("rejects a thin rubric row whose present scores/diagnostic are the wrong type (WP-C25)", () => {
     expect(parseStateBody({ ...slice, rubricEntries: [{ id: "x", finalScore: "hot" }] }).ok).toBe(false);
     expect(parseStateBody({ ...slice, rubricEntries: [{ id: "x", diagnostic: [] }] }).ok).toBe(false);
+  });
+
+  it("accepts a thin {id} rubric row (WP-C25) and mapping supplies a non-empty local date", () => {
+    const thin = { id: "x" };
+    const res = parseStateBody({ ...slice, rubricEntries: [thin] });
+    expect(res.ok).toBe(true);
+    expect(valueOf(res)?.rubricEntries[0]).toBe(thin as never);
+    const row = rubricEntryToRow(thin as RubricEntry);
+    expect(row.date).toBe(todayIso());
+    expect(row.date.length).toBeGreaterThan(0);
+  });
+
+  it("defaults missing NOT NULL strings on thin problem, defense, and application rows", () => {
+    const res = parseStateBody({
+      ...slice,
+      problems: [{ id: "p-thin" }],
+      fileDefense: [{ id: "f-thin" }],
+      applications: [{ id: "a-thin" }],
+    });
+    expect(res.ok).toBe(true);
+    const body = valueOf(res)!;
+    expect(body.problems[0]).toMatchObject({ id: "p-thin", title: "", tier: "", pattern: "", status: "" });
+    expect(body.fileDefense[0]).toMatchObject({
+      id: "f-thin",
+      title: "",
+      why: "",
+      terminology: "",
+      interviewLine: "",
+    });
+    expect(body.applications[0]).toMatchObject({
+      id: "a-thin",
+      company: "",
+      roleTitle: "",
+      targetRole: "",
+      status: "",
+      statusChangedAt: "",
+      createdAt: "",
+      updatedAt: "",
+    });
   });
 });
 

@@ -7,52 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@electric-sql/pglite':
-        specifier: ^0.5.4
-        version: 0.5.4
-      '@tailwindcss/postcss':
-        specifier: ^4.3.2
-        version: 4.3.2
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.4.0
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@electric-sql/pglite@0.5.4)(postgres@3.4.9)
-      framer-motion:
-        specifier: ^12.12.0
-        version: 12.42.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      lucide-react:
-        specifier: ^0.525.0
-        version: 0.525.0(react@19.2.0)
-      next:
-        specifier: 16.2.10
-        version: 16.2.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      postgres:
-        specifier: ^3.4.9
-        version: 3.4.9
-      react:
-        specifier: 19.2.0
-        version: 19.2.0
-      react-dom:
-        specifier: 19.2.0
-        version: 19.2.0(react@19.2.0)
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.2.17)(react@19.2.0)
-      rehype-highlight:
-        specifier: ^7.0.2
-        version: 7.0.2
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
-      tsx:
-        specifier: ^4.23.0
-        version: 4.23.0
-      zustand:
-        specifier: ^5.0.3
-        version: 5.0.14(@types/react@19.2.17)(react@19.2.0)
     devDependencies:
       '@types/node':
         specifier: ^22
@@ -66,9 +20,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      drizzle-kit:
-        specifier: ^0.31.10
-        version: 0.31.10
       oxlint:
         specifier: ^1.73.0
         version: 1.73.0
@@ -3998,7 +3949,8 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres@3.4.9: {}
+  postgres@3.4.9:
+    optional: true
 
   property-information@7.2.0: {}
 

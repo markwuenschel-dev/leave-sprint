@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { AUTH_COOKIE_MAX_AGE, verifySession } from "@/lib/auth/token";
+
 import { POST } from "./route";
 
 const TOKEN = "s3cret-app-token";
@@ -31,17 +33,25 @@ function setCookie(res: Response): string {
 }
 
 describe("POST /api/unlock", () => {
-  it("exchanges the correct token for the wp_token cookie", async () => {
+  it("exchanges the correct token for a signed wp_token session cookie, never the raw token (INT-003)", async () => {
     const res = await POST(post(JSON.stringify({ token: TOKEN })));
     expect(res.status).toBe(200);
     await expect(res.clone().json()).resolves.toEqual({ ok: true });
 
     const cookie = setCookie(res);
-    expect(cookie).toContain(`wp_token=${TOKEN}`);
+    const match = /wp_token=([^;]+)/.exec(cookie);
+    expect(match).not.toBeNull();
+    const cookieValue = match![1];
+
+    // Not the raw secret -- the whole point of INT-003.
+    expect(cookieValue).not.toBe(TOKEN);
+    // ...but it IS a session verifySession accepts right now.
+    expect(verifySession(cookieValue, TOKEN, Math.floor(Date.now() / 1000))).toBe(true);
+
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("Path=/");
     expect(cookie).toContain("SameSite=lax");
-    expect(cookie).toContain(`Max-Age=${60 * 60 * 24 * 365}`);
+    expect(cookie).toContain(`Max-Age=${AUTH_COOKIE_MAX_AGE}`);
   });
 
   it("does not set Secure outside production (so it works over plain-http local dev)", async () => {

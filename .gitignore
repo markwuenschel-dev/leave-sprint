@@ -49,3 +49,10 @@ next-env.d.ts
 
 # Personal assessment data (grades) — keep out of the shared repo
 data/assessments/
+
+# Isolated delivery worktrees (using-git-worktrees fallback)
+.worktrees/
+
+# Independent-verification evidence (must stay outside any verified diff)
+.verification/
+reports/

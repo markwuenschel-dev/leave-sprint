@@ -9,14 +9,8 @@ import { useMemo, useState } from "react";
 import {
   RD,
   KGTAG_CLUSTERS,
-  computeRaw,
-  computeFinal,
-  subTotal,
+  previewGrade,
   scoreBand,
-  deriveAnswerLevel,
-  deriveQualifyingLevel,
-  deriveDemonstratedLevel,
-  validateMonotonic,
   GATE_VERDICTS,
   LEVEL_VERDICTS,
   GAP_TYPES,
@@ -169,7 +163,7 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
   const [mode, setMode] = useState<LoggingMode>("fast");
 
   // Memoized so the reference is stable while the three inputs are unchanged —
-  // an inline literal here defeated the derivedAnswer memo below on every render.
+  // an inline literal here defeated the preview memo below on every render.
   const levelScores: LevelScores = useMemo(
     () => ({
       L1: numOrNull(ls.L1),
@@ -178,26 +172,37 @@ export function GradeForm({ onLogged }: { onLogged?: () => void }) {
     }),
     [ls],
   );
-  const monotonicOk = validateMonotonic(levelScores);
-
-  const derivedAnswer = useMemo(
-    () => deriveAnswerLevel(levelScores, gates, subs),
-    [levelScores, gates, subs],
+  const preview = useMemo(
+    () =>
+      previewGrade({
+        levelScores,
+        gates,
+        subs,
+        problemLevel,
+        difficulty,
+        assistanceLevel: assist,
+        taskScore,
+        cap: cap === "" ? null : Number(cap),
+        penalties,
+        overrideAnswer: overrideDerive ? answerLevelManual : undefined,
+        overrideQualifying: overrideDerive ? qualifyingManual : undefined,
+      }),
+    [
+      levelScores,
+      gates,
+      subs,
+      problemLevel,
+      difficulty,
+      assist,
+      taskScore,
+      cap,
+      penalties,
+      overrideDerive,
+      answerLevelManual,
+      qualifyingManual,
+    ],
   );
-  const derivedQual = useMemo(
-    () => deriveQualifyingLevel(derivedAnswer, problemLevel, difficulty, assist),
-    [derivedAnswer, problemLevel, difficulty, assist],
-  );
-  const answerLevel = overrideDerive ? answerLevelManual : derivedAnswer;
-  const qualifying = overrideDerive ? qualifyingManual : derivedQual;
-  const demonstrated = deriveDemonstratedLevel(levelScores, qualifying);
-
-  const universal = subTotal(subs) ?? 0;
-  const finalScore = computeFinal(
-    computeRaw(universal, taskScore),
-    cap === "" ? null : Number(cap),
-    penalties,
-  );
+  const { answerLevel, qualifying, demonstrated, universal, finalScore, monotonicOk } = preview;
 
   const allDomains = RD.domainGroups.flatMap((g) => g.domains);
   const kgMatches = kgQuery.trim()

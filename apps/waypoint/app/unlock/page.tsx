@@ -46,7 +46,7 @@ export default function UnlockPage() {
         <p className="text-sm text-[var(--text-mid)] mb-4">
           Enter your <code>APP_TOKEN</code> to unlock this browser. You can also open with{" "}
           <code className="text-[var(--cyan)]">?token=YOUR_APP_TOKEN</code> once, or unset{" "}
-          <code>APP_TOKEN</code> for open local use.
+          <code>APP_TOKEN</code> for open local use in dev (production builds require it).
         </p>
 
         <form onSubmit={submit}>

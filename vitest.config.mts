@@ -15,8 +15,6 @@ export default defineConfig({
       '@waypoint/rubric': abs('./packages/rubric/src/index.ts'),
       '@waypoint/qbank': abs('./packages/qbank/src/index.ts'),
       '@waypoint/practice-types': abs('./packages/practice-types/src/index.ts'),
-      // apps/waypoint uses `@/…` for its own root; the frozen twin uses the same
-      // prefix for the repo root, but no twin file is under test.
       '@/': `${abs('./apps/waypoint')}/`,
     },
   },
