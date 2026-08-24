@@ -107,7 +107,7 @@ export function DefenseSurface() {
           </>
         }
         right={
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-3">
+          <div className="flex max-w-full items-center gap-3 rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-3">
             <ProgressRing
               value={corePct}
               size={64}
@@ -115,7 +115,7 @@ export function DefenseSurface() {
             >
               <span className="text-xs font-bold">{coreDone}</span>
             </ProgressRing>
-            <div className="text-xs leading-snug">
+            <div className="min-w-0 text-xs leading-snug">
               <div className="font-medium text-[var(--text)]">
                 {coreDone}/{core.length} core cold
               </div>

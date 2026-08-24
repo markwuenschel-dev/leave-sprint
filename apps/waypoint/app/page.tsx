@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Target,
   Gauge,
+  Compass,
   BookOpen,
   Shield,
   Mic2,
@@ -20,6 +21,7 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import {
   TodaySurface,
   ReadinessSurface,
+  CareerSurface,
   PracticeSurface,
   DefenseSurface,
   InterviewSurface,
@@ -38,11 +40,24 @@ import {
   type WpNavDetail,
 } from "@/lib/nav";
 
+/**
+ * One responsive content width for all three shell bands (header row, tab strip,
+ * main). Kept in a single constant so they can never drift apart and leave the tab
+ * strip misaligned with the content beneath it.
+ *
+ * The app previously capped every band at `max-w-6xl` (1152px) with no `xl:`/`2xl:`
+ * override anywhere, which left roughly 700px of dead gutter per side on a 2560px
+ * display. It steps up instead of going full-bleed: unbounded width would stretch
+ * table rows and prose past a readable measure.
+ */
+const SHELL_WIDTH = "shell-width";
+
 type TabId = MainTabId;
 
 const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "today", label: "Today", icon: Target },
   { id: "readiness", label: "Readiness", icon: Gauge },
+  { id: "career", label: "Career", icon: Compass },
   { id: "practice", label: "Practice", icon: BookOpen },
   { id: "defense", label: "Defense", icon: Shield },
   { id: "interview", label: "Interview", icon: Mic2 },
@@ -108,7 +123,7 @@ export default function WaypointHome() {
         }}
       >
         <div
-          className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4"
+          className={`${SHELL_WIDTH} flex h-14 items-center justify-between gap-3 px-4`}
         >
           <div className="min-w-0">
             <div className="text-xl font-semibold tracking-tight">Waypoint</div>
@@ -145,7 +160,7 @@ export default function WaypointHome() {
         </div>
         {/* Always-visible tab row (do not gate on md: — broken if Tailwind breakpoints miss) */}
         <nav
-          className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2"
+          className={`${SHELL_WIDTH} scroll-fade-x flex gap-1 overflow-x-auto px-2 pb-2`}
           aria-label="Main"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
@@ -156,7 +171,7 @@ export default function WaypointHome() {
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm"
+                className="flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm md:min-h-9"
                 style={{
                   background: active ? "var(--fill-strong)" : "transparent",
                   color: active ? "var(--cyan)" : "var(--text-mid)",
@@ -171,9 +186,10 @@ export default function WaypointHome() {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className={`${SHELL_WIDTH} px-4 py-6`}>
         {tab === "today" && <TodaySurface />}
         {tab === "readiness" && <ReadinessSurface />}
+        {tab === "career" && <CareerSurface />}
         {tab === "practice" && <PracticeSurface />}
         {tab === "defense" && <DefenseSurface />}
         {tab === "interview" && (

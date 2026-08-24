@@ -277,12 +277,54 @@ body {
   background: var(--tint-cyan);
 }
 
-/* Mobile bottom nav */
-@media (max-width: 768px) {
-  .desktop-nav { display: none; }
+/*
+ * The one content width for all three shell bands — header row, tab strip, main.
+ *
+ * Written as explicit media queries rather than Tailwind variants so the four
+ * target sizes read top to bottom in one place, and so the ordering is
+ * unambiguous: an arbitrary `min-[2200px]:` variant was silently losing to
+ * `2xl:` and never applied.
+ *
+ * It steps rather than going full-bleed. Unbounded width would stretch table rows
+ * and prose past a readable measure on a wide display.
+ */
+.shell-width {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;            /* phone, tablet, small laptop — 1152px */
 }
-@media (min-width: 769px) {
-  .mobile-nav { display: none; }
+@media (min-width: 1280px) {   /* laptop */
+  .shell-width { max-width: 1400px; }
+}
+@media (min-width: 1536px) {   /* desktop */
+  .shell-width { max-width: 1680px; }
+}
+@media (min-width: 2200px) {   /* wide desktop */
+  .shell-width { max-width: 1960px; }
+}
+
+/*
+ * Horizontal-scroll affordance for the tab strip.
+ *
+ * Replaces two dead rules (.desktop-nav / .mobile-nav) that no component has ever
+ * used — a mobile bottom-nav that was planned and never built. The shell instead
+ * keeps one always-visible scrolling tab row, so what it actually needs is a cue
+ * that there is more to the right.
+ *
+ * Applied only below `xl`: the eleven tabs measure ~1165px, so from 1280px up the
+ * row no longer scrolls and a fade would just dim a stationary edge.
+ */
+@media (max-width: 1279px) {
+  .scroll-fade-x {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+  }
+  /* Once scrolled to the end there is nothing more to hint at, so drop the fade. */
+  .scroll-fade-x:has(> :last-child:target),
+  .scroll-fade-x.at-end {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 /* High signal polish */
@@ -311,6 +353,7 @@ body {
 .md p { margin: 0.5em 0; }
 .md ul, .md ol { margin: 0.5em 0; padding-left: 1.35em; }
 .md ul { list-style: disc; }
+.md { overflow-wrap: anywhere; }
 .md ol { list-style: decimal; }
 .md li { margin: 0.2em 0; }
 .md li::marker { color: var(--text-dim); }

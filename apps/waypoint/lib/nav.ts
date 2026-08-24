@@ -3,6 +3,7 @@
 export type MainTabId =
   | "today"
   | "readiness"
+  | "career"
   | "practice"
   | "defense"
   | "interview"
