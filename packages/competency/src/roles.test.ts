@@ -48,7 +48,7 @@ describe('CAREER_ROLE_IDS / CAREER_ROLES', () => {
 describe('getRole / isCareerRoleId', () => {
   it('returns the registry entry for a known id', () => {
     expect(getRole('bie').longLabel).toBe('Business Intelligence Engineer');
-    expect(getRole('swe').tier).toBe('primary');
+    expect(getRole('swe').tier).toBe('secondary');
   });
 
   it('throws on an unknown id rather than defaulting to a plausible role', () => {
@@ -77,8 +77,8 @@ describe('rolesAtTier', () => {
   });
 
   it('returns registry order within a tier', () => {
-    expect(rolesAtTier('primary').map((r) => r.id)).toEqual(['swe', 'mle']);
-    expect(rolesAtTier('secondary').map((r) => r.id)).toEqual(['ds', 'de']);
+    expect(rolesAtTier('primary').map((r) => r.id)).toEqual(['ds']);
+    expect(rolesAtTier('secondary').map((r) => r.id)).toEqual(['swe', 'mle', 'de']);
     expect(rolesAtTier('exploratory').map((r) => r.id)).toEqual(['bie', 'bia', 'redteam']);
   });
 });

@@ -44,6 +44,15 @@ export type CareerRoleId = (typeof CAREER_ROLE_IDS)[number];
  *
  * Tier is a *pursuit* statement (how much this role matters to the search), not a
  * competence statement. It never changes a score — it only weights prioritisation.
+ *
+ * Current assignment reflects an explicit, dated selection made 2026-08-24: `ds` is
+ * the sole primary ("A") role; `swe` and `mle` were demoted from primary at the same
+ * time because the registry was asserting a search stance that contradicted it. This
+ * is a user decision, never inferred — do not re-tier a role without a new one.
+ *
+ * NOTE: `ROLE_WEIGHT_TABLE` (packages/rubric/src/diagnostics.ts:63) still encodes the
+ * OLD stance (SWE/MLE Primary) and is read live by dashboards.ts:132. The two are
+ * knowingly divergent until that legacy table is addressed separately.
  */
 export type RoleTier = 'primary' | 'secondary' | 'exploratory';
 
@@ -74,7 +83,7 @@ export const CAREER_ROLES: readonly CareerRole[] = [
     id: 'swe',
     label: 'SWE',
     longLabel: 'Software Engineer',
-    tier: 'primary',
+    tier: 'secondary',
     weightsFromSpec: true,
     blurb: 'Implementation, debugging, design, testing and operations on product code.',
   },
@@ -82,7 +91,7 @@ export const CAREER_ROLES: readonly CareerRole[] = [
     id: 'mle',
     label: 'MLE',
     longLabel: 'Machine Learning Engineer',
-    tier: 'primary',
+    tier: 'secondary',
     weightsFromSpec: true,
     blurb: 'Software engineering plus model implementation, evaluation and serving.',
   },
@@ -90,7 +99,7 @@ export const CAREER_ROLES: readonly CareerRole[] = [
     id: 'ds',
     label: 'DS',
     longLabel: 'Data Scientist',
-    tier: 'secondary',
+    tier: 'primary',
     weightsFromSpec: true,
     blurb: 'Problem formulation, statistics, modelling and business interpretation.',
   },
