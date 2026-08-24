@@ -13,7 +13,7 @@
     "lint:fix": "oxlint apps/waypoint packages --fix",
     "typecheck": "pnpm typecheck:waypoint && pnpm typecheck:packages",
     "typecheck:waypoint": "tsc --noEmit -p apps/waypoint/tsconfig.json",
-    "typecheck:packages": "tsc --noEmit -p packages/rubric/tsconfig.json && tsc --noEmit -p packages/qbank/tsconfig.json && tsc --noEmit -p packages/practice-types/tsconfig.json",
+    "typecheck:packages": "tsc --noEmit -p packages/rubric/tsconfig.json && tsc --noEmit -p packages/qbank/tsconfig.json && tsc --noEmit -p packages/practice-types/tsconfig.json && tsc --noEmit -p packages/competency/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest"
   },

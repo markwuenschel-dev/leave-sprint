@@ -8,9 +8,23 @@ import {
   rubricEntries,
   qbankStatus,
   applications,
+  careerProjects,
+  careerResumes,
+  careerJobTargets,
+  careerCampaigns,
   appMeta,
 } from "./schema";
 import { rubricEntryToRow, rowToRubricEntry } from "./mappers";
+import {
+  campaignToRow,
+  jobTargetToRow,
+  projectToRow,
+  resumeToRow,
+  rowToCampaign,
+  rowToJobTarget,
+  rowToProject,
+  rowToResume,
+} from "./careerMappers";
 import { SEED } from "../../data/seed";
 import type {
   WaypointState,
@@ -39,15 +53,20 @@ export async function loadState(): Promise<LoadedState> {
     return { ...seedSlice(), empty: true };
   }
 
-  const [rDays, weeks, probs, fds, rubrics, qb, apps] = await Promise.all([
-    db.select().from(rhythmDays),
-    db.select().from(weeklyReviews),
-    db.select().from(problems),
-    db.select().from(fileDefense),
-    db.select().from(rubricEntries),
-    db.select().from(qbankStatus),
-    db.select().from(applications),
-  ]);
+  const [rDays, weeks, probs, fds, rubrics, qb, apps, projs, resumeRows, targets, camps] =
+    await Promise.all([
+      db.select().from(rhythmDays),
+      db.select().from(weeklyReviews),
+      db.select().from(problems),
+      db.select().from(fileDefense),
+      db.select().from(rubricEntries),
+      db.select().from(qbankStatus),
+      db.select().from(applications),
+      db.select().from(careerProjects),
+      db.select().from(careerResumes),
+      db.select().from(careerJobTargets),
+      db.select().from(careerCampaigns),
+    ]);
 
   const rhythmOut: Record<string, RhythmDay> = {};
   for (const r of rDays) {
@@ -135,6 +154,10 @@ export async function loadState(): Promise<LoadedState> {
     qbankOrder: (m.qbankOrder as Partial<Record<TrackKey, string[]>>) || {},
     studyGuides: (m.studyGuides as WaypointState["studyGuides"]) || {},
     applications: appsOut,
+    projects: projs.map(rowToProject),
+    resumes: resumeRows.map(rowToResume),
+    jobTargets: targets.map(rowToJobTarget),
+    campaigns: camps.map(rowToCampaign),
     solidInterviewLogs: m.solidInterviewLogs || { SWE_FS_II: [], MLE_II: [] },
     mockSeq: m.mockSeq ?? 0,
     mockAsked: m.mockAsked ?? [],
@@ -302,6 +325,46 @@ export async function saveState(
     if (authoritative) {
       if (aRows.length) await tx.delete(applications).where(notInArray(applications.id, aRows.map((r) => r.id)));
       else await tx.delete(applications);
+    }
+
+    // Career Library. `?? []` because these collections are OPTIONAL in
+    // parseStateBody — an older client, or a hand-rolled PUT, may omit them
+    // entirely, and that must upsert nothing rather than throw a 500. The
+    // authoritative gate still applies: a non-authoritative save can never delete.
+    const projRows = (slice.projects ?? []).map(projectToRow);
+    for (const row of projRows) {
+      await tx.insert(careerProjects).values(row).onConflictDoUpdate({ target: careerProjects.id, set: row });
+    }
+    if (authoritative) {
+      if (projRows.length) await tx.delete(careerProjects).where(notInArray(careerProjects.id, projRows.map((r) => r.id)));
+      else await tx.delete(careerProjects);
+    }
+
+    const resumeRows = (slice.resumes ?? []).map(resumeToRow);
+    for (const row of resumeRows) {
+      await tx.insert(careerResumes).values(row).onConflictDoUpdate({ target: careerResumes.id, set: row });
+    }
+    if (authoritative) {
+      if (resumeRows.length) await tx.delete(careerResumes).where(notInArray(careerResumes.id, resumeRows.map((r) => r.id)));
+      else await tx.delete(careerResumes);
+    }
+
+    const targetRows = (slice.jobTargets ?? []).map(jobTargetToRow);
+    for (const row of targetRows) {
+      await tx.insert(careerJobTargets).values(row).onConflictDoUpdate({ target: careerJobTargets.id, set: row });
+    }
+    if (authoritative) {
+      if (targetRows.length) await tx.delete(careerJobTargets).where(notInArray(careerJobTargets.id, targetRows.map((r) => r.id)));
+      else await tx.delete(careerJobTargets);
+    }
+
+    const campaignRows = (slice.campaigns ?? []).map(campaignToRow);
+    for (const row of campaignRows) {
+      await tx.insert(careerCampaigns).values(row).onConflictDoUpdate({ target: careerCampaigns.id, set: row });
+    }
+    if (authoritative) {
+      if (campaignRows.length) await tx.delete(careerCampaigns).where(notInArray(careerCampaigns.id, campaignRows.map((r) => r.id)));
+      else await tx.delete(careerCampaigns);
     }
   });
 

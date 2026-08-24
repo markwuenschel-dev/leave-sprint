@@ -55,7 +55,12 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ["@waypoint/rubric", "@waypoint/qbank", "@waypoint/practice-types"],
+  transpilePackages: [
+    "@waypoint/rubric",
+    "@waypoint/qbank",
+    "@waypoint/practice-types",
+    "@waypoint/competency",
+  ],
   // monorepo: silence wrong-lockfile root warning
   outputFileTracingRoot: path.join(__dirname, "../.."),
 };

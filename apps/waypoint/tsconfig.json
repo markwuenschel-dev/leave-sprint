@@ -8,7 +8,8 @@
       "@/*": ["./*"],
       "@waypoint/rubric": ["../../packages/rubric/src/index.ts"],
       "@waypoint/qbank": ["../../packages/qbank/src/index.ts"],
-      "@waypoint/practice-types": ["../../packages/practice-types/src/index.ts"]
+      "@waypoint/practice-types": ["../../packages/practice-types/src/index.ts"],
+      "@waypoint/competency": ["../../packages/competency/src/index.ts"]
     },
     "allowJs": true
   },

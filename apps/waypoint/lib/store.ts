@@ -21,6 +21,17 @@ import type {
   WaypointState,
 } from "./domain";
 import type { TwinImportSummary } from "./twinImport";
+import type {
+  Campaign,
+  CampaignStage,
+  JdSnapshot,
+  JobRequirement,
+  JobTarget,
+  Project,
+  ResumeClaim,
+  ResumeVersion,
+} from "./career/types";
+import { EMPTY_CLAIM_DEFENSE, EMPTY_PROJECT_DEFENSE } from "./career/types";
 import type { StudyGuide } from "./study";
 import { emptyRhythm, todayIso, weekStartIso } from "./domain";
 
@@ -53,6 +64,20 @@ export interface WaypointStore extends WaypointState {
   deleteRubricEntry: (id: string) => void;
   upsertApplication: (app: Application) => void;
   deleteApplication: (id: string) => void;
+  /**
+   * Career Library. Upsert-or-prepend + delete-by-id, matching the Application
+   * pair above. Children (resume claims, JD requirements, campaign stages) are
+   * edited by replacing their parent, so there is deliberately no per-child action
+   * to keep out of sync with the parent's `updatedAt`.
+   */
+  upsertProject: (project: Project) => void;
+  deleteProject: (id: string) => void;
+  upsertResume: (resume: ResumeVersion) => void;
+  deleteResume: (id: string) => void;
+  upsertJobTarget: (target: JobTarget) => void;
+  deleteJobTarget: (id: string) => void;
+  upsertCampaign: (campaign: Campaign) => void;
+  deleteCampaign: (id: string) => void;
   setWeeklyField: (
     weekStart: string,
     patch: Partial<{ whatMoved: string; focusNext: string; pipelineNotes: string; done: boolean }>,
@@ -86,6 +111,10 @@ export const SNAPSHOT_KEYS = [
   "qbankOrder",
   "studyGuides",
   "applications",
+  "projects",
+  "resumes",
+  "jobTargets",
+  "campaigns",
   "solidInterviewLogs",
   "mockSeq",
   "mockAsked",
@@ -117,6 +146,12 @@ const unionById = <T extends { id: string }>(server: T[], local: T[]): T[] => {
 const unionStr = (a: string[] = [], b: string[] = []): string[] =>
   Array.from(new Set([...a, ...b]));
 
+/** Replace in place by id, or prepend when new. Newest-first, like applications. */
+const upsertRow = <T extends { id: string }>(list: T[], row: T): T[] => {
+  const idx = list.findIndex((x) => x.id === row.id);
+  return idx >= 0 ? list.map((x, i) => (i === idx ? row : x)) : [row, ...list];
+};
+
 /**
  * Rehydration merge that preserves un-synced local edits.
  *
@@ -143,6 +178,10 @@ const mergeHydration = (persisted: unknown, current: WaypointStore): WaypointSto
     studyGuides: { ...p.studyGuides, ...current.studyGuides },
     rubricEntries: mergeEntries(p.rubricEntries ?? [], current.rubricEntries),
     applications: unionById(p.applications ?? [], current.applications),
+    projects: unionById(p.projects ?? [], current.projects),
+    resumes: unionById(p.resumes ?? [], current.resumes),
+    jobTargets: unionById(p.jobTargets ?? [], current.jobTargets),
+    campaigns: unionById(p.campaigns ?? [], current.campaigns),
     solidInterviewLogs: {
       SWE_FS_II: unionStr(p.solidInterviewLogs?.SWE_FS_II, current.solidInterviewLogs.SWE_FS_II),
       MLE_II: unionStr(p.solidInterviewLogs?.MLE_II, current.solidInterviewLogs.MLE_II),
@@ -338,6 +377,32 @@ export const useWaypointStore = create<WaypointStore>()(
           return { applications, lastUpdated: now() };
         }),
 
+      upsertProject: (project) =>
+        set((s) => ({ projects: upsertRow(s.projects, project), lastUpdated: now() })),
+      deleteProject: (id) =>
+        set((s) => ({ projects: s.projects.filter((p) => p.id !== id), lastUpdated: now() })),
+
+      upsertResume: (resume) =>
+        set((s) => ({ resumes: upsertRow(s.resumes, resume), lastUpdated: now() })),
+      deleteResume: (id) =>
+        set((s) => ({ resumes: s.resumes.filter((r) => r.id !== id), lastUpdated: now() })),
+
+      upsertJobTarget: (target) =>
+        set((s) => ({ jobTargets: upsertRow(s.jobTargets, target), lastUpdated: now() })),
+      deleteJobTarget: (id) =>
+        set((s) => ({
+          jobTargets: s.jobTargets.filter((t) => t.id !== id),
+          // A campaign without its target is unreachable in the UI and would keep
+          // claiming stage readiness forever, so it goes with the target.
+          campaigns: s.campaigns.filter((c) => c.jobTargetId !== id),
+          lastUpdated: now(),
+        })),
+
+      upsertCampaign: (campaign) =>
+        set((s) => ({ campaigns: upsertRow(s.campaigns, campaign), lastUpdated: now() })),
+      deleteCampaign: (id) =>
+        set((s) => ({ campaigns: s.campaigns.filter((c) => c.id !== id), lastUpdated: now() })),
+
       deleteApplication: (id) =>
         set((s) => ({
           applications: s.applications.filter((a) => a.id !== id),
@@ -442,6 +507,141 @@ export function newApplication(partial?: Partial<Application>): Application {
     materials: [],
     createdAt: t,
     updatedAt: t,
+    ...partial,
+  };
+}
+
+/* ─────────────────────── Career Library factories ───────────────────────
+ * Blank rows, valid the moment they are created. Every required field gets a
+ * real value so a half-filled draft can still round-trip through /api/state
+ * without tripping a NOT NULL column.
+ */
+
+/** Stable, column-safe slug. Mirrors the catalog's `slug` (data/catalog.ts:12-18). */
+export function projectSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
+export function newProject(partial?: Partial<Project>): Project {
+  const t = now();
+  const name = partial?.name ?? "";
+  return {
+    id: crypto.randomUUID(),
+    slug: partial?.slug ?? (projectSlug(name) || "untitled"),
+    name,
+    summary: "",
+    stage: "idea",
+    ownership: "sole-author",
+    architecture: "",
+    technologies: [],
+    decisions: [],
+    testing: { strategy: "", automated: false },
+    failures: [],
+    limitations: [],
+    competencies: [],
+    evidenceRefs: [],
+    defense: { ...EMPTY_PROJECT_DEFENSE },
+    createdAt: t,
+    updatedAt: t,
+    ...partial,
+  };
+}
+
+export function newResumeVersion(partial?: Partial<ResumeVersion>): ResumeVersion {
+  const t = now();
+  return {
+    id: crypto.randomUUID(),
+    label: "",
+    body: "",
+    claims: [],
+    targetRole: null,
+    frozenAt: null,
+    createdAt: t,
+    updatedAt: t,
+    ...partial,
+  };
+}
+
+export function newResumeClaim(partial?: Partial<ResumeClaim>): ResumeClaim {
+  return {
+    id: crypto.randomUUID(),
+    text: "",
+    section: "experience",
+    projectIds: [],
+    competencies: [],
+    defense: { ...EMPTY_CLAIM_DEFENSE },
+    ...partial,
+  };
+}
+
+export function newJobTarget(partial?: Partial<JobTarget>): JobTarget {
+  const t = now();
+  return {
+    id: crypto.randomUUID(),
+    company: "",
+    roleTitle: "",
+    careerRole: null,
+    applicationId: null,
+    submittedResumeId: null,
+    snapshots: [],
+    createdAt: t,
+    updatedAt: t,
+    ...partial,
+  };
+}
+
+export function newJdSnapshot(partial?: Partial<JdSnapshot>): JdSnapshot {
+  return {
+    id: crypto.randomUUID(),
+    capturedAt: now(),
+    body: "",
+    requirements: [],
+    ...partial,
+  };
+}
+
+export function newJobRequirement(partial?: Partial<JobRequirement>): JobRequirement {
+  return {
+    id: crypto.randomUUID(),
+    text: "",
+    kind: "required",
+    competencies: [],
+    projectIds: [],
+    claimIds: [],
+    ...partial,
+  };
+}
+
+export function newCampaign(partial?: Partial<Campaign>): Campaign {
+  const t = now();
+  return {
+    id: crypto.randomUUID(),
+    jobTargetId: "",
+    careerRole: "swe",
+    currentStageId: null,
+    stages: [],
+    domainRequirements: [],
+    createdAt: t,
+    updatedAt: t,
+    ...partial,
+  };
+}
+
+export function newCampaignStage(partial?: Partial<CampaignStage>): CampaignStage {
+  return {
+    id: crypto.randomUUID(),
+    kind: "technical-screen",
+    scheduledFor: null,
+    completedAt: null,
+    // Default 1: a stage you bothered to add is one you expect to sit.
+    likelihood: 1,
+    expectedCompetencies: [],
+    expectedQuestionAreas: [],
+    outcome: "pending",
     ...partial,
   };
 }

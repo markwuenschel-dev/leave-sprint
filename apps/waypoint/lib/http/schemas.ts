@@ -393,6 +393,18 @@ export function parseStateBody(raw: unknown): ParseResult<StateSaveRequestBody> 
     if (!rows.every(hasStringId)) return invalid(key, "rows each carrying a string `id`");
   }
 
+  // Career Library collections are OPTIONAL, unlike the four above. saveState
+  // reads them as `slice.x ?? []`, so a client that predates them — or any
+  // hand-rolled PUT — saves successfully instead of taking a 400 for a field it
+  // has never heard of. When present they must still be arrays of id-bearing rows.
+  const optionalArrayCollections = ["projects", "resumes", "jobTargets", "campaigns"] as const;
+  for (const key of optionalArrayCollections) {
+    if (raw[key] === undefined) continue;
+    if (!Array.isArray(raw[key])) return invalid(key, "an array");
+    const rows = raw[key] as unknown[];
+    if (!rows.every(hasStringId)) return invalid(key, "rows each carrying a string `id`");
+  }
+
   const rhythmDays = raw.rhythmDays as Record<string, unknown>;
   if (!everyValue(rhythmDays, (d) => isRecord(d) && !!str(d.date) && isRecord(d.slots))) {
     return invalid("rhythmDays", "days carrying a string `date` and a `slots` object");
@@ -440,12 +452,45 @@ export function parseStateBody(raw: unknown): ParseResult<StateSaveRequestBody> 
   defaultMissingStrings(raw.problems as unknown[], PROBLEM_REQUIRED_STRINGS);
   defaultMissingStrings(raw.fileDefense as unknown[], DEFENSE_REQUIRED_STRINGS);
   defaultMissingStrings(raw.applications as unknown[], APPLICATION_REQUIRED_STRINGS);
+  defaultMissingStrings(asRows(raw.projects), PROJECT_REQUIRED_STRINGS);
+  defaultMissingStrings(asRows(raw.resumes), RESUME_REQUIRED_STRINGS);
+  defaultMissingStrings(asRows(raw.jobTargets), JOB_TARGET_REQUIRED_STRINGS);
+  defaultMissingStrings(asRows(raw.campaigns), CAMPAIGN_REQUIRED_STRINGS);
 
   return ok(raw as unknown as StateSaveRequestBody);
 }
 
 const PROBLEM_REQUIRED_STRINGS = ["title", "tier", "pattern", "status"] as const;
 const DEFENSE_REQUIRED_STRINGS = ["title", "why", "terminology", "interviewLine"] as const;
+/** Optional collections arrive as `undefined`; treat that as no rows to fill. */
+function asRows(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : [];
+}
+
+/** NOT NULL text columns on wp_projects — a thin `{ id }` row would otherwise 500. */
+const PROJECT_REQUIRED_STRINGS = [
+  "slug",
+  "name",
+  "summary",
+  "stage",
+  "ownership",
+  "createdAt",
+  "updatedAt",
+] as const;
+const RESUME_REQUIRED_STRINGS = ["label", "createdAt", "updatedAt"] as const;
+const JOB_TARGET_REQUIRED_STRINGS = [
+  "company",
+  "roleTitle",
+  "createdAt",
+  "updatedAt",
+] as const;
+const CAMPAIGN_REQUIRED_STRINGS = [
+  "jobTargetId",
+  "careerRole",
+  "createdAt",
+  "updatedAt",
+] as const;
+
 const APPLICATION_REQUIRED_STRINGS = [
   "company",
   "roleTitle",

@@ -142,6 +142,48 @@ CREATE TABLE IF NOT EXISTS wp_applications (
   created_at text NOT NULL,
   updated_at text NOT NULL
 );
+CREATE TABLE IF NOT EXISTS wp_projects (
+  id text PRIMARY KEY,
+  slug text NOT NULL,
+  name text NOT NULL,
+  summary text NOT NULL DEFAULT '',
+  stage text NOT NULL,
+  ownership text NOT NULL,
+  created_at text NOT NULL,
+  updated_at text NOT NULL,
+  data jsonb NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS wp_resumes (
+  id text PRIMARY KEY,
+  label text NOT NULL,
+  target_role text,
+  frozen_at text,
+  created_at text NOT NULL,
+  updated_at text NOT NULL,
+  data jsonb NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS wp_job_targets (
+  id text PRIMARY KEY,
+  company text NOT NULL,
+  role_title text NOT NULL,
+  career_role text,
+  application_id text,
+  submitted_resume_id text,
+  created_at text NOT NULL,
+  updated_at text NOT NULL,
+  data jsonb NOT NULL DEFAULT '{}'
+);
+CREATE TABLE IF NOT EXISTS wp_campaigns (
+  id text PRIMARY KEY,
+  job_target_id text NOT NULL,
+  career_role text NOT NULL,
+  current_stage_id text,
+  created_at text NOT NULL,
+  updated_at text NOT NULL,
+  data jsonb NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS wp_campaigns_target_idx ON wp_campaigns (job_target_id);
+CREATE INDEX IF NOT EXISTS wp_job_targets_app_idx ON wp_job_targets (application_id);
 CREATE TABLE IF NOT EXISTS wp_app_meta (
   id integer PRIMARY KEY,
   phase text NOT NULL DEFAULT 'B',
