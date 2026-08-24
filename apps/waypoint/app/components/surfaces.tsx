@@ -1,5 +1,6 @@
 export { TodaySurface } from "./surfaces/TodaySurface";
 export { ReadinessSurface } from "./surfaces/ReadinessSurface";
+export { CareerSurface } from "./surfaces/CareerSurface";
 export { PracticeSurface } from "./surfaces/PracticeSurface";
 export { DefenseSurface } from "./surfaces/DefenseSurface";
 export { InterviewSurface } from "./surfaces/InterviewSurface";

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Target,
   Gauge,
+  Compass,
   BookOpen,
   Shield,
   Mic2,
@@ -20,6 +21,7 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import {
   TodaySurface,
   ReadinessSurface,
+  CareerSurface,
   PracticeSurface,
   DefenseSurface,
   InterviewSurface,
@@ -43,6 +45,7 @@ type TabId = MainTabId;
 const TABS: { id: TabId; label: string; icon: typeof Target }[] = [
   { id: "today", label: "Today", icon: Target },
   { id: "readiness", label: "Readiness", icon: Gauge },
+  { id: "career", label: "Career", icon: Compass },
   { id: "practice", label: "Practice", icon: BookOpen },
   { id: "defense", label: "Defense", icon: Shield },
   { id: "interview", label: "Interview", icon: Mic2 },
@@ -174,6 +177,7 @@ export default function WaypointHome() {
       <main className="mx-auto max-w-6xl px-4 py-6">
         {tab === "today" && <TodaySurface />}
         {tab === "readiness" && <ReadinessSurface />}
+        {tab === "career" && <CareerSurface />}
         {tab === "practice" && <PracticeSurface />}
         {tab === "defense" && <DefenseSurface />}
         {tab === "interview" && (
