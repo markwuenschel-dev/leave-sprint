@@ -21,5 +21,13 @@
     "**/dist/**",
     "**/.pglite/**",
     "**/*.d.ts"
-  ]
+  ],
+  "rules": {
+    "vitest/valid-expect": [
+      "error",
+      {
+        "maxArgs": 2
+      }
+    ]
+  }
 }

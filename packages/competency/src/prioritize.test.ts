@@ -31,10 +31,6 @@ import {
 
 const ASOF = '2026-08-23';
 
-function isoDaysBefore(days: number, asOf: string = ASOF): string {
-  return new Date(Date.parse(asOf) - days * 86_400_000).toISOString().slice(0, 10);
-}
-
 function ev(over: Partial<CompetencyEvidence> & { id: string }): CompetencyEvidence {
   return {
     date: ASOF,
@@ -404,11 +400,15 @@ describe('determinism', () => {
 
   it('breaks score ties by competency id, ascending', () => {
     const out = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 40 });
-    for (let i = 1; i < out.length; i += 1) {
-      if (out[i - 1].score === out[i].score) {
-        expect(out[i - 1].competency.localeCompare(out[i].competency)).toBeLessThan(0);
-      }
-    }
+    // Collected rather than asserted inside the loop: one unconditional assertion that
+    // names every offending pair beats a conditional expect that reports only the first.
+    const misordered = out
+      .slice(1)
+      .map((cur, i) => ({ prev: out[i], cur }))
+      .filter((p) => p.prev.score === p.cur.score)
+      .filter((p) => p.prev.competency.localeCompare(p.cur.competency) >= 0)
+      .map((p) => `${p.prev.competency} before ${p.cur.competency}`);
+    expect(misordered).toEqual([]);
   });
 
   it('is independent of the input evidence order', () => {
