@@ -1,0 +1,9 @@
+{
+  "//": "Typecheck-only project. See packages/rubric/tsconfig.json.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

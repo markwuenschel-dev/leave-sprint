@@ -93,6 +93,64 @@ export const applications = pgTable("wp_applications", {
   updatedAt: text("updated_at").notNull(),
 });
 
+/* ─────────────────────── Career Library ───────────────────────
+ * Four record types with identity, so they get real rows rather than a jsonb bag
+ * on wp_app_meta. Each follows the wp_rubric_entries pattern: scalars that are
+ * filtered, sorted or joined on are promoted to columns; the rest of the object
+ * lives in `data`. `lib/db/careerMappers.ts` owns both directions of that split
+ * and is the only place that knows which fields are promoted.
+ *
+ * Deliberately NO foreign keys, matching every other table here — the app is the
+ * single writer and cross-table cascades would fight the whole-slice upsert in
+ * saveState.
+ */
+
+export const careerProjects = pgTable("wp_projects", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull(),
+  name: text("name").notNull(),
+  summary: text("summary").notNull().default(""),
+  stage: text("stage").notNull(),
+  ownership: text("ownership").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+});
+
+export const careerResumes = pgTable("wp_resumes", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  targetRole: text("target_role"),
+  frozenAt: text("frozen_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+});
+
+export const careerJobTargets = pgTable("wp_job_targets", {
+  id: text("id").primaryKey(),
+  company: text("company").notNull(),
+  roleTitle: text("role_title").notNull(),
+  careerRole: text("career_role"),
+  // The pipeline row that owns this pursuit's status. Nullable: a target under
+  // initial consideration has no application yet. See lib/career/types.ts header.
+  applicationId: text("application_id"),
+  submittedResumeId: text("submitted_resume_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+});
+
+export const careerCampaigns = pgTable("wp_campaigns", {
+  id: text("id").primaryKey(),
+  jobTargetId: text("job_target_id").notNull(),
+  careerRole: text("career_role").notNull(),
+  currentStageId: text("current_stage_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+});
+
 export const appMeta = pgTable("wp_app_meta", {
   id: integer("id").primaryKey(),
   phase: text("phase").notNull().default("B"),
@@ -118,5 +176,9 @@ export const schema = {
   rubricEntries,
   qbankStatus,
   applications,
+  careerProjects,
+  careerResumes,
+  careerJobTargets,
+  careerCampaigns,
   appMeta,
 };

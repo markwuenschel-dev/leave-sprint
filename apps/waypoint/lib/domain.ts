@@ -2,6 +2,7 @@ import type { Problem, FileDefenseItem, Energy } from "@waypoint/practice-types"
 import type { RubricEntry } from "@waypoint/rubric";
 import type { QBankStatus, TrackKey } from "@waypoint/qbank";
 import type { StudyGuide } from "./study";
+import type { Campaign, JobTarget, Project, ResumeVersion } from "./career/types";
 
 export type Phase = "B" | "A";
 /**
@@ -130,6 +131,20 @@ export interface WaypointState {
    */
   qbankOrder: Partial<Record<TrackKey, string[]>>;
   applications: Application[];
+  /**
+   * Career Library — structured evidence objects, not passive links.
+   *
+   * Kept as four flat collections rather than one nested `careerLibrary` object so
+   * they match the shape of every other user-data collection here and each gets its
+   * own table, its own upsert and its own authoritative-delete gate.
+   *
+   * Note what is NOT here: a Job Target has no status. Pipeline status lives on
+   * `applications` and a target points at it. See lib/career/types.ts for why.
+   */
+  projects: Project[];
+  resumes: ResumeVersion[];
+  jobTargets: JobTarget[];
+  campaigns: Campaign[];
   /** Manually marked solid mocks/scored sessions per primary (count can also derive from rubric). */
   solidInterviewLogs: Record<PrimaryRole, string[]>; // ISO dates or entry ids
   /**

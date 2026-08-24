@@ -15,6 +15,7 @@ export default defineConfig({
       '@waypoint/rubric': abs('./packages/rubric/src/index.ts'),
       '@waypoint/qbank': abs('./packages/qbank/src/index.ts'),
       '@waypoint/practice-types': abs('./packages/practice-types/src/index.ts'),
+      '@waypoint/competency': abs('./packages/competency/src/index.ts'),
       '@/': `${abs('./apps/waypoint')}/`,
     },
   },
