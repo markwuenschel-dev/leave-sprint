@@ -38,10 +38,10 @@ export function RetestQueue({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {BUCKETS.map((b) => (
           <div key={b.key} className={`${card} py-3 text-center`}>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--text-dim)]">
+            <div className="text-[9px] uppercase tracking-wide text-[var(--text-dim)] sm:text-[10px] sm:tracking-wider">
               {b.label}
             </div>
             <div className="mt-1 text-2xl font-semibold" style={{ color: b.color }}>

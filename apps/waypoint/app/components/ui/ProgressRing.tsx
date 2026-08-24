@@ -25,8 +25,18 @@ export function ProgressRing({
   const offset = circ - (clamped / 100) * circ;
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div
+      className="relative inline-flex max-w-full items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      {/* viewBox + max-w-full so the ring shrinks with a narrow container rather than
+          overflowing it; previously it only fitted because every call site was small. */}
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="-rotate-90 h-auto max-w-full"
+      >
         <circle
           cx={size / 2}
           cy={size / 2}

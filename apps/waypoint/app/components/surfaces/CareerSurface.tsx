@@ -342,7 +342,7 @@ export function CareerSurface() {
         <p className="mb-3 text-xs text-[var(--text-dim)]">
           Kept for comparison. They do not drive the queue above.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {view.warm.map((r) => (
             <RoleCard key={r.role} r={r} />
           ))}

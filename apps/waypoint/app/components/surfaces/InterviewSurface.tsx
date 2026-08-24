@@ -187,11 +187,11 @@ export function InterviewSurface({
         }
         right={
           tab === "qbank" ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-3">
+            <div className="flex max-w-full items-center gap-3 rounded-2xl border border-[var(--hairline)] bg-[var(--bg-elev)] px-4 py-3">
               <ProgressRing value={trackPct} size={64} color="var(--cyan)">
                 <span className="text-xs font-bold">{trackPct}%</span>
               </ProgressRing>
-              <div className="text-xs leading-snug">
+              <div className="min-w-0 text-xs leading-snug">
                 <div className="font-medium text-[var(--text)]">{track.short} track</div>
                 <div className="text-[var(--text-dim)]">
                   {trackMastered}/{track.questions.length} mastered

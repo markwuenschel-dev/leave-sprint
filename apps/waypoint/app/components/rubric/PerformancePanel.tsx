@@ -243,7 +243,7 @@ export function PerformancePanel({
       ) : null}
 
       {/* Snapshot dashboard — non-line views of where you stand right now */}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
         <div className={`${card} sm:p-6`}>
           <div className="mb-4">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-dim)]">

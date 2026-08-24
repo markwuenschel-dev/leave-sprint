@@ -49,7 +49,8 @@ export function ScoreDonut({
       viewBox={`0 0 ${size} ${size}`}
       role="img"
       aria-label={label}
-      className="shrink-0"
+      // The viewBox was never exercised: fixed width/height meant it could not scale.
+      className="h-auto max-w-full shrink-0"
     >
       <g transform={`rotate(-90 ${c} ${c})`}>
         <circle
