@@ -26,6 +26,7 @@ import {
   URGENCY_HORIZON_DAYS,
   chooseAction,
   prioritize,
+  prioritizePortfolio,
 } from './prioritize';
 
 const ASOF = '2026-08-23';
@@ -101,7 +102,7 @@ describe('MODE_WEIGHTS', () => {
 });
 
 describe('the two modes produce different rankings on the same graph', () => {
-  const longTerm = prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 5 });
+  const longTerm = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 5 });
   const campaign = prioritize(GRAPH, { mode: 'campaign', asOf: ASOF, campaign: CAMPAIGN, limit: 5 });
 
   it('recommends a different top action in each mode', () => {
@@ -229,7 +230,7 @@ describe('chooseAction decision table', () => {
 });
 
 describe('retention risk', () => {
-  const all = prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 40 });
+  const all = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 40 });
   const byId = new Map(all.map((a) => [a.competency, a]));
 
   it('is 0 for a never-measured competency — nothing to forget', () => {
@@ -247,8 +248,7 @@ describe('retention risk', () => {
 
   it('is 0 for a freshly measured competency', () => {
     const fresh = buildCompetencyGraph([ev({ id: 'f1', competencies: ['implementation'] })], ASOF);
-    const a = prioritize(fresh, {
-      mode: 'long-term',
+    const a = prioritizePortfolio(fresh, {
       asOf: ASOF,
       only: ['implementation'],
     })[0];
@@ -328,18 +328,17 @@ describe('scope of the ranking', () => {
 
 describe('options', () => {
   it('honours `limit`', () => {
-    expect(prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 3 })).toHaveLength(3);
-    expect(prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 1 })).toHaveLength(1);
-    expect(prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 0 })).toEqual([]);
+    expect(prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 3 })).toHaveLength(3);
+    expect(prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 1 })).toHaveLength(1);
+    expect(prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 0 })).toEqual([]);
   });
 
   it('defaults to 5 results', () => {
-    expect(prioritize(GRAPH, { mode: 'long-term', asOf: ASOF })).toHaveLength(5);
+    expect(prioritizePortfolio(GRAPH, { asOf: ASOF })).toHaveLength(5);
   });
 
   it('honours `only`', () => {
-    const out = prioritize(GRAPH, {
-      mode: 'long-term',
+    const out = prioritizePortfolio(GRAPH, {
       asOf: ASOF,
       only: ['debugging', 'testing'],
       limit: 40,
@@ -348,8 +347,7 @@ describe('options', () => {
   });
 
   it('`only` still respects `limit`', () => {
-    const out = prioritize(GRAPH, {
-      mode: 'long-term',
+    const out = prioritizePortfolio(GRAPH, {
       asOf: ASOF,
       only: ['debugging', 'testing', 'reliability'],
       limit: 2,
@@ -358,8 +356,7 @@ describe('options', () => {
   });
 
   it('ignores unknown ids in `only` rather than throwing', () => {
-    const out = prioritize(GRAPH, {
-      mode: 'long-term',
+    const out = prioritizePortfolio(GRAPH, {
       asOf: ASOF,
       only: ['debugging', 'not-real' as never],
     });
@@ -379,7 +376,7 @@ describe('the `why` explanation', () => {
   });
 
   it('is also non-empty in long-term mode', () => {
-    for (const a of prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 20 })) {
+    for (const a of prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 20 })) {
       expect(a.why.length, a.competency).toBeGreaterThan(0);
       expect(a.why.length, a.competency).toBeLessThanOrEqual(3);
     }
@@ -399,14 +396,14 @@ describe('the `why` explanation', () => {
 
 describe('determinism', () => {
   it('produces byte-identical output across repeated calls', () => {
-    const a = prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 40 });
-    const b = prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 40 });
+    const a = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 40 });
+    const b = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 40 });
     expect(b).toEqual(a);
     expect(JSON.stringify(b)).toBe(JSON.stringify(a));
   });
 
   it('breaks score ties by competency id, ascending', () => {
-    const out = prioritize(GRAPH, { mode: 'long-term', asOf: ASOF, limit: 40 });
+    const out = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 40 });
     for (let i = 1; i < out.length; i += 1) {
       if (out[i - 1].score === out[i].score) {
         expect(out[i - 1].competency.localeCompare(out[i].competency)).toBeLessThan(0);
@@ -426,5 +423,64 @@ describe('determinism', () => {
     expect(reversed.map((a) => [a.competency, a.score])).toEqual(
       forward.map((a) => [a.competency, a.score]),
     );
+  });
+});
+
+describe('long-term ranking is scoped to one declared role', () => {
+  // The regression this pins: long-term used to take the best tier-weighted claim any
+  // role had on a competency, so Red Team — an exploratory role whose weights are a
+  // local calibration with no v1.11 §9.3 row — could displace the declared target's
+  // work in the default queue.
+  const RT_ONLY = ['recon', 'exploitation', 'hypothesis-formation', 'scope-discipline'] as const;
+
+  it('drops competencies that only another role uses', () => {
+    const ds = prioritize(GRAPH, { mode: 'long-term', role: 'ds', asOf: ASOF, limit: 40 });
+    const ids = ds.map((a) => a.competency);
+    for (const rt of RT_ONLY) expect(ids, rt).not.toContain(rt);
+    // ds has no `implementation` row in §9.3 either, so it goes too.
+    expect(ids).not.toContain('implementation');
+  });
+
+  it('stamps the declared role on every action, never another one', () => {
+    const ds = prioritize(GRAPH, { mode: 'long-term', role: 'ds', asOf: ASOF, limit: 40 });
+    expect(ds.length).toBeGreaterThan(0);
+    expect(ds.every((a) => a.role === 'ds')).toBe(true);
+  });
+
+  it('uses the declared role weight as relevance, untouched by tier', () => {
+    const [top] = prioritize(GRAPH, {
+      mode: 'long-term',
+      role: 'ds',
+      asOf: ASOF,
+      only: ['statistical-reasoning'],
+    });
+    // §9.3 gives DS statistical reasoning 20 of 100.
+    expect(top.terms.roleRelevance).toBe(0.2);
+  });
+
+  it('ranks the same competency differently for two different declared roles', () => {
+    const forDs = prioritize(GRAPH, {
+      mode: 'long-term', role: 'ds', asOf: ASOF, only: ['sql-reasoning'],
+    })[0];
+    const forBie = prioritize(GRAPH, {
+      mode: 'long-term', role: 'bie', asOf: ASOF, only: ['sql-reasoning'],
+    })[0];
+    // BIE weights SQL at 25, DS does not weight it at all.
+    expect(forBie.terms.roleRelevance).toBe(0.25);
+    expect(forDs).toBeUndefined();
+  });
+
+  it('prioritizePortfolio keeps the old cross-role behaviour, but only when asked', () => {
+    const portfolio = prioritizePortfolio(GRAPH, { asOf: ASOF, limit: 40 });
+    const ids = portfolio.map((a) => a.competency);
+    // The very competencies the DS-scoped run drops are still reachable here.
+    expect(ids.some((id) => (RT_ONLY as readonly string[]).includes(id))).toBe(true);
+  });
+
+  it('campaign mode still derives its role from the campaign alone', () => {
+    const camp = prioritize(GRAPH, {
+      mode: 'campaign', asOf: ASOF, campaign: CAMPAIGN, limit: 10,
+    });
+    expect(camp.every((a) => a.role === CAMPAIGN.role)).toBe(true);
   });
 });

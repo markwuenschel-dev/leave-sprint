@@ -55,8 +55,22 @@ export interface RoleReadiness {
   evidenceStrength: number;
   band: ReadinessBand;
   dimensions: RoleDimensionReadiness[];
-  /** Heaviest unmet weight first — the ranked answer to "what next for this role?". */
+  /**
+   * Dimensions that are not yet `established` — the honest answer to "what is still
+   * unproven for this role?". Ordered by unmet weight, heaviest first.
+   *
+   * Deliberately NOT filtered on `unmetWeight > 0`: any confidence below perfection
+   * leaves some unmet weight, so that test would call every dimension a gap. An
+   * established dimension with residual unmet weight is a retention or confidence
+   * opportunity, not missing proof, and it appears in `priorities` instead.
+   */
   gaps: RoleDimensionReadiness[];
+  /**
+   * Every dimension, ranked by remaining evidence lift (`unmetWeight`, heaviest
+   * first, ties broken by competency id so the order is stable across runs). This is
+   * the complete worklist; `gaps` is the subset that is genuinely unproven.
+   */
+  priorities: RoleDimensionReadiness[];
 }
 
 /**
@@ -118,9 +132,11 @@ export function projectRole(graph: CompetencyGraph, role: CareerRoleId): RoleRea
   const coverage = Math.round((coveredWeight / 100) * 1000) / 1000;
   const evidenceStrength = Math.round((strengthWeight / 100) * 1000) / 1000;
 
-  const gaps = [...dimensions].sort(
+  const priorities = [...dimensions].sort(
     (a, b) => b.unmetWeight - a.unmetWeight || a.competency.localeCompare(b.competency),
   );
+  // Filtered from the already-sorted list so both fields share one ordering.
+  const gaps = priorities.filter((d) => d.status !== 'established');
 
   return {
     role,
@@ -133,6 +149,7 @@ export function projectRole(graph: CompetencyGraph, role: CareerRoleId): RoleRea
     band: readinessBand(score, coverage),
     dimensions,
     gaps,
+    priorities,
   };
 }
 

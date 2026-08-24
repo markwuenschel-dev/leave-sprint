@@ -159,10 +159,15 @@ export interface PrioritizedAction {
  */
 function roleRelevanceFor(
   competency: CompetencyId,
-  mode: OptimizationMode,
-  campaign: CampaignContext | null,
+  scope: PriorityScope,
 ): { value: number; role: CareerRoleId } {
-  if (mode === 'campaign' && campaign) {
+  if (scope.kind === 'role') {
+    // Single declared target: relevance is that role's weight and nothing else. A
+    // competency only another role uses scores 0 here and drops out of the ranking.
+    return { value: roleWeight(scope.role, competency) / 100, role: scope.role };
+  }
+  if (scope.kind === 'campaign') {
+    const { campaign } = scope;
     const w = roleWeight(campaign.role, competency) / 100;
     const likelihood = campaign.stageLikelihood ?? 1;
     // An explicitly expected competency is relevant even when the role profile
@@ -170,6 +175,7 @@ function roleRelevanceFor(
     const expected = campaign.expectedCompetencies?.includes(competency) ? 0.35 : 0;
     return { value: Math.min(1, (w + expected) * likelihood), role: campaign.role };
   }
+  // Portfolio only: the tier-weighted best claim any role has on this competency.
   const users = rolesUsingCompetency(competency);
   let best = 0;
   let bestRole: CareerRoleId = users[0]?.role ?? 'swe';
@@ -214,15 +220,44 @@ export function chooseAction(node: CompetencyNode, roleWeightPct: number): Actio
   return 'mock';
 }
 
-export interface PrioritizeOptions {
-  mode: OptimizationMode;
+/**
+ * Ranking scope. Long-term optimises ONE declared target role; campaign derives its
+ * role from the campaign itself. Both are required by the type rather than defaulted,
+ * because the previous permissive shape silently fell back to an all-role maximum —
+ * which let a warm, locally-calibrated role outrank the chosen transition target.
+ */
+export type PrioritizeOptions =
+  | {
+      mode: 'long-term';
+      /** Required. There is no fallback: an unscoped long-term rank is not expressible. */
+      role: CareerRoleId;
+      asOf: string;
+      /** How many actions to return. */
+      limit?: number;
+      /** Restrict to these competencies. */
+      only?: CompetencyId[];
+    }
+  | {
+      mode: 'campaign';
+      /** Required. The role comes from here and nowhere else. */
+      campaign: CampaignContext;
+      asOf: string;
+      limit?: number;
+      /** Restrict to these competencies. Used by a campaign that knows its agenda. */
+      only?: CompetencyId[];
+    };
+
+/** Deliberate portfolio ranking across every pursued role. Never a fallback. */
+export interface PrioritizePortfolioOptions {
   asOf: string;
-  campaign?: CampaignContext | null;
-  /** How many actions to return. */
   limit?: number;
-  /** Restrict to these competencies. Used by a campaign that knows its agenda. */
   only?: CompetencyId[];
 }
+
+type PriorityScope =
+  | { kind: 'role'; role: CareerRoleId }
+  | { kind: 'campaign'; campaign: CampaignContext }
+  | { kind: 'portfolio' };
 
 const TERM_PHRASE: Record<keyof ModeWeights, (t: PriorityTerms, role: CareerRoleId) => string> = {
   roleRelevance: (t, role) => `${getRole(role).label} weights this at ${Math.round(t.roleRelevance * 100)}%`,
@@ -233,15 +268,18 @@ const TERM_PHRASE: Record<keyof ModeWeights, (t: PriorityTerms, role: CareerRole
   provenPenalty: (t) => `already ${Math.round(t.evidenceStrength * 100)}% evidenced`,
 };
 
-export function prioritize(
+function rankWith(
   graph: CompetencyGraph,
-  opts: PrioritizeOptions,
+  scope: PriorityScope,
+  mode: OptimizationMode,
+  asOf: string,
+  limit: number,
+  only: CompetencyId[] | undefined,
 ): PrioritizedAction[] {
-  const { mode, asOf, limit = 5 } = opts;
-  const campaign = opts.campaign ?? null;
+  const campaign = scope.kind === 'campaign' ? scope.campaign : null;
   const w = MODE_WEIGHTS[mode];
 
-  const ids = (opts.only ?? (Object.keys(graph.nodes) as CompetencyId[])).filter(
+  const ids = (only ?? (Object.keys(graph.nodes) as CompetencyId[])).filter(
     (id) => graph.nodes[id] != null,
   );
 
@@ -249,7 +287,7 @@ export function prioritize(
 
   for (const id of ids) {
     const node = graph.nodes[id];
-    const { value: roleRelevance, role } = roleRelevanceFor(id, mode, campaign);
+    const { value: roleRelevance, role } = roleRelevanceFor(id, scope);
     // A competency no pursued role uses is not worth ranking at all.
     if (roleRelevance <= 0) continue;
 
@@ -315,4 +353,31 @@ export function prioritize(
   return out
     .sort((a, b) => b.score - a.score || a.competency.localeCompare(b.competency))
     .slice(0, limit);
+}
+
+/**
+ * Rank what to do next for one scope. Long-term ranks the declared target role;
+ * campaign ranks the campaign's role. Neither can silently widen to a portfolio.
+ */
+export function prioritize(
+  graph: CompetencyGraph,
+  opts: PrioritizeOptions,
+): PrioritizedAction[] {
+  const scope: PriorityScope =
+    opts.mode === 'campaign'
+      ? { kind: 'campaign', campaign: opts.campaign }
+      : { kind: 'role', role: opts.role };
+  return rankWith(graph, scope, opts.mode, opts.asOf, opts.limit ?? 5, opts.only);
+}
+
+/**
+ * Rank across every pursued role, tier-weighted. This is the old default, kept only
+ * as an explicit choice — call it when comparing the portfolio is the actual question,
+ * never as a stand-in for a target role that was not supplied.
+ */
+export function prioritizePortfolio(
+  graph: CompetencyGraph,
+  opts: PrioritizePortfolioOptions,
+): PrioritizedAction[] {
+  return rankWith(graph, { kind: 'portfolio' }, 'long-term', opts.asOf, opts.limit ?? 5, opts.only);
 }

@@ -237,15 +237,15 @@ describe('dimensions and gaps', () => {
     expect(semantic?.unmetWeight).toBe(20);
   });
 
-  it('sorts gaps by unmetWeight descending, ties broken by competency id', () => {
+  it('sorts priorities by unmetWeight descending, ties broken by competency id', () => {
     const bie = projectRole(g, 'bie');
-    const unmet = bie.gaps.map((d) => d.unmetWeight);
+    const unmet = bie.priorities.map((d) => d.unmetWeight);
     for (let i = 1; i < unmet.length; i += 1) {
       expect(unmet[i - 1]).toBeGreaterThanOrEqual(unmet[i]);
     }
     // sql-reasoning is the HEAVIEST dimension (25) yet ranks 6th, because 0.625
     // confidence has already met most of it. That is the point of unmetWeight.
-    expect(bie.gaps.map((d) => d.competency)).toEqual([
+    expect(bie.priorities.map((d) => d.competency)).toEqual([
       'semantic-modeling',
       'data-modeling',
       'stakeholder-translation',
@@ -256,11 +256,41 @@ describe('dimensions and gaps', () => {
     ]);
   });
 
-  it('contains the same set of dimensions as `dimensions`, just reordered', () => {
+  it('`priorities` contains the same set of dimensions as `dimensions`, just reordered', () => {
     const bie = projectRole(g, 'bie');
-    expect([...bie.gaps].sort((a, b) => a.competency.localeCompare(b.competency))).toEqual(
+    expect([...bie.priorities].sort((a, b) => a.competency.localeCompare(b.competency))).toEqual(
       [...bie.dimensions].sort((a, b) => a.competency.localeCompare(b.competency)),
     );
+  });
+
+  // The regression this pins: `gaps` used to be every dimension re-sorted, so a role
+  // at 85% coverage still reported a "gap" for all seven of its dimensions and any UI
+  // rendering the field was structurally incapable of telling the truth.
+  it('`gaps` holds only dimensions that are not yet established', () => {
+    const bie = projectRole(g, 'bie');
+    expect(bie.gaps.length).toBeLessThan(bie.dimensions.length);
+    for (const d of bie.gaps) expect(d.status, d.competency).not.toBe('established');
+    const established = bie.dimensions.filter((d) => d.status === 'established');
+    expect(established.length).toBeGreaterThan(0);
+    for (const d of established) {
+      expect(bie.gaps.map((x) => x.competency)).not.toContain(d.competency);
+    }
+  });
+
+  it('does not call an established dimension a gap just because unmet weight remains', () => {
+    const bie = projectRole(g, 'bie');
+    const sql = bie.dimensions.find((d) => d.competency === 'sql-reasoning');
+    expect(sql?.status).toBe('established');
+    expect(sql?.unmetWeight).toBeGreaterThan(0); // would be a "gap" under a > 0 filter
+    expect(bie.gaps.map((d) => d.competency)).not.toContain('sql-reasoning');
+    expect(bie.priorities.map((d) => d.competency)).toContain('sql-reasoning');
+  });
+
+  it('`gaps` is a subset of `priorities` and keeps its relative order', () => {
+    const bie = projectRole(g, 'bie');
+    const order = bie.priorities.map((d) => d.competency);
+    const gapOrder = bie.gaps.map((d) => d.competency);
+    expect(gapOrder).toEqual(order.filter((id) => gapOrder.includes(id)));
   });
 });
 

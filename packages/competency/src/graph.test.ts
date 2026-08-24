@@ -485,3 +485,72 @@ describe('provenNodes', () => {
     expect(provenNodes(tied).map((n) => n.id)).toEqual(['debugging', 'reliability', 'testing']);
   });
 });
+
+describe('unrouted diagnostics', () => {
+  // The regression this pins: a count alone lets a readiness number go wrong without
+  // naming the input that caused it. Every drop must be attributable to one evidence
+  // id and one closed reason, so an intentional exclusion (Class C is not numerically
+  // scorable by §10) is distinguishable from a routing defect (an unknown domain).
+  const items: CompetencyEvidence[] = [
+    ev({ id: 'ok', competencies: ['implementation'] }),
+    ev({ id: 'no-score', score: null, competencies: ['implementation'] }),
+    ev({ id: 'nan-score', score: Number.NaN, competencies: ['implementation'] }),
+    ev({ id: 'class-c', evidenceClass: 'classC', competencies: ['implementation'] }),
+    ev({ id: 'no-hints', domains: ['Nonsense'] }),
+  ];
+  const g = buildCompetencyGraph(items, ASOF);
+
+  it('names every dropped attempt with a reason', () => {
+    expect(g.unroutedEvidence).toEqual([
+      { evidenceId: 'no-score', reason: 'unscored' },
+      { evidenceId: 'nan-score', reason: 'non_finite_score' },
+      { evidenceId: 'class-c', reason: 'excluded_evidence_class' },
+      { evidenceId: 'no-hints', reason: 'no_routing_hints' },
+    ]);
+  });
+
+  it('separates a malformed score from an unscorable attempt', () => {
+    const byId = new Map(g.unroutedEvidence.map((u) => [u.evidenceId, u.reason]));
+    expect(byId.get('no-score')).toBe('unscored');
+    expect(byId.get('nan-score')).toBe('non_finite_score');
+    expect(byId.get('no-score')).not.toBe(byId.get('nan-score'));
+  });
+
+  it('keeps unroutedCount as the length of the diagnostic list', () => {
+    expect(g.unroutedCount).toBe(g.unroutedEvidence.length);
+  });
+
+  it('accounts for every input: evidenceCount + unroutedCount === input length', () => {
+    expect(g.evidenceCount + g.unroutedCount).toBe(items.length);
+  });
+
+  it('holds that invariant for an empty graph and for an all-good graph', () => {
+    const empty = buildCompetencyGraph([], ASOF);
+    expect(empty.evidenceCount + empty.unroutedCount).toBe(0);
+    expect(empty.unroutedEvidence).toEqual([]);
+
+    const good = [ev({ id: 'a', competencies: ['debugging'] }), ev({ id: 'b', taskType: 'coding' })];
+    const gg = buildCompetencyGraph(good, ASOF);
+    expect(gg.evidenceCount + gg.unroutedCount).toBe(good.length);
+    expect(gg.unroutedEvidence).toEqual([]);
+  });
+
+  it('only reports no_routing_hints after every channel has failed', () => {
+    // An unknown domain still routes when a direct competency tag is present.
+    const rescued = buildCompetencyGraph(
+      [ev({ id: 'r', domains: ['Nonsense'], competencies: ['sql-reasoning'] })],
+      ASOF,
+    );
+    expect(rescued.unroutedEvidence).toEqual([]);
+    expect(rescued.evidenceCount).toBe(1);
+  });
+
+  it('exposes ids and reason codes only — no evidence prose', () => {
+    const labelled = buildCompetencyGraph(
+      [ev({ id: 'secret', domains: ['Nonsense'], label: 'do not leak me' })],
+      ASOF,
+    );
+    expect(JSON.stringify(labelled.unroutedEvidence)).not.toContain('do not leak me');
+    expect(Object.keys(labelled.unroutedEvidence[0]).sort()).toEqual(['evidenceId', 'reason']);
+  });
+});

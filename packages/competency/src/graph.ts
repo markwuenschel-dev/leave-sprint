@@ -85,14 +85,39 @@ export interface CompetencyNode {
   contributions: CompetencyContribution[];
 }
 
+/**
+ * Why one attempt produced no contribution. A closed set, so a caller can tell an
+ * intentional exclusion (Class C is not numerically scorable by spec) apart from a
+ * routing defect (a domain string nothing recognises) without reading the engine.
+ */
+export type UnroutedReason =
+  | 'unscored'
+  | 'non_finite_score'
+  | 'excluded_evidence_class'
+  | 'no_routing_hints';
+
+export interface UnroutedEvidence {
+  evidenceId: string;
+  reason: UnroutedReason;
+}
+
 export interface CompetencyGraph {
   /** The date the decay was computed against. Passed in — never `Date.now()`. */
   asOf: string;
   nodes: Record<CompetencyId, CompetencyNode>;
   /** Attempts that produced at least one contribution. */
   evidenceCount: number;
-  /** Attempts that produced none — unscored, Class C, or unmappable tags. */
+  /**
+   * Attempts that produced none. Always `unroutedEvidence.length` — a count alone
+   * lets a readiness number go wrong without naming the input that caused it.
+   */
   unroutedCount: number;
+  /**
+   * One entry per dropped attempt, id and reason only. Ids, not labels: resolving
+   * human-readable text is the caller's job, so evidence prose never leaks here.
+   * Invariant: `evidenceCount + unroutedCount === input.length`.
+   */
+  unroutedEvidence: readonly UnroutedEvidence[];
 }
 
 /** Strongest-channel-wins routing for one attempt. */
@@ -162,25 +187,32 @@ export function buildCompetencyGraph(
   for (const c of COMPETENCIES) nodes[c.id] = emptyNode(c.id);
 
   let evidenceCount = 0;
-  let unroutedCount = 0;
+  const unroutedEvidence: UnroutedEvidence[] = [];
 
   for (const e of evidence) {
     // An unscored attempt carries no score signal. It still happened, but averaging
     // it in would require inventing a number, so it is reported as unrouted instead.
-    if (e.score == null || !Number.isFinite(e.score)) {
-      unroutedCount += 1;
+    if (e.score == null) {
+      unroutedEvidence.push({ evidenceId: e.id, reason: 'unscored' });
+      continue;
+    }
+    if (!Number.isFinite(e.score)) {
+      // Distinct from `unscored`: malformed data, not an unscorable attempt. Folding
+      // the two together would hide a data-quality failure behind a design decision.
+      unroutedEvidence.push({ evidenceId: e.id, reason: 'non_finite_score' });
       continue;
     }
     const breakdown = weighEvidence(e, asOf);
     if (breakdown.total <= 0) {
       // Class C is defined as not numerically scorable (§10). Excluded by weight, by design.
-      unroutedCount += 1;
+      unroutedEvidence.push({ evidenceId: e.id, reason: 'excluded_evidence_class' });
       continue;
     }
 
     const routed = routeEvidence(e);
     if (routed.size === 0) {
-      unroutedCount += 1;
+      // Every supported channel — direct, task type, domain — failed to match.
+      unroutedEvidence.push({ evidenceId: e.id, reason: 'no_routing_hints' });
       continue;
     }
     evidenceCount += 1;
@@ -246,7 +278,7 @@ export function buildCompetencyGraph(
     node.status = statusFor(node.confidence, node.score != null);
   }
 
-  return { asOf, nodes, evidenceCount, unroutedCount };
+  return { asOf, nodes, evidenceCount, unroutedCount: unroutedEvidence.length, unroutedEvidence };
 }
 
 /** Nodes as a stable array, registry order. */
