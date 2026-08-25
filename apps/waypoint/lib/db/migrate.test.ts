@@ -23,8 +23,9 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { LEDGER_SCHEMA, LEDGER_TABLE, decideBaseline, readInitialMigration, stampStatements } from "./baseline";
+import { LEDGER_SCHEMA, LEDGER_TABLE, decideBaseline, readInitialMigration, stampSql } from "./baseline";
 import { readCatalog } from "./catalog";
+import { runMigrations } from "./migrate";
 import { schema } from "./schema";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -155,7 +156,7 @@ describe("(c) baseline adoption of databases that predate the ledger", () => {
     const decision = await decideBaseline(client, initial, scratch);
     expect(decision.kind).toBe("stamp");
 
-    for (const stmt of stampStatements(initial)) await client.exec(stmt);
+    await client.exec(stampSql(initial));
     const rows = await ledgerRows(client);
     expect(rows).toHaveLength(1);
     expect(Number(rows[0].created_at)).toBe(initial.createdAt);
@@ -166,7 +167,7 @@ describe("(c) baseline adoption of databases that predate the ledger", () => {
     const client = fresh();
     await client.exec(LEGACY_SQL);
     const initial = readInitialMigration(MIGRATIONS);
-    for (const stmt of stampStatements(initial)) await client.exec(stmt);
+    await client.exec(stampSql(initial));
 
     const before = await readCatalog(client);
     await migrate(drizzle(client, { schema }) as never, { migrationsFolder: MIGRATIONS });
@@ -240,5 +241,79 @@ describe("the archived legacy DDL still matches the generated migration", () => 
     expect(a.columns).toEqual(b.columns);
     expect(a.indexes).toEqual(b.indexes);
     expect(a.tableCount).toBe(EXPECTED_TABLES.length);
+  });
+});
+
+describe("runMigrations — the real sequencing, not a re-issue of its steps", () => {
+  const run = (client: PGlite) =>
+    runMigrations({
+      db: drizzle(client, { schema }),
+      migrationsFolder: MIGRATIONS,
+      makeScratch: async () => fresh() as never,
+    });
+
+  it("migrates an empty database and records the ledger", async () => {
+    const client = fresh();
+    await run(client);
+    expect(await tableNames(client)).toEqual(EXPECTED_TABLES);
+    expect(await ledgerRows(client)).toHaveLength(1);
+  });
+
+  it("adopts a legacy database without touching its data", async () => {
+    const client = fresh();
+    await client.exec(LEGACY_SQL);
+    await client.exec("insert into wp_app_meta (id, phase) values (1,'B')");
+
+    await run(client);
+
+    const rows = await ledgerRows(client);
+    expect(rows).toHaveLength(1);
+    expect(Number(rows[0].created_at)).toBe(readInitialMigration(MIGRATIONS).createdAt);
+    // The point of adoption: the row that was there before is still there after.
+    const meta = await client.query<{ id: number; phase: string }>("select id, phase from wp_app_meta");
+    expect(meta.rows).toEqual([{ id: 1, phase: "B" }]);
+  });
+
+  it("is idempotent across repeated runs", async () => {
+    const client = fresh();
+    await run(client);
+    await run(client);
+    expect(await ledgerRows(client)).toHaveLength(1);
+  });
+
+  it("throws and writes no ledger when the database cannot be adopted", async () => {
+    const client = fresh();
+    await client.exec(LEGACY_SQL);
+    await client.exec("ALTER TABLE wp_app_meta DROP COLUMN mock_asked");
+
+    await expect(run(client)).rejects.toThrow(/refusing to adopt/);
+    expect(await ledgerExists(client)).toBe(false);
+  });
+});
+
+describe("a half-written ledger is not mistaken for an adopted database", () => {
+  // The crash window: if the process dies between creating the ledger table and
+  // inserting its row, an empty ledger is left behind. Reading that as "managed"
+  // would let drizzle replay the initial migration against a populated schema.
+  it("treats a ledger table with no rows as un-adopted", async () => {
+    const client = fresh();
+    await client.exec(LEGACY_SQL);
+    await client.exec(`CREATE SCHEMA IF NOT EXISTS ${LEDGER_SCHEMA}`);
+    await client.exec(
+      `CREATE TABLE IF NOT EXISTS ${LEDGER_SCHEMA}.${LEDGER_TABLE} (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)`,
+    );
+
+    const decision = await decideBaseline(client, readInitialMigration(MIGRATIONS), scratch);
+    expect(decision.kind).toBe("stamp");
+  });
+
+  it("stamps atomically — the ledger row and its table arrive together", async () => {
+    const client = fresh();
+    await client.exec(LEGACY_SQL);
+    const initial = readInitialMigration(MIGRATIONS);
+    await client.exec(stampSql(initial));
+    const rows = await ledgerRows(client);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].hash).toBe(initial.hash);
   });
 });

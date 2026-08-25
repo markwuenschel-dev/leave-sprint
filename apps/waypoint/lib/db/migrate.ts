@@ -18,6 +18,7 @@
  *     connection strings, never secrets.
  */
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { migrate } from "drizzle-orm/pglite/migrator";
 
@@ -25,7 +26,7 @@ import {
   type MigrationIdentity,
   decideBaseline,
   readInitialMigration,
-  stampStatements,
+  stampSql,
 } from "./baseline";
 import type { QueryableClient } from "./catalog";
 import { getDb } from "./index";
@@ -54,14 +55,26 @@ function describe(m: MigrationIdentity): string {
   return `${m.tag} (created_at=${m.createdAt}, hash=${m.hash.slice(0, 12)}…)`;
 }
 
-async function main(): Promise<void> {
-  const migrationsFolder = path.join(process.cwd(), "drizzle");
+/**
+ * The whole migration sequence, with its inputs injectable.
+ *
+ * Exported and parameterised so a test can drive the real ordering — decide, then
+ * stamp, then migrate — against an in-memory database. Previously this logic was
+ * only reachable by running the file, so nothing could cover it.
+ */
+export async function runMigrations(opts: {
+  db?: unknown;
+  migrationsFolder?: string;
+  makeScratch?: () => Promise<PgliteClient>;
+} = {}): Promise<void> {
+  const migrationsFolder = opts.migrationsFolder ?? path.join(process.cwd(), "drizzle");
   const initial = readInitialMigration(migrationsFolder);
 
-  const db = await getDb();
+  const db = opts.db ?? (await getDb());
   const client = clientOf(db);
+  const makeScratch = opts.makeScratch ?? scratchDatabase;
 
-  const decision = await decideBaseline(client, initial, scratchDatabase);
+  const decision = await decideBaseline(client, initial, makeScratch);
 
   switch (decision.kind) {
     case "already-managed":
@@ -77,7 +90,7 @@ async function main(): Promise<void> {
         `[migrate] existing schema matches ${describe(initial)} exactly; ` +
           "adopting it by recording that migration as applied",
       );
-      for (const stmt of stampStatements(initial)) await client.exec(stmt);
+      await client.exec(stampSql(initial));
       break;
     case "abort":
       throw new Error(`[migrate] refusing to adopt this database.\n\n${decision.reason}`);
@@ -87,12 +100,21 @@ async function main(): Promise<void> {
   console.log("[migrate] up to date");
 }
 
+/**
+ * Only self-execute when this file IS the entry point. Importing it (a test, a
+ * tool) must not start a migration as a side effect.
+ */
+const isEntryPoint =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
 // PGlite's embedded WASM runtime keeps the event loop alive, so the process never
 // exits on its own after migrations finish. In `pnpm db:migrate && next start` that
 // hangs the migrate step forever and `next start` never runs (container serves nothing
 // → 502). Exit explicitly once migrations complete. Queries are already awaited, so the
 // file-backed DB is durably flushed by this point (verified: survives even SIGKILL).
-main()
+if (isEntryPoint) {
+  runMigrations()
   .then(() => process.exit(0))
   .catch((e: unknown) => {
     // Identity and error class only. A migration failure is an operational event,
@@ -104,3 +126,4 @@ main()
     console.error("[migrate] the server will not start; no automatic retry.");
     process.exit(1);
   });
+}

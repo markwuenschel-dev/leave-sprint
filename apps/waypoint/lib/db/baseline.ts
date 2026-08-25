@@ -110,7 +110,13 @@ export async function decideBaseline(
   makeScratch: () => Promise<QueryableClient & { exec(sql: string): Promise<unknown>; close?(): Promise<void> }>,
 ): Promise<BaselineDecision> {
   const ledgerRows = await readLedger(client);
-  if (ledgerRows !== null) return { kind: "already-managed", rows: ledgerRows };
+  // A ledger table with no rows is NOT an adopted database. It is what a crash
+  // between creating the table and inserting the row leaves behind, and drizzle
+  // would then find no prior migration and replay the initial one against a
+  // populated schema. Treat it as un-adopted and let the catalog check decide.
+  if (ledgerRows !== null && ledgerRows > 0) {
+    return { kind: "already-managed", rows: ledgerRows };
+  }
 
   const live = await readCatalog(client);
   if (isEmptyOfAppTables(live)) return { kind: "empty" };
@@ -131,13 +137,25 @@ export async function decideBaseline(
   };
 }
 
-/** SQL that records the initial migration as applied. Ledger write only — no DDL. */
-export function stampStatements(migration: MigrationIdentity): string[] {
+/**
+ * SQL that records the initial migration as applied. Ledger write only — no DDL
+ * against application tables.
+ *
+ * One transactional script rather than three statements: a crash between creating
+ * the ledger table and inserting its row would otherwise leave an empty ledger,
+ * and an empty ledger is a state no later run can interpret correctly. Either the
+ * adoption is recorded or nothing is.
+ */
+export function stampSql(migration: MigrationIdentity): string {
   return [
-    `CREATE SCHEMA IF NOT EXISTS "${LEDGER_SCHEMA}"`,
-    `CREATE TABLE IF NOT EXISTS "${LEDGER_SCHEMA}"."${LEDGER_TABLE}" (` +
-      `id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)`,
-    `INSERT INTO "${LEDGER_SCHEMA}"."${LEDGER_TABLE}" ("hash", "created_at") ` +
-      `VALUES ('${migration.hash}', ${migration.createdAt})`,
-  ];
+    "BEGIN;",
+    `CREATE SCHEMA IF NOT EXISTS "${LEDGER_SCHEMA}";`,
+    `CREATE TABLE IF NOT EXISTS "${LEDGER_SCHEMA}"."${LEDGER_TABLE}" (`,
+    "  id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint",
+    ");",
+    `INSERT INTO "${LEDGER_SCHEMA}"."${LEDGER_TABLE}" ("hash", "created_at")`,
+    `VALUES ('${migration.hash}', ${migration.createdAt});`,
+    "COMMIT;",
+  ].join("\n");
 }
+
