@@ -19,13 +19,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // ensure schema exists on first request
-    try {
-      const { default: migrate } = await import("@/lib/db/ensure");
-      await migrate();
-    } catch {
-      /* ensure optional */
-    }
+    // No per-request schema bootstrap. Migration runs once at startup and the
+    // process does not serve traffic unless it exited zero (INT-004, D-002), so a
+    // route that is reachable is already running against a migrated schema.
     const state = await loadState();
     return NextResponse.json(
       { ...state, driver: "pglite" },
@@ -49,12 +45,6 @@ async function persist(req: Request) {
   // but never wipe. saveState ignores the extra __authoritative field.
   const authoritative = body.__authoritative === true;
   try {
-    try {
-      const { default: migrate } = await import("@/lib/db/ensure");
-      await migrate();
-    } catch {
-      /* */
-    }
     const { lastUpdated } = await saveState(body, authoritative);
     return NextResponse.json({ ok: true, lastUpdated });
   } catch (err) {

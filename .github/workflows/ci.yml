@@ -41,6 +41,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # INT-004 D-003(a): generated migrations do not prevent drift on their own.
+      # Regenerate and reject any change under apps/waypoint/drizzle — a schema
+      # edited without a regenerated migration never reaches the database.
+      - name: Schema drift gate
+        run: pnpm check:schema-drift
+
       - name: Test
         run: pnpm test
 

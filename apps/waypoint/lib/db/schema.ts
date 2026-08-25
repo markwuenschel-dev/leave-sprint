@@ -127,29 +127,40 @@ export const careerResumes = pgTable("wp_resumes", {
   data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
 });
 
-export const careerJobTargets = pgTable("wp_job_targets", {
-  id: text("id").primaryKey(),
-  company: text("company").notNull(),
-  roleTitle: text("role_title").notNull(),
-  careerRole: text("career_role"),
-  // The pipeline row that owns this pursuit's status. Nullable: a target under
-  // initial consideration has no application yet. See lib/career/types.ts header.
-  applicationId: text("application_id"),
-  submittedResumeId: text("submitted_resume_id"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
-});
+export const careerJobTargets = pgTable(
+  "wp_job_targets",
+  {
+    id: text("id").primaryKey(),
+    company: text("company").notNull(),
+    roleTitle: text("role_title").notNull(),
+    careerRole: text("career_role"),
+    // The pipeline row that owns this pursuit's status. Nullable: a target under
+    // initial consideration has no application yet. See lib/career/types.ts header.
+    applicationId: text("application_id"),
+    submittedResumeId: text("submitted_resume_id"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  },
+  // Declared here, not only in raw DDL. An index the executed SQL creates but the
+  // schema never declares is invisible to `drizzle-kit generate`, so a generated
+  // migration omits it and diverges from every database the raw DDL ever built.
+  (t) => [index("wp_job_targets_app_idx").on(t.applicationId)],
+);
 
-export const careerCampaigns = pgTable("wp_campaigns", {
-  id: text("id").primaryKey(),
-  jobTargetId: text("job_target_id").notNull(),
-  careerRole: text("career_role").notNull(),
-  currentStageId: text("current_stage_id"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
-});
+export const careerCampaigns = pgTable(
+  "wp_campaigns",
+  {
+    id: text("id").primaryKey(),
+    jobTargetId: text("job_target_id").notNull(),
+    careerRole: text("career_role").notNull(),
+    currentStageId: text("current_stage_id"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (t) => [index("wp_campaigns_target_idx").on(t.jobTargetId)],
+);
 
 export const appMeta = pgTable("wp_app_meta", {
   id: integer("id").primaryKey(),

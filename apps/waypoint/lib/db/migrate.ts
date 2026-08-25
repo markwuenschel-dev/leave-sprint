@@ -1,215 +1,129 @@
 /**
- * Apply SQL migrations from apps/waypoint/drizzle to local PGlite.
+ * The single migration executor for the Waypoint PGlite database.
+ *
+ * One authority (schema.ts), one generated migration folder (drizzle/), one
+ * executor (this file). There is deliberately no second path: the lazy per-request
+ * bootstrap and the inline hand-written DDL that used to live here are both gone,
+ * because three hand-synchronised copies of a schema drift and did (INT-004).
+ *
+ * Invariants this file carries:
+ *
+ *   - Exactly one migrator per PGlite data directory. Deployment is single-writer;
+ *     a second concurrent starter is not supported and is not defended against here.
+ *   - A failed migration is never retried automatically. It exits nonzero and the
+ *     process does not go on to serve traffic (`db:migrate && next start`).
+ *   - A database with no ledger is adopted only when its catalog is demonstrably
+ *     identical to the initial migration's. Otherwise it aborts before any write.
+ *   - Failure output names the migration and the error class. Never data, never
+ *     connection strings, never secrets.
  */
-import fs from "fs";
-import path from "path";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { migrate } from "drizzle-orm/pglite/migrator";
+
+import {
+  type MigrationIdentity,
+  decideBaseline,
+  readInitialMigration,
+  stampSql,
+} from "./baseline";
+import type { QueryableClient } from "./catalog";
 import { getDb } from "./index";
 
-async function main() {
-  const db = await getDb();
-  const dir = path.join(process.cwd(), "drizzle");
-  if (!fs.existsSync(dir)) {
-    console.log("[migrate] no drizzle/ folder — applying inline bootstrap");
-    await bootstrap(db);
-    return;
+/** PGlite exposes both; drizzle hangs it off the db instance as `$client`. */
+type PgliteClient = QueryableClient & {
+  exec(sql: string): Promise<unknown>;
+  close?(): Promise<void>;
+};
+
+function clientOf(db: unknown): PgliteClient {
+  const c = (db as { $client?: PgliteClient }).$client;
+  if (!c?.query || !c?.exec) {
+    throw new Error("[migrate] could not reach the PGlite client on the drizzle instance");
   }
-  const files = fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-  if (files.length === 0) {
-    await bootstrap(db);
-    return;
-  }
-  for (const f of files) {
-    const sql = fs.readFileSync(path.join(dir, f), "utf8");
-    // pglite execute
-    const client = (db as any).$client ?? (db as any).session?.client;
-    if (client?.exec) {
-      await client.exec(sql);
-    } else if (typeof (db as any).execute === "function") {
-      // split statements roughly
-      for (const stmt of sql.split(/;\s*\n/).filter((s) => s.trim())) {
-        await (db as any).execute(stmt);
-      }
-    } else {
-      console.warn("[migrate] unknown driver; bootstrap");
-      await bootstrap(db);
-      return;
-    }
-    console.log(`[migrate] applied ${f}`);
-  }
+  return c;
 }
 
-async function bootstrap(db: Awaited<ReturnType<typeof getDb>>) {
-  const client = (db as any).$client;
-  const sql = BOOTSTRAP_SQL;
-  if (client?.exec) {
-    await client.exec(sql);
-  } else {
-    for (const stmt of sql.split(/;\s*\n/).filter((s) => s.trim() && !s.trim().startsWith("--"))) {
-      try {
-        await (db as any).execute(stmt);
-      } catch {
-        // ignore already exists
-      }
-    }
-  }
-  console.log("[migrate] bootstrap applied");
+async function scratchDatabase(): Promise<PgliteClient> {
+  const { PGlite } = await import("@electric-sql/pglite");
+  // No path argument: in-memory, discarded as soon as the predicate is answered.
+  return new PGlite() as unknown as PgliteClient;
 }
 
-const BOOTSTRAP_SQL = `
-CREATE TABLE IF NOT EXISTS wp_rhythm_days (
-  date text PRIMARY KEY,
-  practice boolean NOT NULL DEFAULT false,
-  defense boolean NOT NULL DEFAULT false,
-  interview boolean NOT NULL DEFAULT false,
-  admin boolean NOT NULL DEFAULT false,
-  journal text,
-  focus_note text,
-  energy text,
-  last_updated text
-);
-CREATE TABLE IF NOT EXISTS wp_weekly_reviews (
-  week_start text PRIMARY KEY,
-  what_moved text,
-  focus_next text,
-  pipeline_notes text,
-  done boolean NOT NULL DEFAULT false,
-  last_updated text
-);
-CREATE TABLE IF NOT EXISTS wp_problems (
-  id text PRIMARY KEY,
-  title text NOT NULL,
-  tier text NOT NULL,
-  pattern text NOT NULL,
-  status text NOT NULL,
-  leetcode_slug text,
-  difficulty text,
-  core boolean NOT NULL DEFAULT false,
-  role_track text
-);
-CREATE TABLE IF NOT EXISTS wp_file_defense (
-  id text PRIMARY KEY,
-  title text NOT NULL,
-  why text NOT NULL,
-  terminology text NOT NULL,
-  interview_line text NOT NULL,
-  practiced_dates jsonb NOT NULL DEFAULT '[]',
-  notes text,
-  core boolean NOT NULL DEFAULT false,
-  role_track text,
-  project text
-);
-ALTER TABLE wp_file_defense ADD COLUMN IF NOT EXISTS project text;
-CREATE TABLE IF NOT EXISTS wp_rubric_entries (
-  id text PRIMARY KEY,
-  rubric_version text,
-  date text NOT NULL,
-  task text,
-  task_type text,
-  domain text,
-  primary_domain text,
-  primary_role text,
-  difficulty integer,
-  assistance_level integer,
-  evidence_class text,
-  universal_score real,
-  task_specific_score real,
-  raw_score real,
-  final_score real,
-  demonstrated_level text,
-  quick_log boolean NOT NULL DEFAULT false,
-  weakness_tags jsonb NOT NULL DEFAULT '[]',
-  diagnostic jsonb NOT NULL DEFAULT '{}'
-);
-CREATE INDEX IF NOT EXISTS wp_rubric_date_idx ON wp_rubric_entries (date);
-CREATE TABLE IF NOT EXISTS wp_qbank_status (
-  question_id text PRIMARY KEY,
-  status text NOT NULL
-);
-CREATE TABLE IF NOT EXISTS wp_applications (
-  id text PRIMARY KEY,
-  company text NOT NULL,
-  role_title text NOT NULL,
-  target_role text NOT NULL,
-  url text,
-  status text NOT NULL,
-  status_changed_at text NOT NULL,
-  applied_at text,
-  notes text,
-  materials jsonb NOT NULL DEFAULT '[]',
-  created_at text NOT NULL,
-  updated_at text NOT NULL
-);
-CREATE TABLE IF NOT EXISTS wp_projects (
-  id text PRIMARY KEY,
-  slug text NOT NULL,
-  name text NOT NULL,
-  summary text NOT NULL DEFAULT '',
-  stage text NOT NULL,
-  ownership text NOT NULL,
-  created_at text NOT NULL,
-  updated_at text NOT NULL,
-  data jsonb NOT NULL DEFAULT '{}'
-);
-CREATE TABLE IF NOT EXISTS wp_resumes (
-  id text PRIMARY KEY,
-  label text NOT NULL,
-  target_role text,
-  frozen_at text,
-  created_at text NOT NULL,
-  updated_at text NOT NULL,
-  data jsonb NOT NULL DEFAULT '{}'
-);
-CREATE TABLE IF NOT EXISTS wp_job_targets (
-  id text PRIMARY KEY,
-  company text NOT NULL,
-  role_title text NOT NULL,
-  career_role text,
-  application_id text,
-  submitted_resume_id text,
-  created_at text NOT NULL,
-  updated_at text NOT NULL,
-  data jsonb NOT NULL DEFAULT '{}'
-);
-CREATE TABLE IF NOT EXISTS wp_campaigns (
-  id text PRIMARY KEY,
-  job_target_id text NOT NULL,
-  career_role text NOT NULL,
-  current_stage_id text,
-  created_at text NOT NULL,
-  updated_at text NOT NULL,
-  data jsonb NOT NULL DEFAULT '{}'
-);
-CREATE INDEX IF NOT EXISTS wp_campaigns_target_idx ON wp_campaigns (job_target_id);
-CREATE INDEX IF NOT EXISTS wp_job_targets_app_idx ON wp_job_targets (application_id);
-CREATE TABLE IF NOT EXISTS wp_app_meta (
-  id integer PRIMARY KEY,
-  phase text NOT NULL DEFAULT 'B',
-  role_filter text NOT NULL DEFAULT 'ALL',
-  qbank_pos jsonb NOT NULL DEFAULT '{"track":"swe","idx":0}',
-  qbank_order jsonb NOT NULL DEFAULT '{}',
-  study_guides jsonb NOT NULL DEFAULT '{}',
-  solid_interview_logs jsonb NOT NULL DEFAULT '{"SWE_FS_II":[],"MLE_II":[]}',
-  mock_seq integer NOT NULL DEFAULT 0,
-  mock_asked jsonb NOT NULL DEFAULT '[]',
-  last_updated text
-);
-ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS qbank_order jsonb NOT NULL DEFAULT '{}';
-ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS study_guides jsonb NOT NULL DEFAULT '{}';
-ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS mock_seq integer NOT NULL DEFAULT 0;
-ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS mock_asked jsonb NOT NULL DEFAULT '[]';
-`;
+function describe(m: MigrationIdentity): string {
+  return `${m.tag} (created_at=${m.createdAt}, hash=${m.hash.slice(0, 12)}…)`;
+}
+
+/**
+ * The whole migration sequence, with its inputs injectable.
+ *
+ * Exported and parameterised so a test can drive the real ordering — decide, then
+ * stamp, then migrate — against an in-memory database. Previously this logic was
+ * only reachable by running the file, so nothing could cover it.
+ */
+export async function runMigrations(opts: {
+  db?: unknown;
+  migrationsFolder?: string;
+  makeScratch?: () => Promise<PgliteClient>;
+} = {}): Promise<void> {
+  const migrationsFolder = opts.migrationsFolder ?? path.join(process.cwd(), "drizzle");
+  const initial = readInitialMigration(migrationsFolder);
+
+  const db = opts.db ?? (await getDb());
+  const client = clientOf(db);
+  const makeScratch = opts.makeScratch ?? scratchDatabase;
+
+  const decision = await decideBaseline(client, initial, makeScratch);
+
+  switch (decision.kind) {
+    case "already-managed":
+      console.log(`[migrate] ledger present (${decision.rows} applied); continuing`);
+      break;
+    case "empty":
+      console.log("[migrate] empty database; applying migrations from scratch");
+      break;
+    case "stamp":
+      // Validation is complete by the time we get here, so this writes only the
+      // ledger row — no DDL — recording the migration the schema already matches.
+      console.log(
+        `[migrate] existing schema matches ${describe(initial)} exactly; ` +
+          "adopting it by recording that migration as applied",
+      );
+      await client.exec(stampSql(initial));
+      break;
+    case "abort":
+      throw new Error(`[migrate] refusing to adopt this database.\n\n${decision.reason}`);
+  }
+
+  await migrate(db as never, { migrationsFolder });
+  console.log("[migrate] up to date");
+}
+
+/**
+ * Only self-execute when this file IS the entry point. Importing it (a test, a
+ * tool) must not start a migration as a side effect.
+ */
+const isEntryPoint =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
 
 // PGlite's embedded WASM runtime keeps the event loop alive, so the process never
 // exits on its own after migrations finish. In `pnpm db:migrate && next start` that
 // hangs the migrate step forever and `next start` never runs (container serves nothing
 // → 502). Exit explicitly once migrations complete. Queries are already awaited, so the
 // file-backed DB is durably flushed by this point (verified: survives even SIGKILL).
-main()
+if (isEntryPoint) {
+  runMigrations()
   .then(() => process.exit(0))
-  .catch((e) => {
-    console.error(e);
+  .catch((e: unknown) => {
+    // Identity and error class only. A migration failure is an operational event,
+    // not a place to spill row data or configuration into a container log.
+    const cls = e instanceof Error ? e.constructor.name : typeof e;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[migrate] FAILED (${cls})`);
+    console.error(msg);
+    console.error("[migrate] the server will not start; no automatic retry.");
     process.exit(1);
   });
+}
