@@ -316,4 +316,20 @@ describe("a half-written ledger is not mistaken for an adopted database", () => 
     expect(rows).toHaveLength(1);
     expect(rows[0].hash).toBe(initial.hash);
   });
+
+  it("leaves NOTHING behind when the stamp is interrupted mid-transaction", async () => {
+    // Atomicity demonstrated rather than argued from BEGIN/COMMIT: inject a
+    // failing statement before the COMMIT and assert the ledger table itself
+    // never comes into existence. This is the crash the transaction exists for.
+    const client = fresh();
+    await client.exec(LEGACY_SQL);
+    const initial = readInitialMigration(MIGRATIONS);
+    const interrupted = stampSql(initial).replace("COMMIT;", "SELECT 1 / 0; COMMIT;");
+
+    await expect(client.exec(interrupted)).rejects.toThrow();
+    // The session is left inside an aborted transaction block; a real process
+    // would have died and reconnected. Clear it, then look at what persisted.
+    await client.exec("ROLLBACK;").catch(() => undefined);
+    expect(await ledgerExists(client)).toBe(false);
+  });
 });

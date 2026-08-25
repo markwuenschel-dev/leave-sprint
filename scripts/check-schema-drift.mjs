@@ -20,11 +20,29 @@
  * Exit 1 — they do not, or the generator could not be run.
  */
 import { execFileSync, execSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
 const REPO = process.cwd();
 const SCOPE = "apps/waypoint/drizzle";
+// Optional receipt path. A gate that leaves no artifact cannot be cited as
+// evidence for anything, so the check records what it actually observed.
+const OUT = process.argv[2] ?? null;
+
+function receipt(status, detail) {
+  if (!OUT) return;
+  mkdirSync(path.dirname(OUT), { recursive: true });
+  writeFileSync(
+    OUT,
+    JSON.stringify(
+      { check: "schema-drift", scope: SCOPE, status, detail, at: new Date().toISOString() },
+      null,
+      2,
+    ) + "\n",
+    "utf8",
+  );
+}
 const APP = path.join(REPO, "apps", "waypoint");
 
 function git(args) {
@@ -84,4 +102,5 @@ if (after) {
   );
 }
 
+receipt("IN_SYNC", `${SCOPE} regenerated with no resulting change`);
 console.log(`✓ ${SCOPE} is in sync with schema.ts — no drift`);
