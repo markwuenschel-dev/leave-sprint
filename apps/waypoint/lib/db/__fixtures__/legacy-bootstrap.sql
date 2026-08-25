@@ -1,11 +1,15 @@
-/**
- * Idempotent schema bootstrap for PGlite (called from API routes).
- */
-import { getDb } from "./index";
-
-let done = false;
-
-const SQL = `
+-- ARCHIVED LEGACY DDL — HISTORICAL COMPATIBILITY EVIDENCE ONLY.
+--
+-- This is the hand-written bootstrap that created every Waypoint database before
+-- INT-004 introduced generated migrations. It is NOT a second production DDL
+-- executor and nothing at runtime reads it. Its only job is to let a test build a
+-- database the way the old code did, so the baseline adoption path can be proved
+-- against a real legacy schema rather than a mock of one.
+--
+-- Changing this file changes what "legacy" means. Any edit needs an explicit
+-- compatibility rationale (INT-004, R-007).
+--
+-- Captured from apps/waypoint/lib/db/migrate.ts at commit d7f9f80.
 CREATE TABLE IF NOT EXISTS wp_rhythm_days (
   date text PRIMARY KEY,
   practice boolean NOT NULL DEFAULT false,
@@ -48,7 +52,6 @@ CREATE TABLE IF NOT EXISTS wp_file_defense (
   role_track text,
   project text
 );
--- additive: existing DBs get the column without a table rebuild
 ALTER TABLE wp_file_defense ADD COLUMN IF NOT EXISTS project text;
 CREATE TABLE IF NOT EXISTS wp_rubric_entries (
   id text PRIMARY KEY,
@@ -148,22 +151,3 @@ ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS qbank_order jsonb NOT NULL DEFA
 ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS study_guides jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS mock_seq integer NOT NULL DEFAULT 0;
 ALTER TABLE wp_app_meta ADD COLUMN IF NOT EXISTS mock_asked jsonb NOT NULL DEFAULT '[]';
-`;
-
-export default async function ensure(): Promise<void> {
-  if (done) return;
-  const db = await getDb();
-  const client = (db as any).$client;
-  if (client?.exec) {
-    await client.exec(SQL);
-  } else {
-    for (const stmt of SQL.split(";").map((s) => s.trim()).filter(Boolean)) {
-      try {
-        await (db as any).execute(stmt);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-  done = true;
-}

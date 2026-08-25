@@ -17,7 +17,6 @@ const saveState = vi.fn<(slice: unknown, authoritative?: boolean) => Promise<{ l
 );
 const loadState = vi.fn<() => Promise<{ empty: boolean }>>(async () => ({ empty: true }));
 vi.mock("@/lib/db/state", () => ({ saveState, loadState }));
-vi.mock("@/lib/db/ensure", () => ({ default: async () => {} }));
 
 const gradeToEntry = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 const complete = vi.fn<() => Promise<string>>(async () => "ok");
