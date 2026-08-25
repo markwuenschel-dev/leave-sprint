@@ -326,7 +326,7 @@ describe("a half-written ledger is not mistaken for an adopted database", () => 
     const initial = readInitialMigration(MIGRATIONS);
     const interrupted = stampSql(initial).replace("COMMIT;", "SELECT 1 / 0; COMMIT;");
 
-    await expect(client.exec(interrupted)).rejects.toThrow();
+    await expect(client.exec(interrupted)).rejects.toThrow(/division by zero/i);
     // The session is left inside an aborted transaction block; a real process
     // would have died and reconnected. Clear it, then look at what persisted.
     await client.exec("ROLLBACK;").catch(() => undefined);
