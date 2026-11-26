@@ -9,7 +9,6 @@
 
 <p align="center">
   <a href="https://github.com/markwuenschel-dev/leave-sprint/actions/workflows/ci.yml"><img src="https://github.com/markwuenschel-dev/leave-sprint/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
-  <a href="https://leavesprint.44-198-76-44.nip.io/api/health"><img src="https://img.shields.io/badge/live-%2Fapi%2Fhealth-22c55e?logo=statuspage&logoColor=white" alt="live health"/></a>
   <img src="https://img.shields.io/badge/node-22-339933?logo=nodedotjs&logoColor=white" alt="Node 22"/>
   <img src="https://img.shields.io/badge/pnpm-11-F69220?logo=pnpm&logoColor=white" alt="pnpm 11"/>
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16"/>
