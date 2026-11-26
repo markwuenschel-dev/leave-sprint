@@ -221,28 +221,7 @@ See `.env.example` and `apps/waypoint/lib/llm/registry.ts`.
 
 ## Deploy
 
-Local-first still means **your** server. Production on this repo is a Compose service `leave-sprint` on a single EC2 box, PGlite volume, Caddy in front.
-
-```mermaid
-flowchart LR
-  Dev[laptop] -->|scripts/deploy.sh · deploy.ps1| Box[EC2 /opt/stack]
-  Box --> Git[leave-sprint @ SHA]
-  Box --> Img[Dockerfile.leave-sprint]
-  Img --> Ctr[compose service leave-sprint]
-  Ctr --> Vol[(PGlite volume)]
-  Caddy[Caddy :443] --> Ctr
-  Probe[GET /api/health] --> Ctr
-```
-
-```bash
-./scripts/deploy.sh              # latest main
-./scripts/deploy.sh <sha>        # pin / roll back
-# PowerShell: .\scripts\deploy.ps1
-```
-
-Scripts SSH to the box, sync the clone, `docker compose up -d --build leave-sprint`, then retry `GET /api/health` through migrate+start warmup.
-
-Bare Node + systemd is documented as an alternate single-box recipe (not what the scripts run):
+Local-first still means **your** server. Single-box recipe (bare Node + systemd):
 
 ```bash
 pnpm install
