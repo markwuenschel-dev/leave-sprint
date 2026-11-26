@@ -295,8 +295,8 @@ export function MoreSurface() {
         <h3 className="mb-2 font-medium">About</h3>
         <p className="text-[var(--text-mid)]">
           Waypoint is a local-first career transition hub (readiness evidence →
-          applications). Leave Sprint Twin remains frozen scaffolding at the repo root. Deploy on
-          a single EC2 with PGlite under{" "}
+          applications). Leave Sprint Twin remains frozen scaffolding at the repo root. Data lives
+          in PGlite under{" "}
           <code className="text-xs">WAYPOINT_PGLITE_DIR</code>.
         </p>
       </div>

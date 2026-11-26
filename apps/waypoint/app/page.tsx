@@ -128,7 +128,7 @@ export default function WaypointHome() {
           <div className="min-w-0">
             <div className="text-xl font-semibold tracking-tight">Waypoint</div>
             <div className="truncate text-[10px]" style={{ color: "var(--text-dim)" }}>
-              Evidence {evidenceGreen ? "green" : "open"} · EC2-ready
+              Evidence {evidenceGreen ? "green" : "open"}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
