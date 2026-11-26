@@ -9,7 +9,6 @@
 
 <p align="center">
   <a href="https://github.com/markwuenschel-dev/leave-sprint/actions/workflows/ci.yml"><img src="https://github.com/markwuenschel-dev/leave-sprint/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
-  <a href="https://leavesprint.44-198-76-44.nip.io/api/health"><img src="https://img.shields.io/badge/live-%2Fapi%2Fhealth-22c55e?logo=statuspage&logoColor=white" alt="live health"/></a>
   <img src="https://img.shields.io/badge/node-22-339933?logo=nodedotjs&logoColor=white" alt="Node 22"/>
   <img src="https://img.shields.io/badge/pnpm-11-F69220?logo=pnpm&logoColor=white" alt="pnpm 11"/>
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16"/>
@@ -221,28 +220,7 @@ See `.env.example` and `apps/waypoint/lib/llm/registry.ts`.
 
 ## Deploy
 
-Local-first still means **your** server. Production on this repo is a Compose service `leave-sprint` on a single EC2 box, PGlite volume, Caddy in front.
-
-```mermaid
-flowchart LR
-  Dev[laptop] -->|scripts/deploy.sh · deploy.ps1| Box[EC2 /opt/stack]
-  Box --> Git[leave-sprint @ SHA]
-  Box --> Img[Dockerfile.leave-sprint]
-  Img --> Ctr[compose service leave-sprint]
-  Ctr --> Vol[(PGlite volume)]
-  Caddy[Caddy :443] --> Ctr
-  Probe[GET /api/health] --> Ctr
-```
-
-```bash
-./scripts/deploy.sh              # latest main
-./scripts/deploy.sh <sha>        # pin / roll back
-# PowerShell: .\scripts\deploy.ps1
-```
-
-Scripts SSH to the box, sync the clone, `docker compose up -d --build leave-sprint`, then retry `GET /api/health` through migrate+start warmup.
-
-Bare Node + systemd is documented as an alternate single-box recipe (not what the scripts run):
+Local-first still means **your** server. Single-box recipe (bare Node + systemd):
 
 ```bash
 pnpm install
