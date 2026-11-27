@@ -6,3 +6,4 @@ export const runtime = "nodejs";
 export function GET() {
   return NextResponse.json({ ok: true });
 }
+// Repo Hub Claude subscription delivery canary
